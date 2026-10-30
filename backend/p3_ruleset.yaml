@@ -1,0 +1,58 @@
+{
+  "version": "p3-2026-02",
+  "sampler_version": "p3-hash-ranked-v1",
+  "sales_tod": {
+    "target": 30,
+    "minimum": 25,
+    "maximum": 35,
+    "random_minimum": 5,
+    "high_value_threshold_inr": "100000.00",
+    "high_value_threshold_classification": "synthetic_test_only"
+  },
+  "cutoff_tod": {"before_count": 10, "after_count": 15},
+  "credit_note_tod": {
+    "post_period_days": 90,
+    "in_period_random_target": 10,
+    "high_value_threshold_inr": "50000.00",
+    "threshold_classification": "synthetic_test_only"
+  },
+  "document_comparison": {
+    "taxable_value_tolerance_inr": "0.00",
+    "quantity_tolerance": "0",
+    "classification": "synthetic_test_only"
+  },
+  "period_end_concentration": {
+    "window_days": 7,
+    "multiple_threshold": "2.00",
+    "minimum_history_months": 3,
+    "amount_basis": "gross_amount",
+    "classification": "synthetic_test_only"
+  },
+  "transaction_splitting": {
+    "window_days": 90,
+    "amount_basis": "gross_amount",
+    "classification": "synthetic_test_only"
+  },
+  "pricing": {
+    "hsn_to_item_code": {"8501": "ITEM-8501"},
+    "unit_price_tolerance_inr": "0.00",
+    "mapping_classification": "synthetic_test_only"
+  },
+  "evidence_requests": {
+    "sales_tod": ["invoice", "e_way_bill", "lorry_receipt"],
+    "cutoff_tod": ["invoice", "e_way_bill", "lorry_receipt", "proof_of_delivery"],
+    "credit_note_tod": ["credit_note", "return_support"]
+  },
+  "t11": {
+    "classification": "synthetic_test_only",
+    "max_road_speed_kmph": "120",
+    "speed_tolerance_kmph": "10",
+    "verified_time_sources": ["verified_gps_telematics"]
+  },
+  "t13": {
+    "key_id": "pramaan-demo-irp-ed25519-1",
+    "key_classification": "DEMO_IRP_TEST_ONLY",
+    "trusted_public_key_b64": "4IHzKlJTcNVckWV2q9zfpQGfD1u9hslMtu7MXfUCLs4=",
+    "backdating_risk_days": 0
+  }
+}

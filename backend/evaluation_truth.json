@@ -1,0 +1,16 @@
+{
+  "_comment": "Ground-truth labels for the synthetic P3 dataset. READ ONLY BY backend/evaluate.py. The audit engine never imports or reads this file (MASTER.md principle: production audit code must not see ground truth).",
+  "dataset_version": "1.2",
+  "planted": [
+    {"entity": "INV-003", "class": "document_mismatch_and_consignee", "expected_tests": ["T06", "T11", "T15"], "document_matchable": true},
+    {"entity": "INV-004", "class": "forged_signed_payload", "expected_tests": ["T13"], "document_matchable": false},
+    {"entity": "INV-005", "class": "overload_and_quantity_mismatch", "expected_tests": ["T06", "T11"], "document_matchable": true},
+    {"entity": "INV-006", "class": "impossible_event_order", "expected_tests": ["T11"], "document_matchable": false},
+    {"entity": "INV-007", "class": "impossible_route_speed", "expected_tests": ["T11"], "document_matchable": false},
+    {"entity": "INV-009", "class": "related_party_fabricated_sale", "expected_tests": ["T01", "T06", "T11", "T13", "T15"], "document_matchable": true},
+    {"entity": "JRN-MAN-001", "class": "revenue_without_sale", "expected_tests": ["T05"], "document_matchable": false},
+    {"entity": "CYCLE", "class": "counterparty_ownership_cycle", "expected_tests": ["T02"], "document_matchable": false}
+  ],
+  "innocent": ["INV-001", "INV-002", "INV-008"],
+  "notes": "Innocent cases are clean sales whose documents agree and whose routes are plausible; they must not produce hard conflicts. The dataset's innocent-trap coverage is limited (no genuine-return credit note or shared-PO case in the pure P3 import path); extending it is a recommended next step."
+}

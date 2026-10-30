@@ -1,0 +1,16 @@
+
+  VITE v7.3.7  ready in 400 ms
+
+  ➜  Local:   http://127.0.0.1:5173/
+3:07:27 AM [vite] (client) hmr update /src/auditor.tsx
+3:07:27 AM [vite] (client) hmr update /src/components.tsx
+3:08:23 AM [vite] (client) hmr update /src/auditor.tsx
+3:08:23 AM [vite] (client) hmr update /src/client.tsx
+3:08:23 AM [vite] (client) hmr update /src/session.tsx, /src/client.tsx, /src/auditor.tsx
+3:11:59 AM [vite] (client) hmr update /src/components.tsx
+3:12:06 AM [vite] (client) hmr invalidate /src/components.tsx Could not Fast Refresh ("money" export is incompatible). Learn more at https://github.com/vitejs/vite-plugin-react/tree/main/packages/plugin-react#consistent-components-exports
+3:12:06 AM [vite] (client) hmr update /src/App.tsx, /src/client.tsx, /src/auditor.tsx
+3:13:36 AM [vite] (client) hmr update /src/auditor.tsx
+3:20:39 AM [vite] (client) hmr update /src/auditor.tsx
+3:24:31 AM [vite] (client) hmr update /src/client.tsx
+3:25:54 AM [vite] (client) hmr update /src/auditor.tsx

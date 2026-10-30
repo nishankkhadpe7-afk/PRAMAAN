@@ -1,0 +1,10 @@
+journal_id,posting_date,invoice_id,account,debit,credit,source_type,description
+JRN-001,2025-04-05,INV-001,Trade Receivables,118000,0,invoice_posting,Invoice posting
+JRN-001,2025-04-05,INV-001,Sales Revenue,0,100000,invoice_posting,Invoice posting
+JRN-001,2025-04-05,INV-001,Output GST,0,18000,invoice_posting,Invoice posting
+JRN-MAN-001,2025-04-30,,Trade Receivables,59000,0,manual_journal,Manual entry with no invoice link; investigate
+JRN-MAN-001,2025-04-30,,Sales Revenue,0,50000,manual_journal,Manual revenue credit without invoice reference
+JRN-MAN-001,2025-04-30,,Output GST,0,9000,manual_journal,Tax line for manual entry
+JRN-003,2025-04-10,INV-003,Trade Receivables,236000,0,invoice_posting,Invoice posting
+JRN-003,2025-04-10,INV-003,Sales Revenue,0,200000,invoice_posting,Invoice posting
+JRN-003,2025-04-10,INV-003,Output GST,0,36000,invoice_posting,Invoice posting

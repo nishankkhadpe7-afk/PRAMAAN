@@ -1,0 +1,10 @@
+{
+  "version": "p1-2026-02",
+  "tests": {
+    "T06": {
+      "value_absolute_tolerance": "1.00",
+      "quantity_absolute_tolerance": "0",
+      "exact_fields": ["gstin", "pin", "vehicle_no"]
+    }
+  }
+}

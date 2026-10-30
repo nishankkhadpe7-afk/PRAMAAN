@@ -1,0 +1,7 @@
+TAX INVOICE (synthetic demo evidence)
+Bill No: PRA/25-26/009
+Date: 2025-06-20
+Seller GSTIN: 29AAAAA0000A1Z5
+Buyer GSTIN: 27ABCDE1234F1Z5
+Taxable: 4000000.00  IGST: 720000.00  Total: 4720000.00
+NOTE: company-supplied document; not independent corroboration.

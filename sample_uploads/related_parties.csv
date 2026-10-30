@@ -1,0 +1,4 @@
+customer_id,customer_name,related,relationship,valid_from
+CUST-002,Banyan Retail Demo,yes,common director,2024-01-01
+CUST-001,Aster Components Demo,yes,director,2024-01-01
+CUST-004,Delta Trade Demo,no,,

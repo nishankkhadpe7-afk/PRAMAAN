@@ -1,0 +1,86 @@
+{
+  "dataset_name": "Pramaan P3 synthetic audit data pack",
+  "dataset_version": "1.2",
+  "created_for": "P3 schema and audit-rule testing",
+  "data_classification": "synthetic-fictional-not-real-taxpayer-data",
+  "warning": "No records are sourced from actual taxpayer filings. Verification fields do not indicate real verification.",
+  "public_schema_references": [
+    {
+      "name": "GSTN FAQ - e-invoice schema background",
+      "url": "https://www.gstn.org.in/faqs-category-details",
+      "use": "Schema field-shape reference only"
+    },
+    {
+      "name": "IRIS IRP - notified e-invoice schema",
+      "url": "https://einvoice6.gst.gov.in/content/notified-e-invoice-schema/",
+      "use": "Invoice field-shape reference only"
+    },
+    {
+      "name": "GSTN E-Way Bill API developer portal",
+      "url": "https://docs.ewaybillgst.gov.in/apidocs/",
+      "use": "E-way bill API schemas, sample JSON and validation concepts"
+    },
+    {
+      "name": "MCA related-party disclosure rules",
+      "url": "https://www.mca.gov.in/Ministry/pdf/Rules_31012020.pdf",
+      "use": "Related-party disclosure field-shape reference only"
+    }
+  ],
+  "files": {
+    "invoices.csv": {
+      "sha256": "cd6cb46adb91508dd4a5194653dc0e1077c1644dd86ef7506774c983312fb9a2",
+      "bytes": 1804,
+      "rows": 9
+    },
+    "dispatches.csv": {
+      "sha256": "21afbfdab24f35f97175ed3d902cb089ef72a1e958ba60c1477a1b7fe2848a38",
+      "bytes": 905,
+      "rows": 9
+    },
+    "journal_entries.csv": {
+      "sha256": "95960b62380b05aee394251f0944aa42eabe152c3969762dc00423c4f4ab09ec",
+      "bytes": 876,
+      "rows": 9
+    },
+    "related_party_edges.csv": {
+      "sha256": "dc412f8643ef6d5e36b5dc00677f4fad6282353534a04aca04323f6ff3901114",
+      "bytes": 941,
+      "rows": 6
+    },
+    "historical_sales.csv": {
+      "sha256": "1d4b014e3ad6fe5734b4945950b95d118ba8073171800dccebcace99046ff013",
+      "bytes": 348,
+      "rows": 6
+    },
+    "threshold_policies.csv": {
+      "sha256": "1d7099f675b5e4aecd56a3425e438e575d4f2c844b542c4c94c68759e675491c",
+      "bytes": 405,
+      "rows": 2
+    },
+    "gstr1_rows.csv": {
+      "sha256": "dc12ee38e77b112d7087689491cdc9e09d1bece5a8b87e30e044fed08daf265a",
+      "bytes": 697,
+      "rows": 5
+    },
+    "price_lists.csv": {
+      "sha256": "e4841d9c28409365d42f3ddeabb56c024d0621a0516e1de6dd0e5bebb38dc6f2",
+      "bytes": 334,
+      "rows": 3
+    },
+    "promotions.csv": {
+      "sha256": "71247158f08308ac61568532f6075e5256234c17a152504894abb6dc5c00456d",
+      "bytes": 292,
+      "rows": 2
+    },
+    "movement_routes.csv": {
+      "sha256": "8b6b22b7306bc06a796d1e773849b2b1a5766c82c900aa536e77d45dc2e25dae",
+      "bytes": 1359,
+      "rows": 9
+    },
+    "invoice_verification_status.csv": {
+      "sha256": "80a77829f84bb6502c8e0bdd15c0d7a411e517a3acefc575405048b07ca8f756",
+      "bytes": 2199,
+      "rows": 6
+    }
+  }
+}

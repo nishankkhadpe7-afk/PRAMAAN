@@ -1,0 +1,16 @@
+[
+  {
+    "customer_id": "CEDAR-CUSTOMER-1",
+    "related_party": true,
+    "relationship_type": "Synthetic disclosed affiliate",
+    "valid_from": "2026-04-01",
+    "valid_to": "2027-03-31"
+  },
+  {
+    "customer_id": "CEDAR-CUSTOMER-3",
+    "related_party": true,
+    "relationship_type": "Synthetic common director",
+    "valid_from": "2026-08-01",
+    "valid_to": null
+  }
+]

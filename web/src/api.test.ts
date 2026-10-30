@@ -1,0 +1,8 @@
+import {describe,it,expect,vi} from 'vitest'
+import {ApiError,makeApi} from './api'
+describe('authenticated API boundary',()=>{
+ it('forwards a credential only as a header and preserves request payloads',async()=>{const fetcher=vi.spyOn(globalThis,'fetch').mockResolvedValue(new Response('{"saved":true}',{status:200,headers:{'Content-Type':'application/json'}}));await makeApi('test-only-credential').json('/p2/customers','POST',{customer_id:'C',name:'0001 =SUM(1,2)'});const [url,options]=fetcher.mock.calls[0];expect(url).toBe('/api/p2/customers');expect(options!.headers).toMatchObject({Authorization:'Bearer test-only-credential'});expect(JSON.parse(options!.body as string).name).toBe('0001 =SUM(1,2)');expect(url).not.toContain('credential');expect(options!.credentials).toBe('omit')})
+ it('surfaces revocation/expiry and invokes session clearing',async()=>{vi.spyOn(globalThis,'fetch').mockResolvedValue(new Response('',{status:401}));const clear=vi.fn();await expect(makeApi('test',clear).json('/ui/runs')).rejects.toBeInstanceOf(ApiError);expect(clear).toHaveBeenCalledOnce()})
+ it('does not interpret forbidden responses as success or reflect secret errors',async()=>{vi.spyOn(globalThis,'fetch').mockResolvedValue(new Response('sensitive traceback',{status:403}));await expect(makeApi('test').json('/p5/review','POST',{})).rejects.toThrow('not permitted')})
+ it('rejects external paths before sending a credential',async()=>{const fetcher=vi.spyOn(globalThis,'fetch');await expect(makeApi('test').json('//attacker.invalid')).rejects.toThrow('Invalid API path');expect(fetcher).not.toHaveBeenCalled()})
+})
