@@ -1,3 +1,13 @@
+<p align="center">
+  <img src="docs/assets/pramaan-logo.png"
+       alt="PRAMAAN - Revenue Audit"
+       width="760">
+</p>
+
+<p align="center">
+  <strong>Verifiable Financial Audit Infrastructure</strong>
+</p>
+
 # Pramaan (प्रमाण)
 
 Pramaan is a local, synthetic-data prototype for statutory revenue-audit work. It preserves a client-provided sales register, reconciles it with recorded sales, runs deterministic checks against an immutable snapshot, and produces reviewable workpapers.
