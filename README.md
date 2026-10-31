@@ -330,7 +330,7 @@ Revoke using python -m Pramaan.backend.security revoke with the same data root. 
 | PRAMAAN_TOKEN               | unset                 | Stdio MCP bearer credential; do not persist it in source/configuration.                                         |
 | PRAMAAN_MCP_URL             | unset                 | Optional Streamable HTTP endpoint for the supplied console.                                                     |
 | PRAMAAN_MCP_PORT            | 8001                  | Streamable HTTP MCP port.                                                                                       |
-| PRAMAAN_MAX_UPLOAD_BYTES    | 10485760              | Maximum decoded source or evidence upload accepted by local API routes (10 MiB default).                       |
+| PRAMAAN_MAX_UPLOAD_BYTES    | 10485760              | Maximum decoded source or evidence upload accepted by local API routes (10 MiB default).                        |
 | PRAMAAN_DEMO_IRP_PUBLIC_KEY | unset                 | Admin-configured test Ed25519 key for the demo IRP path; not an official integration.                           |
 | PRAMAAN_E2E_INSTANCE        | browser               | Disposable browser-test data instance.                                                                          |
 
