@@ -9,8 +9,8 @@ import uuid
 from decimal import Decimal, InvalidOperation
 from typing import Any
 
-from fastapi import APIRouter, HTTPException
-from pydantic import BaseModel, Field
+from fastapi import APIRouter, HTTPException, Query
+from pydantic import BaseModel, ConfigDict, Field
 
 from . import app as p1
 from .upload_safety import UploadSafetyError, content_type, decode_base64
@@ -27,6 +27,9 @@ def init_p2(db: sqlite3.Connection) -> None:
       CREATE TABLE IF NOT EXISTS p2_invoices(invoice_id TEXT PRIMARY KEY, bill_no TEXT NOT NULL UNIQUE, order_id TEXT NOT NULL REFERENCES p2_sales_orders(order_id), dispatch_id TEXT NOT NULL REFERENCES p2_dispatches(dispatch_id), invoice_date TEXT NOT NULL, net_cents INTEGER NOT NULL, tax_cents INTEGER NOT NULL, gross_cents INTEGER NOT NULL);
       CREATE TABLE IF NOT EXISTS p2_journals(journal_id TEXT PRIMARY KEY, invoice_id TEXT NOT NULL REFERENCES p2_invoices(invoice_id), posted INTEGER NOT NULL CHECK(posted=1), reverses TEXT UNIQUE REFERENCES p2_journals(journal_id));
       CREATE TABLE IF NOT EXISTS p2_journal_lines(journal_id TEXT NOT NULL REFERENCES p2_journals(journal_id), line_no INTEGER NOT NULL, account TEXT NOT NULL, debit_cents INTEGER NOT NULL CHECK(debit_cents>=0), credit_cents INTEGER NOT NULL CHECK(credit_cents>=0), CHECK((debit_cents>0 AND credit_cents=0) OR (credit_cents>0 AND debit_cents=0)), PRIMARY KEY(journal_id,line_no));
+      CREATE TABLE IF NOT EXISTS p2_journal_reversals(reversal_id TEXT PRIMARY KEY REFERENCES p2_journals(journal_id), reverses TEXT NOT NULL REFERENCES p2_journals(journal_id), reason TEXT NOT NULL CHECK(length(reason) BETWEEN 10 AND 500), actor TEXT NOT NULL);
+      CREATE TRIGGER IF NOT EXISTS p2_journal_reversals_no_update BEFORE UPDATE ON p2_journal_reversals BEGIN SELECT RAISE(ABORT,'reversal records are immutable'); END;
+      CREATE TRIGGER IF NOT EXISTS p2_journal_reversals_no_delete BEFORE DELETE ON p2_journal_reversals BEGIN SELECT RAISE(ABORT,'reversal records are immutable'); END;
       CREATE TABLE IF NOT EXISTS p2_receipts(receipt_id TEXT PRIMARY KEY, invoice_id TEXT NOT NULL REFERENCES p2_invoices(invoice_id), amount_cents INTEGER NOT NULL CHECK(amount_cents>0), value_date TEXT NOT NULL, bank_ref TEXT);
       CREATE TABLE IF NOT EXISTS p2_credit_notes(credit_note_id TEXT PRIMARY KEY, invoice_id TEXT NOT NULL REFERENCES p2_invoices(invoice_id), credit_date TEXT NOT NULL, amount_cents INTEGER NOT NULL CHECK(amount_cents>0), reason TEXT NOT NULL);
       CREATE TABLE IF NOT EXISTS p2_evidence(evidence_id TEXT PRIMARY KEY, object_type TEXT NOT NULL, object_id TEXT NOT NULL, sha256 TEXT NOT NULL, content_type TEXT NOT NULL);
@@ -189,8 +192,19 @@ def create_sale(payload: SaleIn) -> dict[str, Any]:
         db.close()
 
 
+class ReversalIn(BaseModel):
+    model_config = ConfigDict(str_strip_whitespace=True, extra="forbid")
+    reason: str = Field(min_length=10, max_length=500)
+
+
 @router.post("/journals/{journal_id}/reverse")
-def reverse_journal(journal_id: str, reversal_id: str) -> dict[str, Any]:
+def reverse_journal(journal_id: str, body: ReversalIn, reversal_id: str = Query(min_length=1, max_length=120)) -> dict[str, Any]:
+    from .security import event_actor, identity
+    caller = identity.get()
+    if caller is not None and caller.get("channel") == "mcp":
+        # Defence in depth: SecurityMiddleware already denies this action on the MCP channel.
+        raise HTTPException(403, "DENIED: journal reversal requires an authenticated human session")
+    actor = event_actor()
     db = db_open()
     try:
         original = db.execute("SELECT invoice_id FROM p2_journals WHERE journal_id=?", (journal_id,)).fetchone()
@@ -199,7 +213,8 @@ def reverse_journal(journal_id: str, reversal_id: str) -> dict[str, Any]:
         original_lines = db.execute("SELECT account,debit_cents,credit_cents FROM p2_journal_lines WHERE journal_id=? ORDER BY line_no", (journal_id,)).fetchall()
         reverse_lines = [(line["account"], line["credit_cents"], line["debit_cents"]) for line in original_lines]
         add_journal(db, reversal_id, original["invoice_id"], reverse_lines, journal_id)
-        p1.log_event(db, "client-demo", "journal_reversed", reversal_id, {"reverses": journal_id})
+        db.execute("INSERT INTO p2_journal_reversals(reversal_id,reverses,reason,actor) VALUES(?,?,?,?)", (reversal_id, journal_id, body.reason, actor))
+        p1.log_event(db, actor, "journal_reversed", reversal_id, {"reverses": journal_id, "reason": body.reason})
         db.commit()
         return {"journal_id": reversal_id, "reverses": journal_id, "balanced": True}
     except sqlite3.IntegrityError as exc:
@@ -320,6 +335,10 @@ def get_journal(journal_id: str) -> dict[str, Any]:
         if not journal:
             raise HTTPException(404, "journal not found")
         lines = [dict(row) for row in db.execute("SELECT * FROM p2_journal_lines WHERE journal_id=? ORDER BY line_no", (journal_id,))]
-        return {"journal_id": journal_id, "invoice_id": journal["invoice_id"], "posted": bool(journal["posted"]), "reverses": journal["reverses"], "lines": lines, "balanced": sum(x["debit_cents"] for x in lines) == sum(x["credit_cents"] for x in lines)}
+        try:
+            record = db.execute("SELECT reason,actor FROM p2_journal_reversals WHERE reversal_id=?", (journal_id,)).fetchone()
+        except sqlite3.OperationalError:
+            record = None
+        return {"journal_id": journal_id, "invoice_id": journal["invoice_id"], "posted": bool(journal["posted"]), "reverses": journal["reverses"], "reversal": dict(record) if record else None, "lines": lines, "balanced": sum(x["debit_cents"] for x in lines) == sum(x["credit_cents"] for x in lines)}
     finally:
         db.close()

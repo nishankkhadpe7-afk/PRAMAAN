@@ -28,7 +28,6 @@ TOOLS = {
     "create_sale_lifecycle": ("client_employee", "POST", "/p2/sales", [], True),
     "upload_sale": ("client_employee", "POST", "/sales", [], True),
     "update_business_record": ("client_employee", "PATCH", "/sales/{sale_id}/records", ["sale_id"], True),
-    "reverse_journal": ("client_employee", "POST", "/p2/journals/{journal_id}/reverse", ["journal_id", "reversal_id"], False),
     "upload_sales_register": ("client_employee", "POST", "/p2/registers", [], True),
     "upload_related_parties": ("client_employee", "POST", "/p2/related-parties", [], True),
     "respond_to_evidence_request": ("client_employee", "POST", "/p3/evidence-requests/{request_id}/evidence", ["request_id"], True),
@@ -112,8 +111,6 @@ async def call_tool(name, arguments):
         method, path = spec[1:3]
         path = path.format(**{key: quote(arguments[key], safe="") for key in spec[3]})
         kwargs = {"json": arguments["payload"]} if spec[4] else {}
-        if name == "reverse_journal":
-            kwargs["params"] = {"reversal_id": arguments["reversal_id"]}
         data = await api(method, path, **kwargs)
         if name.startswith("select_"):
             sheet = {"select_sales_tod": "sales_tod", "select_cutoff_tod": "cutoff_tod", "select_credit_note_tod": "credit_note_tod"}[name]

@@ -23,7 +23,7 @@ class P2ApiGateTests(unittest.TestCase):
         for item in reversed(self.patches):
             item.stop()
 
-    def request(self, method, path, payload=None):
+    def request(self, method, path, payload=None, extra_headers=None):
         body = json.dumps(payload or {}).encode()
         messages = [{"type": "http.request", "body": body, "more_body": False}]
         sent = []
@@ -38,6 +38,7 @@ class P2ApiGateTests(unittest.TestCase):
         scope = {"type": "http", "asgi": {"version": "3.0", "spec_version": "2.3"}, "http_version": "1.1", "method": method, "scheme": "http", "path": raw_path, "raw_path": raw_path.encode(), "query_string": query.encode(), "root_path": "", "headers": [(b"content-type", b"application/json")], "client": ("test", 1234), "server": ("test", 80)}
         from Pramaan.backend.tests.auth_support import headers
         scope["headers"].extend(headers(scope))
+        scope["headers"].extend(extra_headers or [])
         asyncio.run(p1.app(scope, receive, send))
         status = next(m["status"] for m in sent if m["type"] == "http.response.start")
         response_body = b"".join(m.get("body", b"") for m in sent if m["type"] == "http.response.body")
@@ -70,12 +71,55 @@ class P2ApiGateTests(unittest.TestCase):
             db.execute("DELETE FROM p2_journal_lines WHERE journal_id='JRN-1' AND line_no=1")
         db.rollback()
         db.close()
-        status, reversal = self.request("POST", "/p2/journals/JRN-1/reverse?reversal_id=JRN-1-REV")
+        status, reversal = self.request("POST", "/p2/journals/JRN-1/reverse?reversal_id=JRN-1-REV", {"reason": "Customer returned goods; invoice cancelled"})
         self.assertEqual(status, 200, reversal)
         self.assertEqual(reversal["reverses"], "JRN-1")
         reverse_status, reverse_journal = self.request("GET", "/p2/journals/JRN-1-REV")
         self.assertEqual(reverse_status, 200)
         self.assertTrue(reverse_journal["balanced"])
+
+    def _post_sale(self, n=1):
+        self.request("POST", "/p2/customers", {"customer_id": "C-R", "name": "Reversal Customer"})
+        status, sale = self.request("POST", "/p2/sales", {"order_id": f"SO-R{n}", "dispatch_id": f"DSP-R{n}", "invoice_id": f"INV-R{n}", "journal_id": f"JRN-R{n}", "customer_id": "C-R", "order_date": "2026-03-01", "dispatch_date": "2026-03-02", "invoice_date": "2026-03-03", "bill_no": f"B-R{n}", "net_amount": "100.00"})
+        self.assertEqual(status, 200, sale)
+
+    def test_reversal_requires_valid_reason(self):
+        self._post_sale()
+        url = "/p2/journals/JRN-R1/reverse?reversal_id=REV-R1"
+        for payload in (None, {}, {"reason": "short"}, {"reason": " " * 20}, {"reason": "x" * 501}, {"reason": "valid reason here", "extra": 1}):
+            status, _ = self.request("POST", url, payload)
+            self.assertEqual(status, 422, payload)
+        db = sqlite3.connect(p1.DB_PATH)
+        self.assertEqual(db.execute("SELECT COUNT(*) FROM p2_journals WHERE reverses IS NOT NULL").fetchone()[0], 0)
+        db.close()
+
+    def test_reversal_is_denied_on_mcp_channel_even_with_books_writes_enabled(self):
+        self._post_sale()
+        url = "/p2/journals/JRN-R1/reverse?reversal_id=REV-R1"
+        with patch.dict("os.environ", {"PRAMAAN_MCP_BOOKS_WRITES": "allow"}):
+            status, _ = self.request("POST", url, {"reason": "Agent attempted reversal"}, [(b"x-pramaan-channel", b"mcp")])
+        self.assertEqual(status, 403)
+        db = sqlite3.connect(p1.DB_PATH)
+        self.assertEqual(db.execute("SELECT COUNT(*) FROM p2_journals WHERE reverses IS NOT NULL").fetchone()[0], 0)
+        db.close()
+
+    def test_reversal_records_reason_and_authenticated_actor_immutably(self):
+        self._post_sale()
+        status, _ = self.request("POST", "/p2/journals/JRN-R1/reverse?reversal_id=REV-R1", {"reason": "  Duplicate posting found in review  "})
+        self.assertEqual(status, 200)
+        status, journal = self.request("GET", "/p2/journals/REV-R1")
+        self.assertEqual(status, 200)
+        self.assertEqual(journal["reversal"], {"reason": "Duplicate posting found in review", "actor": "regression-client_employee"})
+        status, _ = self.request("POST", "/p2/journals/JRN-R1/reverse?reversal_id=REV-R2", {"reason": "Second attempt on same journal"})
+        self.assertEqual(status, 409)
+        db = sqlite3.connect(p1.DB_PATH)
+        with self.assertRaises(sqlite3.DatabaseError):
+            db.execute("UPDATE p2_journal_reversals SET reason='tampered after the fact' WHERE reversal_id='REV-R1'")
+        db.rollback()
+        with self.assertRaises(sqlite3.DatabaseError):
+            db.execute("DELETE FROM p2_journal_reversals WHERE reversal_id='REV-R1'")
+        db.close()
+        self.assertTrue(p1.verify_log()["valid"])
 
     def test_register_preservation_and_t00_detects_planted_row_and_field_difference(self):
         status, _ = self.request("POST", "/p2/customers", {"customer_id": "C-2", "name": "Match Customer", "gstin": "27AAAAA1111A1Z1"})

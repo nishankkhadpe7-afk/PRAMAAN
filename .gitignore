@@ -13,3 +13,4 @@ web/*.tsbuildinfo
 .env
 .env.*
 !.env.example
+.server-logs/
