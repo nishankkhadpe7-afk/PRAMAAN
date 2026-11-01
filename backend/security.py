@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import argparse
 import hashlib
+import os
 import secrets
 import sqlite3
 import time
@@ -14,7 +15,7 @@ from starlette.routing import Match
 
 identity = ContextVar("pramaan_identity", default=None)
 TOOL_NAMES = {"create_customer", "create_sale_lifecycle", "upload_sale", "update_business_record",
-              "reverse_journal", "upload_sales_register", "upload_related_parties", "respond_to_evidence_request",
+              "upload_sales_register", "upload_related_parties", "respond_to_evidence_request",
               "create_audit_run", "run_tests", "reproduce_workpaper", "get_findings", "select_sales_tod",
               "select_cutoff_tod", "select_credit_note_tod", "get_post_test_changes", "verify_audit_log",
               "get_sale_lifecycle", "import_register_to_workpaper", "list_evidence_requests"}
@@ -48,11 +49,34 @@ TOOL_NAMES |= {"create_export_package", "export_p5_workpaper", "export_memo", "p
 BUSINESS = {"sales", "parties", "evidence", "links", "p2_customers", "p2_sales_orders",
             "p2_dispatches", "p2_invoices", "p2_journals", "p2_journal_lines", "p2_receipts",
             "p2_credit_notes", "p2_evidence", "p2_register_uploads", "p2_register_rows",
-            "p2_related_party_uploads", "p4_record_versions"}
+            "p2_related_party_uploads", "p4_record_versions", "p2_journal_reversals"}
 AUDIT = {"runs", "p2_reconciliations", "p3_audit_runs", "p3_samples", "p3_draws",
          "p3_evidence_requests", "p4_changes"}
 AUDIT |= {"p5_packages", "p5_proposals", "p2_reconciliation_rules"}
 AUDIT |= {"p3_audit_labels"}
+
+
+# Agent (MCP-channel) policy, enforced server-side in SecurityMiddleware.
+# - Reversals are human-session only: no environment switch can enable them for agents.
+# - Operations that create or edit the client's books/records are denied to agents
+#   unless the operator explicitly sets PRAMAAN_MCP_BOOKS_WRITES=allow. Any other
+#   value, including unset or a typo, denies (fail-closed).
+# The channel is declared by the MCP adapter via a request header, so this stops the
+# adapter path and is audit-logged; it does not stop a credential holder who calls
+# the HTTP API directly. Do not issue agent credentials with client write authority
+# unless that trust is intended.
+MCP_ALWAYS_BLOCKED = {"reverse_journal"}
+MCP_BOOKS_WRITES = {"create_sale", "import_sale", "update_business_record"}
+
+
+def agent_action_blocked(action, channel, env=None):
+    if channel != "mcp":
+        return False
+    if action in MCP_ALWAYS_BLOCKED:
+        return True
+    if action in MCP_BOOKS_WRITES:
+        return (os.environ if env is None else env).get("PRAMAAN_MCP_BOOKS_WRITES") != "allow"
+    return False
 
 
 def event_actor():
@@ -221,6 +245,8 @@ class SecurityMiddleware:
         permitted = caller and action in (CLIENT if caller["role"] == "client_employee" else AUDITOR)
         if action == "record_review_decision":
             permitted = permitted and caller.get("human") and channel != "mcp"
+        if permitted and agent_action_blocked(action, channel):
+            permitted = False
         if not permitted:
             security_event(caller, action, "denied", channel, tool)
             return await JSONResponse({"detail": "DENIED: invalid credential or forbidden operation"}, status_code=403 if caller else 401)(scope, receive, send)

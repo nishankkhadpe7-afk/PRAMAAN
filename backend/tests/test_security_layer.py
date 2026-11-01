@@ -96,3 +96,25 @@ class T13AdapterTests(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class AgentChannelPolicyTests(unittest.TestCase):
+    def setUp(self):
+        from Pramaan.backend import security
+        self.security = security
+
+    def test_reversal_is_blocked_for_agents_regardless_of_environment(self):
+        for env in ({}, {"PRAMAAN_MCP_BOOKS_WRITES": "allow"}):
+            self.assertTrue(self.security.agent_action_blocked("reverse_journal", "mcp", env))
+        self.assertFalse(self.security.agent_action_blocked("reverse_journal", "api", {}))
+
+    def test_books_writes_are_denied_to_agents_unless_explicitly_allowed(self):
+        for action in ("create_sale", "import_sale", "update_business_record"):
+            for env in ({}, {"PRAMAAN_MCP_BOOKS_WRITES": ""}, {"PRAMAAN_MCP_BOOKS_WRITES": "ALLOW "}, {"PRAMAAN_MCP_BOOKS_WRITES": "deny"}):
+                self.assertTrue(self.security.agent_action_blocked(action, "mcp", env), (action, env))
+            self.assertFalse(self.security.agent_action_blocked(action, "mcp", {"PRAMAAN_MCP_BOOKS_WRITES": "allow"}))
+            self.assertFalse(self.security.agent_action_blocked(action, "api", {}))
+
+    def test_submission_and_read_tools_stay_available_to_agents(self):
+        for action in ("create_customer", "upload_register", "upload_related_parties", "submit_requested_evidence", "get_sale", "audit_result"):
+            self.assertFalse(self.security.agent_action_blocked(action, "mcp", {}))

@@ -150,7 +150,7 @@ py -m unittest discover -s Pramaan/backend/tests -v
 
 ## P2 business and T00 API
 
-P2 adds `/p2/customers`, `/p2/sales`, `/p2/journals/{journal_id}`, `/p2/journals/{journal_id}/reverse`, `/p2/registers`, `/p2/related-parties`, and `/p2/registers/{upload_id}/reconcile`. A sale request creates the order, dispatch, invoice and a balanced receivable/revenue/tax journal together; receipt, credit note and invoice evidence can be supplied in that request. The sales endpoint can be called repeatedly to create a batch.
+P2 adds `/p2/customers`, `/p2/sales`, `/p2/journals/{journal_id}`, `/p2/journals/{journal_id}/reverse` (requires a 10–500 character `reason` in the JSON body; human session only, denied on the MCP channel), `/p2/registers`, `/p2/related-parties`, and `/p2/registers/{upload_id}/reconcile`. A sale request creates the order, dispatch, invoice and a balanced receivable/revenue/tax journal together; receipt, credit note and invoice evidence can be supplied in that request. The sales endpoint can be called repeatedly to create a batch.
 
 Posted journal headers and lines reject SQL update/delete; corrections append a reversing journal. Register/related-party source bytes go into the content-addressed vault; parsed rows and comparison metadata are held separately. T00 matches exact bill numbers, detects register-only/system-only rows, and compares Bill No, Date, Customer, Gross Amt and GST No. T00 v2 reports missing/invalid comparison inputs separately as PARSE_REVIEW; it does not silently skip them.
 

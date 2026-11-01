@@ -149,7 +149,7 @@ class P4GateTests(unittest.TestCase):
             with socket.socket() as sock:
                 sock.bind(("127.0.0.1", 0)); return sock.getsockname()[1]
         api_port, mcp_port = free_port(), free_port()
-        env = dict(os.environ, PRAMAAN_DATA=str(self.root), PRAMAAN_API_URL=f"http://127.0.0.1:{api_port}", PRAMAAN_MCP_PORT=str(mcp_port))
+        env = dict(os.environ, PRAMAAN_DATA=str(self.root), PRAMAAN_API_URL=f"http://127.0.0.1:{api_port}", PRAMAAN_MCP_PORT=str(mcp_port), PRAMAAN_MCP_BOOKS_WRITES="allow")
         parent = Path(__file__).resolve().parents[3]
         processes = []
         try:
@@ -170,6 +170,7 @@ class P4GateTests(unittest.TestCase):
                     listed = asyncio.run(run())
                     self.assertIn("create_customer", [t["name"] for t in listed["tools"]])
                     self.assertNotIn("create_audit_run", [t["name"] for t in listed["tools"]])
+                    self.assertNotIn("reverse_journal", [t["name"] for t in listed["tools"]])
                     result = asyncio.run(run("create_customer", {"payload": {"customer_id": "EXT-" + transport, "name": "external console"}}))
                     self.assertFalse(result["isError"])
                     sale = {"order_id": "O-" + transport, "dispatch_id": "D-" + transport, "invoice_id": "I-" + transport, "journal_id": "J-" + transport, "customer_id": "EXT-" + transport, "order_date": "2026-03-30", "dispatch_date": "2026-03-30", "invoice_date": "2026-03-30", "bill_no": "B-" + transport, "net_amount": "100.00"}

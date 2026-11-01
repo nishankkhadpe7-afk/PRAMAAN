@@ -18,7 +18,7 @@ An invoice can show a sale was recorded; it does not itself establish that the s
 
 ## Quick start
 
-Prerequisites: Python 3.11+ (tested on 3.14), Node 20.19+ or 22.12+ (tested on Node 24.14.0), and npm. Run from this repository directory.
+Prerequisites: Python 3.11+ (tested on 3.11.9 and 3.13.14), Node 20.19+ or 22.12+ (tested on Node 20.20.2), and npm. Run from this repository directory.
 
 ```powershell
 py -m venv .venv-p4
@@ -55,6 +55,8 @@ $env:PYTHONPATH = (Split-Path -Parent $PWD.Path)
 ```
 
 reset reloads only .demo/runtime; it does not change source fixtures or backend/data. It creates synthetic business data, revocable credentials, preserved sources, reconciliation data, and a sample audit run. Do not reset an instance whose work must be retained.
+
+> **Important — Python package import.** Backend modules import themselves as `from Pramaan.backend import ...`, but there is no `Pramaan/` directory at the repository root. `START_PRAMAAN.bat` creates a small package shim at `.demo/launcher/Pramaan/__init__.py` that maps `Pramaan` to this repository root. If you start services manually instead of using the launcher, create that shim first (or set `PYTHONPATH` to a directory containing a `Pramaan` package whose `__init__.py` sets `__path__` to this repo root), otherwise `unittest discover`, `demo`, `security`, and other `Pramaan.backend.*` invocations will fail with `ModuleNotFoundError: No module named 'Pramaan'`.
 
 ## Demonstration
 
@@ -249,7 +251,7 @@ flowchart LR
 
 | Tool group              | Tools                                                                                                                                                                   |
 | ----------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Client records          | create_customer, create_sale_lifecycle, upload_sale, update_business_record, reverse_journal                                                                            |
+| Client records          | create_customer, create_sale_lifecycle*, upload_sale*, update_business_record*                                                                                          |
 | Client sources/evidence | upload_sales_register, upload_related_parties, respond_to_evidence_request                                                                                              |
 | Audit execution         | create_audit_run, run_tests, reproduce_workpaper, import_register_to_workpaper, verify_audit_log                                                                        |
 | Audit investigation     | get_findings, select_sales_tod, select_cutoff_tod, select_credit_note_tod, get_post_test_changes, get_sale_lifecycle, get_witnesses, trace_related_parties, get_journal |
@@ -258,6 +260,12 @@ flowchart LR
 | Shared                  | list_evidence_requests                                                                                                                                                  |
 
 Schemas allow documented IDs and, where necessary, a payload; extra properties are rejected. List results support limit (default 20, maximum 100) and offset.
+
+**Agent write policy (prototype).**
+- `reverse_journal` is not an MCP tool. The reversal endpoint requires a 10–500 character reason, records the authenticated actor and reason in an immutable `p2_journal_reversals` row, and is denied server-side on the MCP channel even if called directly.
+- Tools marked `*` create or edit the client's books and records. They are denied to agents by default and work only when the operator sets `PRAMAAN_MCP_BOOKS_WRITES=allow` (any other value denies). Every attempt, allowed or denied, is written to the audit log with its channel and tool name.
+- There is no human-approval queue for agent writes yet; that is roadmap. The channel is declared by the MCP adapter in a request header, so this policy governs the adapter path. It does not stop someone who holds a client credential from calling the HTTP API directly, so do not issue client credentials to agents that should not write.
+- Auditor-role identities have no tools that change client books or records; their only decision-related tool, `propose_review_decision`, records a proposal that a human reviewer must decide.
 
 ### Connect locally
 
@@ -336,10 +344,17 @@ Revoke using python -m Pramaan.backend.security revoke with the same data root. 
 
 ```powershell
 $env:PYTHONPATH = (Split-Path -Parent $PWD.Path)
-.\.venv-p4\Scripts\python.exe -m unittest discover -s backend/tests -v
-.\.venv-p4\Scripts\python.exe -m compileall -q backend
-.\.venv-p4\Scripts\python.exe -m Pramaan.backend.demo rehearse --name rehearsal
-.\.venv-p4\Scripts\python.exe -m Pramaan.backend.release_verify --require-quality --output .demo/release-evidence.json
+# Backend modules import as `from Pramaan.backend ...`; the repo root has no
+# `Pramaan/` directory, so create the package shim that START_PRAMAAN.bat uses.
+$launcherDir = Join-Path $PWD.Path '.demo\launcher'
+$shimDir = Join-Path $launcherDir 'Pramaan'
+if (-not (Test-Path -LiteralPath $shimDir)) { New-Item -ItemType Directory -Path $shimDir | Out-Null }
+Set-Content -Path (Join-Path $shimDir '__init__.py') -Value ('__path__ = [r"' + $PWD.Path + '"]')
+$env:PYTHONPATH = $launcherDir + ';' + $env:PYTHONPATH
+\.venv-p4\Scripts\python.exe -m unittest discover -s backend/tests -v
+\.venv-p4\Scripts\python.exe -m compileall -q backend
+\.venv-p4\Scripts\python.exe -m Pramaan.backend.demo rehearse --name rehearsal
+\.venv-p4\Scripts\python.exe -m Pramaan.backend.release_verify --require-quality --output .demo/release-evidence.json
 Push-Location web
 npm run build
 npm run typecheck
@@ -400,3 +415,4 @@ Read [PROGRESS.md](PROGRESS.md), [PHASES.md](PHASES.md), [MASTER.md](MASTER.md),
 | [sample_uploads](sample_uploads/) | Synthetic register/evidence examples and test packs.                                         |
 | [README-SYN.md](README-SYN.md)    | Generator/checker specification, not a claim that every specified feature is implemented.    |
 | [DEMO.md](DEMO.md)                | Accurate live walkthrough.                                                                   |
+
