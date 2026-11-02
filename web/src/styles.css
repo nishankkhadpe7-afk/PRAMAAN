@@ -859,8 +859,10 @@ details[open]>summary{margin-bottom:10px}
   border-radius:3px;
   letter-spacing:0.5px;
 }
-.inspector-tag.critical{background:rgba(244, 63, 94, 0.2);color:#f43f5e;border:1px solid #f43f5e}
-.inspector-tag.warning{background:rgba(245, 158, 11, 0.2);color:#f59e0b;border:1px solid #f59e0b}
+.inspector-tag.critical{background:rgba(239, 68, 68, 0.2);color:#ef4444;border:1px solid #ef4444}
+.inspector-tag.serious{background:rgba(249, 115, 22, 0.2);color:#f97316;border:1px solid #f97316}
+.inspector-tag.warning{background:rgba(234, 179, 8, 0.2);color:#eab308;border:1px solid #eab308}
+.inspector-tag.info{background:rgba(168, 85, 247, 0.2);color:#a855f7;border:1px solid #a855f7}
 .inspector-tag.verified,.inspector-tag.normal{background:rgba(203, 161, 88, 0.2);color:var(--gold);border:1px solid var(--gold-border)}
 .close-btn{
   background:none;
@@ -887,6 +889,71 @@ details[open]>summary{margin-bottom:10px}
   font-family:var(--mono);
   font-size:11.5px;
   color:var(--gold);
+}
+.inspector-chips{
+  display:flex;
+  flex-wrap:wrap;
+  gap:4px;
+  margin-top:4px;
+}
+.inspector-chips code{
+  font-size:10.5px;
+  background:rgba(255, 255, 255, 0.06);
+  padding:2px 5px;
+  border-radius:3px;
+}
+.inspector-findings{
+  margin-top:10px;
+  padding-top:10px;
+  border-top:1px solid rgba(255, 255, 255, 0.08);
+}
+.inspector-findings h5{
+  margin:0 0 8px;
+  font-size:12px;
+  color:var(--gold);
+}
+.inspector-findings ul{
+  list-style:none;
+  padding:0;
+  margin:0;
+  display:grid;
+  gap:6px;
+  max-height:140px;
+  overflow-y:auto;
+}
+.inspector-findings li{
+  background:#090a0d;
+  padding:6px 8px;
+  border-radius:4px;
+  border:1px solid rgba(255, 255, 255, 0.05);
+}
+.inspector-findings li p{
+  margin:4px 0 0;
+  font-size:11px;
+  color:var(--muted);
+}
+.finding-chip{
+  font-family:var(--mono);
+  font-size:9.5px;
+  padding:1px 4px;
+  border-radius:2px;
+  display:inline-block;
+  background:rgba(255, 255, 255, 0.1);
+  color:var(--ink);
+}
+.finding-chip.INCONSISTENT,.finding-chip.IMPOSSIBLE{background:rgba(239, 68, 68, 0.2);color:#ef4444}
+.finding-chip.GAP,.finding-chip.UNAVAILABLE,.finding-chip.UNVERIFIED{background:rgba(249, 115, 22, 0.2);color:#f97316}
+.finding-chip.REVIEW{background:rgba(234, 179, 8, 0.2);color:#eab308}
+.finding-chip.DISCLOSED_RELATED_PARTY{background:rgba(168, 85, 247, 0.2);color:#a855f7}
+.empty-suspicious-state{
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  height:420px;
+  color:var(--subtle);
+  font-size:14px;
+  text-align:center;
+  padding:20px;
 }
 .inspector-details{
   font-size:11.5px;
@@ -916,13 +983,27 @@ details[open]>summary{margin-bottom:10px}
 .graph-legend-strip span{display:flex;align-items:center;gap:6px}
 .lg-dot{width:8px;height:8px;border-radius:50%;display:inline-block}
 .lg-dot.company{background:var(--gold)}
-.lg-dot.customer{background:#718096}
-.lg-dot.warning{background:var(--warning)}
-.lg-dot.critical{background:var(--error)}
-.lg-line.dashed{
+.lg-dot.customer{background:#64748b}
+.lg-dot.invoice{background:#d97706}
+.lg-dot.disclosed{background:#a855f7}
+.lg-dot.inconsistent{background:#ef4444}
+.lg-dot.impossible{background:#ff0033}
+.lg-dot.evidence-gap{background:#f97316}
+.lg-dot.review{background:#eab308}
+.lg-line.dashed-circular{
   width:16px;
   height:2px;
-  border-top:2px dashed #f59e0b;
+  border-top:2px dashed #ef4444;
+}
+.lg-line.reversal{
+  width:16px;
+  height:2px;
+  background:#0d9488;
+}
+.lg-line.subtle{
+  width:16px;
+  height:1px;
+  background:rgba(148, 163, 184, 0.35);
 }
 
 /* Cryptographic Chain Styling */
