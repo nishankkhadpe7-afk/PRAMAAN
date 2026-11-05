@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import json
+import secrets
 import sqlite3
 from datetime import date, datetime, timedelta
 from decimal import Decimal
@@ -19,6 +20,8 @@ from .upload_safety import UploadSafetyError, content_type, decode_base64
 router = APIRouter(prefix="/p3", tags=["P3 audit, sampling, evidence requests"])
 RULESET_PATH = Path(__file__).with_name("p3_ruleset.yaml")
 SAMPLER_VERSION = "p3-hash-ranked-v1"
+# Code identity of the deterministic engine; a cached reproduction verdict is valid only for it (H7).
+ENGINE_FINGERPRINT = p1.digest(b"".join(Path(__file__).with_name(name).read_bytes() for name in ("p3.py", "p3_crypto.py", "app.py")))
 
 
 def db_open() -> sqlite3.Connection:
@@ -35,7 +38,15 @@ def db_open() -> sqlite3.Connection:
       CREATE TABLE IF NOT EXISTS p3_samples(run_id TEXT NOT NULL, sheet TEXT NOT NULL, item_no INTEGER NOT NULL, object_ref TEXT NOT NULL, stratum TEXT NOT NULL, selection_reason TEXT NOT NULL, random_draw TEXT, inclusion_probability REAL, PRIMARY KEY(run_id,sheet,object_ref));
       CREATE TABLE IF NOT EXISTS p3_draws(run_id TEXT NOT NULL, sheet TEXT NOT NULL, object_ref TEXT NOT NULL, draw TEXT NOT NULL, rank INTEGER NOT NULL, selected INTEGER NOT NULL, PRIMARY KEY(run_id,sheet,object_ref));
       CREATE TABLE IF NOT EXISTS p3_evidence_requests(request_id TEXT PRIMARY KEY, run_id TEXT NOT NULL, sheet TEXT NOT NULL, sample_ref TEXT NOT NULL, object_type TEXT NOT NULL, required_docs TEXT NOT NULL, uploaded_docs TEXT NOT NULL, status TEXT NOT NULL);
+      CREATE TABLE IF NOT EXISTS p3_run_verifications(run_id TEXT NOT NULL REFERENCES p3_audit_runs(run_id), result_sha TEXT NOT NULL, snapshot_hash TEXT NOT NULL, engine TEXT NOT NULL, verified_at TEXT NOT NULL, PRIMARY KEY(run_id,result_sha,snapshot_hash,engine));
       CREATE TABLE IF NOT EXISTS p3_evidence(evidence_id TEXT PRIMARY KEY, request_id TEXT NOT NULL REFERENCES p3_evidence_requests(request_id), object_type TEXT NOT NULL, object_id TEXT NOT NULL, document_type TEXT NOT NULL, sha256 TEXT NOT NULL, content_type TEXT NOT NULL, controller TEXT NOT NULL, acquisition_channel TEXT NOT NULL, independently_verified INTEGER NOT NULL DEFAULT 0, verification_method TEXT);
+      CREATE TRIGGER IF NOT EXISTS p3_samples_no_update BEFORE UPDATE ON p3_samples BEGIN SELECT RAISE(ABORT,'samples are immutable'); END;
+      CREATE TRIGGER IF NOT EXISTS p3_samples_no_delete BEFORE DELETE ON p3_samples BEGIN SELECT RAISE(ABORT,'samples are immutable'); END;
+      CREATE TRIGGER IF NOT EXISTS p3_draws_no_update BEFORE UPDATE ON p3_draws BEGIN SELECT RAISE(ABORT,'sampling draws are immutable'); END;
+      CREATE TRIGGER IF NOT EXISTS p3_draws_no_delete BEFORE DELETE ON p3_draws BEGIN SELECT RAISE(ABORT,'sampling draws are immutable'); END;
+      CREATE TRIGGER IF NOT EXISTS p3_requests_no_delete BEFORE DELETE ON p3_evidence_requests BEGIN SELECT RAISE(ABORT,'evidence requests are retained'); END;
+      CREATE TRIGGER IF NOT EXISTS p3_evidence_no_update BEFORE UPDATE ON p3_evidence BEGIN SELECT RAISE(ABORT,'received evidence is immutable'); END;
+      CREATE TRIGGER IF NOT EXISTS p3_evidence_no_delete BEFORE DELETE ON p3_evidence BEGIN SELECT RAISE(ABORT,'received evidence is immutable'); END;
     """)
     return db
 
@@ -91,7 +102,9 @@ def load_ruleset() -> dict[str, Any]:
 class AuditRunIn(BaseModel):
     period_start: str
     period_end: str
-    sampling_seed: str = Field(min_length=16)
+    # H1: omit to let the server draw an unpredictable seed. A supplied seed is only for
+    # deliberately re-performing a documented selection and is recorded as such.
+    sampling_seed: str | None = Field(default=None, min_length=16, max_length=200)
     audit_name: str | None = Field(default=None, min_length=3, max_length=120)
     upload_id: str | None = None
 
@@ -160,14 +173,65 @@ def _dataset_rows(db: sqlite3.Connection) -> tuple[str | None, dict[str, list[di
     return dataset_id, grouped
 
 
+def new_sampling_seed() -> str:
+    """Unpredictable 128-bit seed; the auditee cannot pre-compute the hash-ranked selection."""
+    return "srv-" + secrets.token_hex(16)
+
+
+def readable_date(value: Any) -> bool:
+    try:
+        date.fromisoformat(value)
+        return True
+    except (TypeError, ValueError):
+        return False
+
+
+def sanitize_dates(snapshot: dict[str, Any]) -> tuple[dict[str, Any], list[dict[str, Any]]]:
+    """C1: keep one unreadable record from blocking the whole audit.
+
+    Records whose dates cannot be read are withheld from date-based tests and sampling and
+    are surfaced instead as top-severity INCONSISTENT observations, so they cannot slip
+    through unnoticed. A snapshot with only readable dates is returned unchanged, which
+    keeps every previously stored run reproducible bit for bit.
+    """
+    bad_invoices = [i for i in snapshot["invoices"] if not readable_date(i.get("invoice_date"))]
+    bad_ids = {i["invoice_id"] for i in bad_invoices}
+    bad_notes = [n for n in snapshot["credit_notes"] if not readable_date(n.get("credit_date")) or not readable_date(n.get("invoice_date")) or n.get("invoice_id") in bad_ids]
+    upload = snapshot.get("related_party_upload")
+    bad_relations = [r for r in (upload or {}).get("records", []) if any(r.get(k) and not readable_date(r[k]) for k in ("valid_from", "valid_to"))]
+    if not (bad_invoices or bad_notes or bad_relations):
+        return snapshot, []
+    findings = []
+    for invoice in bad_invoices:
+        findings.append(make_finding("T03", invoice["invoice_id"], "INCONSISTENT", "The recorded invoice date is not a readable calendar date, so this sale was excluded from cut-off, period and sampling tests. Correct the record and rerun the audit.", category="UNREADABLE_DATE", bill_no=invoice.get("bill_no"), recorded_value=str(invoice.get("invoice_date"))[:40]))
+    for note in bad_notes:
+        findings.append(make_finding("T09", note["credit_note_id"], "INCONSISTENT", "A credit note or its invoice has an unreadable date, so the note was excluded from credit-note tests and sampling. Correct the record and rerun the audit.", category="UNREADABLE_DATE", invoice_id=note.get("invoice_id"), recorded_value=str(note.get("credit_date"))[:40]))
+    for relation in bad_relations:
+        findings.append(make_finding("T01", str(relation.get("customer_id", relation.get("party_id", "unknown"))), "GAP", "A related-party disclosure has an unreadable validity date and was not applied. Obtain a corrected disclosure.", category="UNREADABLE_DATE"))
+    clean = dict(snapshot)
+    clean["invoices"] = [i for i in snapshot["invoices"] if i["invoice_id"] not in bad_ids]
+    bad_note_ids = {n["credit_note_id"] for n in bad_notes}
+    clean["credit_notes"] = [n for n in snapshot["credit_notes"] if n["credit_note_id"] not in bad_note_ids]
+    if bad_relations:
+        clean["related_party_upload"] = {**upload, "records": [r for r in upload["records"] if r not in bad_relations]}
+    return clean, findings
+
+
 def parse_date(value: str) -> date:
     try:
         return date.fromisoformat(value)
     except (TypeError, ValueError) as exc:
-        raise HTTPException(422, f"date must be ISO YYYY-MM-DD: {value}") from exc
+        raise HTTPException(422, "dates must be ISO YYYY-MM-DD") from exc
 
 
-def build_snapshot(db: sqlite3.Connection) -> dict[str, Any]:
+def snapshot_like(db: sqlite3.Connection, reference: dict[str, Any]) -> dict[str, Any]:
+    """Build the current snapshot in the same shape as ``reference`` so a run frozen before
+    vault-referenced registers (H7) is not reported as changed merely because of the format."""
+    legacy = any("source_base64" in r for r in reference.get("register_uploads", []))
+    return build_snapshot(db, inline_sources=legacy)
+
+
+def build_snapshot(db: sqlite3.Connection, inline_sources: bool = False) -> dict[str, Any]:
     dataset_id, source_rows = _dataset_rows(db)
     dataset_manifest = None
     if dataset_id:
@@ -214,7 +278,7 @@ def build_snapshot(db: sqlite3.Connection) -> dict[str, Any]:
     related_upload = db.execute("SELECT upload_id,sha256,period,parsed_json FROM p2_related_party_uploads ORDER BY rowid DESC LIMIT 1").fetchone()
     related = None if related_upload is None else {"upload_id": related_upload["upload_id"], "sha256": related_upload["sha256"], "period": related_upload["period"], "records": json.loads(related_upload["parsed_json"])}
     from .p5 import capture_registers
-    registers = capture_registers(db)
+    registers = capture_registers(db, inline_sources)
     return {"invoices": invoices, "credit_notes": credit_notes, "p2_evidence": p2_evidence, "p3_evidence": p3_evidence, "related_party_upload": related, "dataset_id": dataset_id, "dataset_manifest": dataset_manifest, "source_data": source_rows, "synthetic_fixture": bool(dataset_id), **({"register_uploads": registers} if registers else {})}
 
 
@@ -287,9 +351,11 @@ def calculate(snapshot: dict[str, Any], period_start: str, period_end: str, seed
     start, end = parse_date(period_start), parse_date(period_end)
     if start > end:
         raise HTTPException(422, "period_start must not follow period_end")
+    source_snapshot = snapshot
+    snapshot, quality_findings = sanitize_dates(snapshot)
     invoices = snapshot["invoices"]
     invoice_by_id = {invoice["invoice_id"]: invoice for invoice in invoices}
-    findings: list[dict[str, Any]] = []
+    findings: list[dict[str, Any]] = list(quality_findings)
     related_by_invoice: dict[str, list[dict[str, Any]]] = {}
 
     # T01: disclosed relationships are dated and sourced; they are classification inputs, not fraud findings.
@@ -657,7 +723,7 @@ def calculate(snapshot: dict[str, Any], period_start: str, period_end: str, seed
     }
     findings.sort(key=lambda f: (f["test_id"], f["object_ref"], f["finding_id"]))
     manifest = snapshot.get("dataset_manifest")
-    result = {"run_id": run_id, "snapshot_hash": p1.digest(p1.canonical(snapshot)), "source_dataset_id": manifest["dataset_id"] if manifest else None, "source_manifest_sha256": manifest["manifest_sha256"] if manifest else None, "ruleset_version": ruleset["version"], "ruleset_hash": p1.digest(p1.canonical(ruleset)), "sampler_version": ruleset["sampler_version"], "sampler_tie_break": "lexicographic draw hash, then object reference; draw=SHA-256(seed UTF-8 + NUL + object reference UTF-8)", "sampling_seed": seed, "period_start": period_start, "period_end": period_end, "findings": findings, "sample_items": sample_items, "coverage": coverage_report, "rule_coverage": coverage}
+    result = {"run_id": run_id, "snapshot_hash": p1.digest(p1.canonical(source_snapshot)), "source_dataset_id": manifest["dataset_id"] if manifest else None, "source_manifest_sha256": manifest["manifest_sha256"] if manifest else None, "ruleset_version": ruleset["version"], "ruleset_hash": p1.digest(p1.canonical(ruleset)), "sampler_version": ruleset["sampler_version"], "sampler_tie_break": "lexicographic draw hash, then object reference; draw=SHA-256(seed UTF-8 + NUL + object reference UTF-8)", "sampling_seed": seed, "period_start": period_start, "period_end": period_end, "findings": findings, "sample_items": sample_items, "coverage": coverage_report, "rule_coverage": coverage}
     draw_rows = [{"sheet": "sales_tod", "object_ref": ref, "draw": draw, "rank": rank, "selected": int(rank < random_count)} for rank, (draw, ref) in enumerate(sales_draws)] + [{"sheet": "credit_note_tod", "object_ref": ref, "draw": draw, "rank": rank, "selected": int(rank < random_cn_count)} for rank, (draw, ref) in enumerate(cn_draws)]
     return result, sample_items, draw_rows
 
@@ -672,9 +738,10 @@ def save_run(db: sqlite3.Connection, snapshot: dict[str, Any], period_start: str
     ruleset_json = p1.canonical(ruleset).decode()
     run_id = "P3-" + p1.digest(p1.canonical([snapshot_hash, seed, ruleset["version"], ruleset_json, ruleset["sampler_version"], period_start, period_end]))[:18]
     result, samples, draws = calculate(snapshot, period_start, period_end, seed, ruleset, run_id)
-    db.execute("INSERT OR IGNORE INTO p3_audit_runs VALUES(?,?,?,?,?,?,?,?,?,?,?)", (run_id, snapshot_hash, snapshot_json, ruleset_json, ruleset["version"], ruleset["sampler_version"], seed, period_start, period_end, p1.canonical(result).decode(), rerun_of))
-    db.execute("DELETE FROM p3_samples WHERE run_id=?", (run_id,))
-    db.execute("DELETE FROM p3_draws WHERE run_id=?", (run_id,))
+    inserted = db.execute("INSERT OR IGNORE INTO p3_audit_runs VALUES(?,?,?,?,?,?,?,?,?,?,?)", (run_id, snapshot_hash, snapshot_json, ruleset_json, ruleset["version"], ruleset["sampler_version"], seed, period_start, period_end, p1.canonical(result).decode(), rerun_of)).rowcount
+    if not inserted:
+        # B5: the identical run already exists; its samples, draws and requests are immutable.
+        return result
     for index, sample in enumerate(samples, 1):
         db.execute("INSERT INTO p3_samples VALUES(?,?,?,?,?,?,?,?)", (run_id, sample["sheet"], index, sample["object_ref"], sample["stratum"], sample["selection_reason"], sample["random_draw"], sample["inclusion_probability"]))
     for draw in draws:
@@ -697,7 +764,8 @@ def create_audit_run(payload: AuditRunIn) -> dict[str, Any]:
     try:
         snapshot = build_snapshot(db)
         register = selected_register(snapshot, payload.upload_id)
-        result = save_run(db, snapshot, payload.period_start, payload.period_end, payload.sampling_seed, ruleset)
+        seed = payload.sampling_seed or new_sampling_seed()
+        result = save_run(db, snapshot, payload.period_start, payload.period_end, seed, ruleset)
         if any(r["source_integrity"] != "VALID" for r in snapshot.get("register_uploads", [])):
             raise HTTPException(409, "source register integrity failure")
         name = payload.audit_name or default_audit_name(payload.period_start, payload.period_end)
@@ -786,7 +854,6 @@ def submit_requested_evidence(request_id: str, payload: EvidenceUploadIn) -> dic
         except UploadSafetyError as exc:
             raise HTTPException(422, "invalid or oversized evidence") from exc
         sha = p1.digest(content)
-        (p1.VAULT / sha).write_bytes(content)
         object_id = request["sample_ref"]
         db.execute("INSERT INTO p3_evidence VALUES(?,?,?,?,?,?,?,?,?,?,?)", (payload.evidence_id, request_id, request["object_type"], object_id, payload.document_type, sha, safe_content_type, payload.controller, payload.acquisition_channel, 0, None))
         uploaded = sorted(json.loads(request["uploaded_docs"]) + [payload.document_type])
@@ -802,6 +869,7 @@ def submit_requested_evidence(request_id: str, payload: EvidenceUploadIn) -> dic
                 sibling_status = "fulfilled" if set(sibling_required) <= set(sibling_uploaded) else "partially_fulfilled"
                 db.execute("UPDATE p3_evidence_requests SET uploaded_docs=?,status=? WHERE request_id=?", (p1.canonical(sibling_uploaded).decode(), sibling_status, sibling["request_id"]))
                 also_satisfied.append(sibling["request_id"])
+        p1.store_blob(content)
         p1.log_event(db, "client-demo", "evidence_request_fulfilled" if status == "fulfilled" else "evidence_received", request_id, {"document_type": payload.document_type, "sha256": sha, "independently_verified": False, "also_satisfied_requests": also_satisfied})
         db.commit()
         return {"request_id": request_id, "evidence_id": payload.evidence_id, "sha256": sha, "uploaded_docs": uploaded, "required_docs": required, "status": status, "independently_verified": False, "also_satisfied_requests": also_satisfied}

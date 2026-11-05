@@ -212,7 +212,7 @@ class P6IntegrationTests(unittest.TestCase):
         self.assertIn(package["package_id"], [p["package_id"] for p in saved["packages"]])
         self.assertEqual(next(p for p in saved["packages"] if p["package_id"] == package["package_id"])["upload_id"], self.upload)
         self.assertEqual(self.request("POST", "/p2/customers", body={"customer_id": "FORBIDDEN", "name": "forbidden"}).status_code, 403)
-        self.assertTrue(any(e["action"] == "security_denied" and e["actor"] == "ui-auditor" for e in self.request("GET", "/ui/events").json()["events"]))
+        self.assertTrue(any(e["decision"] == "denied" and e["subject"] == "ui-auditor" for e in self.request("GET", "/ui/events").json()["access_denials"]))
 
     def test_reset_is_bounded_preserves_fixture_hashes_and_source_values(self):
         for name in ("../backend/data", "C:\\Windows", "..", ""):

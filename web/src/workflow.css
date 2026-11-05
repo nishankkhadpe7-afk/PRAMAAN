@@ -1,6 +1,6 @@
 /* ===== Samples, evidence requests and integrity (auditor.tsx, client.tsx) ===== */
-.sample-facts{display:flex;flex-wrap:wrap;gap:12px;margin-bottom:18px;align-items:stretch}
-.sample-facts>div:not(.sample-bases){border:1px solid var(--line);border-radius:10px;padding:10px 14px;background:var(--surface-2);min-width:120px;display:flex;flex-direction:column;gap:2px}
+.sample-facts{display:flex;flex-wrap:wrap;gap:12px;margin-bottom:20px;align-items:stretch}
+.sample-facts>div:not(.sample-bases){border:1px solid var(--line);border-radius:10px;padding:12px 16px;background:var(--surface-2);min-width:140px;display:flex;flex:1 1 150px;flex-direction:column;gap:3px}
 .sample-facts span{font-size:14px;color:var(--subtle)}
 .sample-facts strong{font-size:22px;font-weight:600;font-variant-numeric:tabular-nums}
 .sample-bases{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin-left:auto}
@@ -27,7 +27,7 @@
 .file-chip{min-height:28px;padding:3px 10px;border-radius:9999px;font-size:14px;gap:6px}
 .file-chip em{font-style:normal;font-size:12.5px;padding:1px 6px;border-radius:9999px;background:rgba(57,135,229,.2);color:var(--ink)}
 
-.doc-checklist{display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:10px;margin-bottom:20px}
+.doc-checklist{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:12px;margin-bottom:20px}
 .doc-check{display:flex;gap:10px;align-items:center;border:1px solid var(--line);border-radius:10px;padding:12px;background:var(--surface-2)}
 .doc-check strong{display:block;font-size:15.5px;font-weight:500}
 .doc-check.have svg{color:var(--good)}
@@ -66,11 +66,11 @@
 .model-pill{display:inline-flex;align-items:center;gap:6px;padding:4px 10px;border-radius:9999px;border:1px solid var(--line-strong);background:var(--surface-2);font-size:14px;color:var(--muted);white-space:nowrap}
 .model-pill svg{color:var(--viz-7)}
 .assistant-answer.intro{margin-bottom:16px}
-.assistant-thread{display:grid;gap:16px;margin-bottom:16px}
+.assistant-thread{display:grid;gap:18px;margin-bottom:18px}
 .turn{display:grid;gap:8px}
-.turn-q{justify-self:end;max-width:80%;display:flex;gap:8px;align-items:flex-start;padding:10px 14px;border-radius:12px 12px 4px 12px;background:rgba(94,106,210,.18);border:1px solid rgba(94,106,210,.45);font-size:15.5px;color:var(--ink)}
+.turn-q{justify-self:end;max-width:min(80%,780px);display:flex;gap:8px;align-items:flex-start;padding:11px 15px;border-radius:12px 12px 4px 12px;background:rgba(94,106,210,.18);border:1px solid rgba(94,106,210,.45);font-size:15.5px;color:var(--ink)}
 .turn-q svg{flex-shrink:0;margin-top:3px;color:var(--primary-hover)}
-.turn-a{border:1px solid var(--line);background:var(--surface-2);border-radius:4px 12px 12px 12px;padding:14px 16px;font-size:15.5px}
+.turn-a{max-width:100%;border:1px solid var(--line);background:var(--surface-2);border-radius:4px 12px 12px 12px;padding:16px 18px;font-size:15.5px;overflow-wrap:anywhere}
 .turn-a>small{display:block;margin-top:10px;font-size:13.5px}
 .turn-a.waiting,.turn-a.failed,.turn-a.thinking{display:flex;gap:10px;align-items:center;color:var(--muted)}
 .turn-a.waiting svg{color:var(--warning)}
@@ -91,7 +91,7 @@
 .suggestions button{min-height:32px;padding:6px 12px;border-radius:9999px;font-size:14.5px;font-weight:400;color:var(--muted);text-align:left}
 .suggestions button:hover:not(:disabled){color:var(--ink);border-color:var(--primary)}
 @media(prefers-reduced-motion:reduce){.dots i{animation:none}}
-@media(max-width:768px){.turn-q{max-width:100%}}
+@media(max-width:768px){.turn-q{max-width:100%}.turn-a{padding:14px}.suggestions button{max-width:100%;white-space:normal}}
 .ai-disclaimer{display:flex;align-items:center;gap:6px;justify-content:center;margin-top:10px;font-size:13.5px;color:var(--subtle);text-align:center}
 .ai-disclaimer svg{flex-shrink:0}
 
@@ -109,3 +109,4 @@
 .check-card.warn{border-color:rgba(250,178,25,.5)}
 .check-card.warn .check-title svg{color:var(--warning)}
 @media(max-width:768px){.exposure-kpis{grid-template-columns:1fr}}
+@media(max-width:480px){.sample-facts>div:not(.sample-bases){min-width:calc(50% - 6px);padding:10px 12px}.sample-bases{width:100%}.basis-pill{white-space:normal}.doc-checklist{grid-template-columns:1fr}.integrity-banner{padding:14px}.check-grid{grid-template-columns:1fr}.turn-q{justify-self:stretch}.turn-a.failed{align-items:flex-start;flex-wrap:wrap}.turn-a.failed button{width:100%;margin-left:0}.exposure-kpis>div{padding:12px}}

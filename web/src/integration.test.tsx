@@ -3,6 +3,7 @@ import userEvent from '@testing-library/user-event'
 import {MemoryRouter} from 'react-router-dom'
 import {beforeEach,it,expect,vi} from 'vitest'
 import {App} from './App'
+import {ApiError} from './api'
 
 const session=vi.hoisted(()=>({identity:{subject:'integration-auditor',role:'auditor',human:false},api:{json:vi.fn(),download:vi.fn()},signOut:vi.fn()}))
 vi.mock('./session',()=>({useSession:()=>session}))
@@ -33,5 +34,16 @@ it('clears old package details during loading, failure, and deselection',async()
 
 it('uses source-backed audit defaults and posts the values shown in the form',async()=>{
  session.api.json.mockImplementation(async(path:string,method:string,body:unknown)=>{if(path==='/ui/audit-setup')return {invoice_count:4,register_count:1,register_row_count:4,unreconciled_register_count:0,invoice_date_start:'2023-05-01',invoice_date_end:'2023-08-15',period_start:'2023-05-01',period_end:'2023-08-15'};if(path==='/p3/audit-runs'&&method==='POST')return {run_id:'R1',...body as object};if(path.startsWith('/ui/runs/R1/context'))return context;throw new Error('Unexpected API path: '+path)});
- mount('/auditor/runs/new');await screen.findByLabelText('Period start');expect(screen.getByLabelText('Period start')).toHaveValue('2023-05-01');expect(screen.getByLabelText('Period end')).toHaveValue('2023-08-15');const seed=(screen.getByLabelText('Sampling seed') as HTMLInputElement).value;expect(seed.length).toBeGreaterThanOrEqual(16);await userEvent.click(screen.getByRole('button',{name:'Create audit run'}));await screen.findByRole('heading',{name:'Cedar Wholesale audit'});expect(session.api.json).toHaveBeenCalledWith('/p3/audit-runs','POST',{period_start:'2023-05-01',period_end:'2023-08-15',sampling_seed:seed,audit_name:'Revenue audit - May 2023 to Aug 2023',upload_id:null});
+ mount('/auditor/runs/new');await screen.findByLabelText('Period start');expect(screen.getByLabelText('Period start')).toHaveValue('2023-05-01');expect(screen.getByLabelText('Period end')).toHaveValue('2023-08-15');expect((screen.getByLabelText('Fixed sampling seed (optional)') as HTMLInputElement).value).toBe('');await userEvent.click(screen.getByRole('button',{name:'Create audit run'}));await screen.findByRole('heading',{name:'Cedar Wholesale audit'});expect(session.api.json).toHaveBeenCalledWith('/p3/audit-runs','POST',{period_start:'2023-05-01',period_end:'2023-08-15',audit_name:'Revenue audit - May 2023 to Aug 2023',upload_id:null});
+})
+
+it('shows server field errors beside the field and sends an advanced seed only when chosen',async()=>{
+ session.api.json.mockImplementation(async(path:string,method:string)=>{if(path==='/ui/audit-setup')return {invoice_count:4,register_count:0,register_row_count:0,unreconciled_register_count:0,unreadable_date_count:1,invoice_date_start:'2023-05-01',invoice_date_end:'2023-08-15',period_start:'2023-05-01',period_end:'2023-08-15'};if(path==='/p3/audit-runs'&&method==='POST')throw new ApiError(422,undefined,'Invalid request: sampling_seed: String should have at least 16 characters','invalid_input',[{field:'sampling_seed',message:'String should have at least 16 characters'}]);throw new Error('Unexpected API path: '+path)})
+ mount('/auditor/runs/new');await screen.findByLabelText('Period start')
+ expect(screen.getByText(/1 invoice record\(s\) have an unreadable date/)).toBeInTheDocument()
+ await userEvent.click(screen.getByText('Advanced: re-perform a documented selection'))
+ await userEvent.type(screen.getByLabelText('Fixed sampling seed (optional)'),'documented-seed-0001')
+ await userEvent.click(screen.getByRole('button',{name:'Create audit run'}))
+ expect(await screen.findByText('String should have at least 16 characters')).toBeInTheDocument()
+ expect(session.api.json).toHaveBeenCalledWith('/p3/audit-runs','POST',expect.objectContaining({sampling_seed:'documented-seed-0001'}))
 })

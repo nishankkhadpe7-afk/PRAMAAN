@@ -54,9 +54,13 @@ class P4GateTests(unittest.TestCase):
         self.assertNotIn(self.client_token, response.text)
         self.assertEqual(self.request("GET", "/p4/identity", "client").json()["role"], "client_employee")
         with sqlite3.connect(p1.DB_PATH) as db:
+            db.row_factory = sqlite3.Row
             events = [json.loads(r[0]) for r in db.execute("SELECT event_json FROM events")]
-        self.assertTrue(any(e["action"] == "security_denied" and e["actor"] == "auditor-1" for e in events))
-        self.assertNotIn(self.client_token, json.dumps(events))
+            access = [dict(r) for r in db.execute("SELECT * FROM access_log")]
+        # H2: access decisions are recorded in the append-only access_log, not the hash chain.
+        self.assertTrue(any(e["decision"] == "denied" and e["subject"] == "auditor-1" for e in access))
+        self.assertFalse(any(e["action"].startswith("security_") for e in events))
+        self.assertNotIn(self.client_token, json.dumps(events) + json.dumps(access))
         from concurrent.futures import ThreadPoolExecutor
         with ThreadPoolExecutor(max_workers=4) as pool:
             self.assertEqual(list(pool.map(lambda _: self.request("GET", "/integrity").status_code, range(8))), [200] * 8)
@@ -209,8 +213,9 @@ class P4GateTests(unittest.TestCase):
                 self.assertEqual(client.post(f"http://127.0.0.1:{mcp_port}/mcp", headers={"Authorization": "Bearer " + self.client_token}, json={}).status_code, 401)
             with sqlite3.connect(p1.DB_PATH) as db:
                 self.assertEqual(db.execute("SELECT count(*) FROM p2_customers WHERE customer_id='FORBIDDEN'").fetchone()[0], 0)
-                denials = [json.loads(r[0]) for r in db.execute("SELECT event_json FROM events WHERE event_json LIKE '%security_denied%'")]
-                self.assertTrue(any(e["actor"] == "auditor-1" and e["channel"] == "mcp" and e["object_ref"] == "create_customer:create_customer" for e in denials))
+                db.row_factory = sqlite3.Row
+                denials = [dict(r) for r in db.execute("SELECT * FROM access_log WHERE decision='denied'")]
+                self.assertTrue(any(e["subject"] == "auditor-1" and e["channel"] == "mcp" and e["action"] == "create_customer" and e["tool"] == "create_customer" for e in denials))
         finally:
             for process in processes:
                 process.terminate()

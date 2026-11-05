@@ -206,6 +206,9 @@ async def complete(cfg: dict[str, str], messages: list[dict[str, Any]], tools: l
     return data["choices"][0]["message"]
 
 
+CHILD_ENV_KEYS = ("PYTHONPATH", "PRAMAAN_API_URL", "PRAMAAN_TOKEN", "PRAMAAN_MAX_UPLOAD_BYTES", "SSL_CERT_FILE", "SSL_CERT_DIR", "TMP", "TEMP", "TMPDIR")
+
+
 async def _session(handler, credential: str | None = None):
     if os.environ.get("PRAMAAN_MCP_URL"):
         token = credential or os.environ.get("PRAMAAN_TOKEN", "")
@@ -214,7 +217,11 @@ async def _session(handler, credential: str | None = None):
                 async with ClientSession(read, write) as session:
                     await session.initialize()
                     return await handler(session)
-    child_env = dict(os.environ)
+    # B7: the MCP adapter receives only what it needs. LLM provider keys and other secrets in
+    # the parent environment never reach the child (the SDK adds a minimal safe default env).
+    child_env = {key: os.environ[key] for key in CHILD_ENV_KEYS if os.environ.get(key)}
+    if not child_env.get("PYTHONPATH"):
+        child_env["PYTHONPATH"] = os.pathsep.join(p for p in sys.path if p)
     if credential:
         child_env["PRAMAAN_TOKEN"] = credential.removeprefix("Bearer ")
     params = StdioServerParameters(command=sys.executable, args=["-m", "Pramaan.backend.mcp_server"], env=child_env)

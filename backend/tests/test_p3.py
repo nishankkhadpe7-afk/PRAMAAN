@@ -65,7 +65,7 @@ class P3WorkflowTests(unittest.TestCase):
                 payload["credit_note"] = {"credit_note_id": "P3-CN-IN", "credit_date": "2026-03-15", "amount": "2.50", "reason": "in-period adjustment"}
             status, result = self.request("POST", "/p2/sales", payload)
             self.assertEqual(status, 200, result)
-        rp_source = b"customer_id,related_party,valid_from\r\nP3-CUST-0,true,2025-04-01\r\n"
+        rp_source = b"customer_id,related_party,valid_from,relationship_type\r\nP3-CUST-0,true,2025-04-01,disclosed director relation\r\n"
         status, uploaded = self.request("POST", "/p2/related-parties", {"period": "FY26", "source_base64": base64.b64encode(rp_source).decode(), "records": [{"customer_id": "P3-CUST-0", "related_party": True, "valid_from": "2025-04-01", "relationship_type": "disclosed director relation"}]})
         self.assertEqual(status, 200, uploaded)
 
