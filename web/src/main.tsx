@@ -17,4 +17,5 @@ import '@fontsource/cinzel/latin-600.css'
 import '@fontsource/cinzel/latin-700.css'
 import './styles.css'
 import './theme.css'
+import './system.css'
 ReactDOM.createRoot(document.getElementById('root')!).render(<React.StrictMode><BrowserRouter><SessionProvider><App/></SessionProvider></BrowserRouter></React.StrictMode>)
