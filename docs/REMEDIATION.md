@@ -100,3 +100,7 @@ Existing rows are never rewritten. Security events already in the hash chain sta
 ## Hosted-deployment considerations (not implemented)
 
 Multi-tenant hosting would need: Postgres with row-level security (the SQLite authorizer is not a security boundary), session login instead of pasted bearer tokens, an external anchor for the hash chain, centralised log shipping for `access_log`, and secrets in a vault rather than `.env`.
+
+## UI/UX audit (branch `ui-ux-audit`)
+
+UI-01 – UI-18 tracked in `docs/ui-audit/02-issues.md`; report in `docs/UI_UX_AUDIT.md`. axe serious nodes 106 → 0, console errors 1 → 0, 360 px overflow 2 screens → 0. Backend gaps left open: UI-03 (rerun evidence linking), UI-11 (evidence-request API), no bulk review endpoint.

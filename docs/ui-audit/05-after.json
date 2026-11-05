@@ -1,0 +1,885 @@
+{
+ "phase": "after",
+ "captured_at": "2026-11-05T19:17:45.786Z",
+ "screens": {
+  "landing": {
+   "path": "/",
+   "widths": {
+    "360": {
+     "overflow": null,
+     "small_targets": 0,
+     "console_errors": [],
+     "failed_requests": [],
+     "axe": []
+    },
+    "390": {
+     "overflow": null,
+     "small_targets": 0,
+     "console_errors": [],
+     "failed_requests": []
+    },
+    "768": {
+     "overflow": null,
+     "small_targets": 0,
+     "console_errors": [],
+     "failed_requests": []
+    },
+    "1024": {
+     "overflow": null,
+     "small_targets": 0,
+     "console_errors": [],
+     "failed_requests": []
+    },
+    "1440": {
+     "overflow": null,
+     "small_targets": 0,
+     "console_errors": [],
+     "failed_requests": [],
+     "axe": []
+    },
+    "1920": {
+     "overflow": null,
+     "small_targets": 0,
+     "console_errors": [],
+     "failed_requests": []
+    }
+   }
+  },
+  "login": {
+   "path": "/login",
+   "widths": {
+    "360": {
+     "overflow": null,
+     "small_targets": 1,
+     "console_errors": [],
+     "failed_requests": [],
+     "axe": []
+    },
+    "390": {
+     "overflow": null,
+     "small_targets": 1,
+     "console_errors": [],
+     "failed_requests": []
+    },
+    "768": {
+     "overflow": null,
+     "small_targets": 1,
+     "console_errors": [],
+     "failed_requests": []
+    },
+    "1024": {
+     "overflow": null,
+     "small_targets": 1,
+     "console_errors": [],
+     "failed_requests": []
+    },
+    "1440": {
+     "overflow": null,
+     "small_targets": 1,
+     "console_errors": [],
+     "failed_requests": [],
+     "axe": []
+    },
+    "1920": {
+     "overflow": null,
+     "small_targets": 1,
+     "console_errors": [],
+     "failed_requests": []
+    }
+   }
+  },
+  "client-dashboard": {
+   "path": "/client",
+   "widths": {
+    "360": {
+     "overflow": null,
+     "small_targets": 1,
+     "console_errors": [],
+     "failed_requests": [
+      "failed /api/ui/business",
+      "failed /api/ui/inbox",
+      "failed /api/ui/registers"
+     ],
+     "axe": []
+    },
+    "390": {
+     "overflow": null,
+     "small_targets": 1,
+     "console_errors": [],
+     "failed_requests": [
+      "failed /api/ui/business",
+      "failed /api/ui/inbox",
+      "failed /api/ui/registers"
+     ]
+    },
+    "768": {
+     "overflow": null,
+     "small_targets": 1,
+     "console_errors": [],
+     "failed_requests": [
+      "failed /api/ui/business",
+      "failed /api/ui/inbox",
+      "failed /api/ui/registers"
+     ]
+    },
+    "1024": {
+     "overflow": null,
+     "small_targets": 1,
+     "console_errors": [],
+     "failed_requests": [
+      "failed /api/ui/business",
+      "failed /api/ui/inbox",
+      "failed /api/ui/registers"
+     ]
+    },
+    "1440": {
+     "overflow": null,
+     "small_targets": 1,
+     "console_errors": [],
+     "failed_requests": [
+      "failed /api/ui/business",
+      "failed /api/ui/inbox",
+      "failed /api/ui/registers"
+     ],
+     "axe": []
+    },
+    "1920": {
+     "overflow": null,
+     "small_targets": 1,
+     "console_errors": [],
+     "failed_requests": [
+      "failed /api/ui/business",
+      "failed /api/ui/inbox",
+      "failed /api/ui/registers"
+     ]
+    }
+   }
+  },
+  "client-business": {
+   "path": "/client/business",
+   "widths": {
+    "360": {
+     "overflow": null,
+     "small_targets": 0,
+     "console_errors": [],
+     "failed_requests": [
+      "failed /api/ui/business"
+     ],
+     "axe": []
+    },
+    "390": {
+     "overflow": null,
+     "small_targets": 0,
+     "console_errors": [],
+     "failed_requests": [
+      "failed /api/ui/business"
+     ]
+    },
+    "768": {
+     "overflow": null,
+     "small_targets": 0,
+     "console_errors": [],
+     "failed_requests": [
+      "failed /api/ui/business"
+     ]
+    },
+    "1024": {
+     "overflow": null,
+     "small_targets": 0,
+     "console_errors": [],
+     "failed_requests": [
+      "failed /api/ui/business"
+     ]
+    },
+    "1440": {
+     "overflow": null,
+     "small_targets": 0,
+     "console_errors": [],
+     "failed_requests": [
+      "failed /api/ui/business"
+     ],
+     "axe": []
+    },
+    "1920": {
+     "overflow": null,
+     "small_targets": 0,
+     "console_errors": [],
+     "failed_requests": [
+      "failed /api/ui/business"
+     ]
+    }
+   }
+  },
+  "client-registers": {
+   "path": "/client/registers",
+   "widths": {
+    "360": {
+     "overflow": null,
+     "small_targets": 0,
+     "console_errors": [],
+     "failed_requests": [
+      "failed /api/ui/registers"
+     ],
+     "axe": []
+    },
+    "390": {
+     "overflow": null,
+     "small_targets": 0,
+     "console_errors": [],
+     "failed_requests": [
+      "failed /api/ui/registers"
+     ]
+    },
+    "768": {
+     "overflow": null,
+     "small_targets": 0,
+     "console_errors": [],
+     "failed_requests": [
+      "failed /api/ui/registers"
+     ]
+    },
+    "1024": {
+     "overflow": null,
+     "small_targets": 0,
+     "console_errors": [],
+     "failed_requests": [
+      "failed /api/ui/registers"
+     ]
+    },
+    "1440": {
+     "overflow": null,
+     "small_targets": 0,
+     "console_errors": [],
+     "failed_requests": [
+      "failed /api/ui/registers"
+     ],
+     "axe": []
+    },
+    "1920": {
+     "overflow": null,
+     "small_targets": 0,
+     "console_errors": [],
+     "failed_requests": [
+      "failed /api/ui/registers"
+     ]
+    }
+   }
+  },
+  "client-inbox": {
+   "path": "/client/evidence-requests",
+   "widths": {
+    "360": {
+     "overflow": null,
+     "small_targets": 0,
+     "console_errors": [],
+     "failed_requests": [
+      "failed /api/ui/inbox"
+     ],
+     "axe": []
+    },
+    "390": {
+     "overflow": null,
+     "small_targets": 0,
+     "console_errors": [],
+     "failed_requests": [
+      "failed /api/ui/inbox"
+     ]
+    },
+    "768": {
+     "overflow": null,
+     "small_targets": 0,
+     "console_errors": [],
+     "failed_requests": [
+      "failed /api/ui/inbox"
+     ]
+    },
+    "1024": {
+     "overflow": null,
+     "small_targets": 0,
+     "console_errors": [],
+     "failed_requests": [
+      "failed /api/ui/inbox"
+     ]
+    },
+    "1440": {
+     "overflow": null,
+     "small_targets": 0,
+     "console_errors": [],
+     "failed_requests": [
+      "failed /api/ui/inbox"
+     ],
+     "axe": []
+    },
+    "1920": {
+     "overflow": null,
+     "small_targets": 0,
+     "console_errors": [],
+     "failed_requests": [
+      "failed /api/ui/inbox"
+     ]
+    }
+   }
+  },
+  "auditor-overview": {
+   "path": "/auditor",
+   "widths": {
+    "360": {
+     "overflow": null,
+     "small_targets": 1,
+     "console_errors": [],
+     "failed_requests": [
+      "failed /api/ui/runs",
+      "failed /api/ui/registers",
+      "failed /api/ui/runs/P3-c47b8e203d60a60a9b/context",
+      "failed /api/ui/inbox"
+     ],
+     "axe": []
+    },
+    "390": {
+     "overflow": null,
+     "small_targets": 1,
+     "console_errors": [],
+     "failed_requests": [
+      "failed /api/ui/runs",
+      "failed /api/ui/registers",
+      "failed /api/ui/runs/P3-c47b8e203d60a60a9b/context",
+      "failed /api/ui/inbox"
+     ]
+    },
+    "768": {
+     "overflow": null,
+     "small_targets": 1,
+     "console_errors": [],
+     "failed_requests": [
+      "failed /api/ui/runs",
+      "failed /api/ui/registers",
+      "failed /api/ui/runs/P3-c47b8e203d60a60a9b/context",
+      "failed /api/ui/inbox"
+     ]
+    },
+    "1024": {
+     "overflow": null,
+     "small_targets": 1,
+     "console_errors": [],
+     "failed_requests": [
+      "failed /api/ui/runs",
+      "failed /api/ui/registers",
+      "failed /api/ui/runs/P3-c47b8e203d60a60a9b/context",
+      "failed /api/ui/inbox"
+     ]
+    },
+    "1440": {
+     "overflow": null,
+     "small_targets": 1,
+     "console_errors": [],
+     "failed_requests": [
+      "failed /api/ui/runs",
+      "failed /api/ui/registers",
+      "failed /api/ui/runs/P3-c47b8e203d60a60a9b/context",
+      "failed /api/ui/inbox"
+     ],
+     "axe": []
+    },
+    "1920": {
+     "overflow": null,
+     "small_targets": 1,
+     "console_errors": [],
+     "failed_requests": [
+      "failed /api/ui/runs",
+      "failed /api/ui/registers",
+      "failed /api/ui/runs/P3-c47b8e203d60a60a9b/context",
+      "failed /api/ui/inbox"
+     ]
+    }
+   }
+  },
+  "auditor-new-run": {
+   "path": "/auditor/runs/new",
+   "widths": {
+    "360": {
+     "overflow": null,
+     "small_targets": 0,
+     "console_errors": [],
+     "failed_requests": [
+      "failed /api/ui/audit-setup"
+     ],
+     "axe": []
+    },
+    "390": {
+     "overflow": null,
+     "small_targets": 0,
+     "console_errors": [],
+     "failed_requests": [
+      "failed /api/ui/audit-setup"
+     ]
+    },
+    "768": {
+     "overflow": null,
+     "small_targets": 0,
+     "console_errors": [],
+     "failed_requests": [
+      "failed /api/ui/audit-setup"
+     ]
+    },
+    "1024": {
+     "overflow": null,
+     "small_targets": 0,
+     "console_errors": [],
+     "failed_requests": [
+      "failed /api/ui/audit-setup"
+     ]
+    },
+    "1440": {
+     "overflow": null,
+     "small_targets": 0,
+     "console_errors": [],
+     "failed_requests": [
+      "failed /api/ui/audit-setup"
+     ],
+     "axe": []
+    },
+    "1920": {
+     "overflow": null,
+     "small_targets": 0,
+     "console_errors": [],
+     "failed_requests": [
+      "failed /api/ui/audit-setup"
+     ]
+    }
+   }
+  },
+  "run-summary": {
+   "path": "/auditor/runs/<run>",
+   "widths": {
+    "360": {
+     "overflow": null,
+     "small_targets": 0,
+     "console_errors": [],
+     "failed_requests": [
+      "failed /api/ui/runs/P3-c47b8e203d60a60a9b/context",
+      "failed /api/ui/inbox"
+     ],
+     "axe": []
+    },
+    "390": {
+     "overflow": null,
+     "small_targets": 0,
+     "console_errors": [],
+     "failed_requests": [
+      "failed /api/ui/runs/P3-c47b8e203d60a60a9b/context",
+      "failed /api/ui/inbox"
+     ]
+    },
+    "768": {
+     "overflow": null,
+     "small_targets": 0,
+     "console_errors": [],
+     "failed_requests": [
+      "failed /api/ui/runs/P3-c47b8e203d60a60a9b/context",
+      "failed /api/ui/inbox"
+     ]
+    },
+    "1024": {
+     "overflow": null,
+     "small_targets": 0,
+     "console_errors": [],
+     "failed_requests": [
+      "failed /api/ui/runs/P3-c47b8e203d60a60a9b/context",
+      "failed /api/ui/inbox"
+     ]
+    },
+    "1440": {
+     "overflow": null,
+     "small_targets": 0,
+     "console_errors": [],
+     "failed_requests": [
+      "failed /api/ui/runs/P3-c47b8e203d60a60a9b/context",
+      "failed /api/ui/inbox"
+     ],
+     "axe": []
+    },
+    "1920": {
+     "overflow": null,
+     "small_targets": 0,
+     "console_errors": [],
+     "failed_requests": [
+      "failed /api/ui/runs/P3-c47b8e203d60a60a9b/context",
+      "failed /api/ui/inbox"
+     ]
+    }
+   }
+  },
+  "run-findings": {
+   "path": "/auditor/runs/<run>/findings",
+   "widths": {
+    "360": {
+     "overflow": null,
+     "small_targets": 1,
+     "console_errors": [],
+     "failed_requests": [
+      "failed /api/ui/runs/P3-c47b8e203d60a60a9b/context"
+     ],
+     "axe": []
+    },
+    "390": {
+     "overflow": null,
+     "small_targets": 1,
+     "console_errors": [],
+     "failed_requests": [
+      "failed /api/ui/runs/P3-c47b8e203d60a60a9b/context"
+     ]
+    },
+    "768": {
+     "overflow": null,
+     "small_targets": 1,
+     "console_errors": [],
+     "failed_requests": [
+      "failed /api/ui/runs/P3-c47b8e203d60a60a9b/context"
+     ]
+    },
+    "1024": {
+     "overflow": null,
+     "small_targets": 1,
+     "console_errors": [],
+     "failed_requests": [
+      "failed /api/ui/runs/P3-c47b8e203d60a60a9b/context"
+     ]
+    },
+    "1440": {
+     "overflow": null,
+     "small_targets": 1,
+     "console_errors": [],
+     "failed_requests": [
+      "failed /api/ui/runs/P3-c47b8e203d60a60a9b/context"
+     ],
+     "axe": []
+    },
+    "1920": {
+     "overflow": null,
+     "small_targets": 1,
+     "console_errors": [],
+     "failed_requests": [
+      "failed /api/ui/runs/P3-c47b8e203d60a60a9b/context"
+     ]
+    }
+   }
+  },
+  "run-samples": {
+   "path": "/auditor/runs/<run>/samples",
+   "widths": {
+    "360": {
+     "overflow": null,
+     "small_targets": 0,
+     "console_errors": [],
+     "failed_requests": [
+      "failed /api/ui/runs/P3-c47b8e203d60a60a9b/context"
+     ],
+     "axe": []
+    },
+    "390": {
+     "overflow": null,
+     "small_targets": 0,
+     "console_errors": [],
+     "failed_requests": [
+      "failed /api/ui/runs/P3-c47b8e203d60a60a9b/context"
+     ]
+    },
+    "768": {
+     "overflow": null,
+     "small_targets": 0,
+     "console_errors": [],
+     "failed_requests": [
+      "failed /api/ui/runs/P3-c47b8e203d60a60a9b/context"
+     ]
+    },
+    "1024": {
+     "overflow": null,
+     "small_targets": 0,
+     "console_errors": [],
+     "failed_requests": [
+      "failed /api/ui/runs/P3-c47b8e203d60a60a9b/context"
+     ]
+    },
+    "1440": {
+     "overflow": null,
+     "small_targets": 0,
+     "console_errors": [],
+     "failed_requests": [
+      "failed /api/ui/runs/P3-c47b8e203d60a60a9b/context"
+     ],
+     "axe": []
+    },
+    "1920": {
+     "overflow": null,
+     "small_targets": 0,
+     "console_errors": [],
+     "failed_requests": [
+      "failed /api/ui/runs/P3-c47b8e203d60a60a9b/context"
+     ]
+    }
+   }
+  },
+  "run-workpapers": {
+   "path": "/auditor/runs/<run>/workpapers",
+   "widths": {
+    "360": {
+     "overflow": null,
+     "small_targets": 0,
+     "console_errors": [],
+     "failed_requests": [
+      "failed /api/ui/runs/P3-c47b8e203d60a60a9b/context",
+      "failed /api/ui/runs"
+     ],
+     "axe": []
+    },
+    "390": {
+     "overflow": null,
+     "small_targets": 0,
+     "console_errors": [],
+     "failed_requests": [
+      "failed /api/ui/runs/P3-c47b8e203d60a60a9b/context",
+      "failed /api/ui/runs"
+     ]
+    },
+    "768": {
+     "overflow": null,
+     "small_targets": 0,
+     "console_errors": [],
+     "failed_requests": [
+      "failed /api/ui/runs/P3-c47b8e203d60a60a9b/context",
+      "failed /api/ui/runs"
+     ]
+    },
+    "1024": {
+     "overflow": null,
+     "small_targets": 0,
+     "console_errors": [],
+     "failed_requests": [
+      "failed /api/ui/runs/P3-c47b8e203d60a60a9b/context",
+      "failed /api/ui/runs"
+     ]
+    },
+    "1440": {
+     "overflow": null,
+     "small_targets": 0,
+     "console_errors": [],
+     "failed_requests": [
+      "failed /api/ui/runs/P3-c47b8e203d60a60a9b/context",
+      "failed /api/ui/runs"
+     ],
+     "axe": []
+    },
+    "1920": {
+     "overflow": null,
+     "small_targets": 0,
+     "console_errors": [],
+     "failed_requests": [
+      "failed /api/ui/runs/P3-c47b8e203d60a60a9b/context",
+      "failed /api/ui/runs"
+     ]
+    }
+   }
+  },
+  "run-integrity": {
+   "path": "/auditor/runs/<run>/integrity",
+   "widths": {
+    "360": {
+     "overflow": null,
+     "small_targets": 0,
+     "console_errors": [],
+     "failed_requests": [
+      "failed /api/ui/runs/P3-c47b8e203d60a60a9b/context",
+      "failed /api/ui/runs/P3-c47b8e203d60a60a9b/integrity",
+      "failed /api/p4/audit-runs/P3-c47b8e203d60a60a9b/changes",
+      "failed /api/ui/events"
+     ],
+     "axe": []
+    },
+    "390": {
+     "overflow": null,
+     "small_targets": 0,
+     "console_errors": [],
+     "failed_requests": [
+      "failed /api/ui/runs/P3-c47b8e203d60a60a9b/context",
+      "failed /api/ui/runs/P3-c47b8e203d60a60a9b/integrity",
+      "failed /api/p4/audit-runs/P3-c47b8e203d60a60a9b/changes",
+      "failed /api/ui/events"
+     ]
+    },
+    "768": {
+     "overflow": null,
+     "small_targets": 0,
+     "console_errors": [],
+     "failed_requests": [
+      "failed /api/ui/runs/P3-c47b8e203d60a60a9b/context",
+      "failed /api/ui/runs/P3-c47b8e203d60a60a9b/integrity",
+      "failed /api/p4/audit-runs/P3-c47b8e203d60a60a9b/changes",
+      "failed /api/ui/events"
+     ]
+    },
+    "1024": {
+     "overflow": null,
+     "small_targets": 0,
+     "console_errors": [],
+     "failed_requests": [
+      "failed /api/ui/runs/P3-c47b8e203d60a60a9b/context",
+      "failed /api/ui/runs/P3-c47b8e203d60a60a9b/integrity",
+      "failed /api/p4/audit-runs/P3-c47b8e203d60a60a9b/changes",
+      "failed /api/ui/events"
+     ]
+    },
+    "1440": {
+     "overflow": null,
+     "small_targets": 0,
+     "console_errors": [],
+     "failed_requests": [
+      "failed /api/ui/runs/P3-c47b8e203d60a60a9b/context",
+      "failed /api/ui/runs/P3-c47b8e203d60a60a9b/integrity",
+      "failed /api/p4/audit-runs/P3-c47b8e203d60a60a9b/changes",
+      "failed /api/ui/events"
+     ],
+     "axe": []
+    },
+    "1920": {
+     "overflow": null,
+     "small_targets": 0,
+     "console_errors": [],
+     "failed_requests": [
+      "failed /api/ui/runs/P3-c47b8e203d60a60a9b/context",
+      "failed /api/ui/runs/P3-c47b8e203d60a60a9b/integrity",
+      "failed /api/p4/audit-runs/P3-c47b8e203d60a60a9b/changes",
+      "failed /api/ui/events"
+     ]
+    }
+   }
+  },
+  "finding-detail": {
+   "path": "/auditor/findings/<finding>?run=<run>",
+   "widths": {
+    "360": {
+     "overflow": null,
+     "small_targets": 1,
+     "console_errors": [],
+     "failed_requests": [
+      "failed /api/ui/runs/P3-c47b8e203d60a60a9b/context"
+     ],
+     "axe": []
+    },
+    "390": {
+     "overflow": null,
+     "small_targets": 1,
+     "console_errors": [],
+     "failed_requests": [
+      "failed /api/ui/runs/P3-c47b8e203d60a60a9b/context"
+     ]
+    },
+    "768": {
+     "overflow": null,
+     "small_targets": 1,
+     "console_errors": [],
+     "failed_requests": [
+      "failed /api/ui/runs/P3-c47b8e203d60a60a9b/context"
+     ]
+    },
+    "1024": {
+     "overflow": null,
+     "small_targets": 1,
+     "console_errors": [],
+     "failed_requests": [
+      "failed /api/ui/runs/P3-c47b8e203d60a60a9b/context"
+     ]
+    },
+    "1440": {
+     "overflow": null,
+     "small_targets": 1,
+     "console_errors": [],
+     "failed_requests": [
+      "failed /api/ui/runs/P3-c47b8e203d60a60a9b/context"
+     ],
+     "axe": []
+    },
+    "1920": {
+     "overflow": null,
+     "small_targets": 1,
+     "console_errors": [],
+     "failed_requests": [
+      "failed /api/ui/runs/P3-c47b8e203d60a60a9b/context"
+     ]
+    }
+   }
+  },
+  "assistant": {
+   "path": "/auditor/assistant?run=<run>",
+   "widths": {
+    "360": {
+     "overflow": null,
+     "small_targets": 1,
+     "console_errors": [],
+     "failed_requests": [
+      "failed /api/ui/runs",
+      "failed /api/ui/events",
+      "failed /api/ui/runs/P3-c47b8e203d60a60a9b/context"
+     ],
+     "axe": []
+    },
+    "390": {
+     "overflow": null,
+     "small_targets": 1,
+     "console_errors": [],
+     "failed_requests": [
+      "failed /api/ui/runs",
+      "failed /api/ui/events",
+      "failed /api/ui/runs/P3-c47b8e203d60a60a9b/context"
+     ]
+    },
+    "768": {
+     "overflow": null,
+     "small_targets": 1,
+     "console_errors": [],
+     "failed_requests": [
+      "failed /api/ui/runs",
+      "failed /api/ui/events",
+      "failed /api/ui/runs/P3-c47b8e203d60a60a9b/context"
+     ]
+    },
+    "1024": {
+     "overflow": null,
+     "small_targets": 1,
+     "console_errors": [],
+     "failed_requests": [
+      "failed /api/ui/runs",
+      "failed /api/ui/events",
+      "failed /api/ui/runs/P3-c47b8e203d60a60a9b/context"
+     ]
+    },
+    "1440": {
+     "overflow": null,
+     "small_targets": 1,
+     "console_errors": [],
+     "failed_requests": [
+      "failed /api/ui/runs",
+      "failed /api/ui/events",
+      "failed /api/ui/runs/P3-c47b8e203d60a60a9b/context"
+     ],
+     "axe": []
+    },
+    "1920": {
+     "overflow": null,
+     "small_targets": 1,
+     "console_errors": [],
+     "failed_requests": [
+      "failed /api/ui/runs",
+      "failed /api/ui/events",
+      "failed /api/ui/runs/P3-c47b8e203d60a60a9b/context"
+     ]
+    }
+   }
+  }
+ },
+ "states": {
+  "loading": "captured",
+  "error": "captured",
+  "empty": "captured",
+  "drawer": "captured"
+ }
+}
