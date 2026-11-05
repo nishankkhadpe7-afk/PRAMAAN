@@ -1,0 +1,1082 @@
+{
+ "phase": "before",
+ "captured_at": "2026-11-05T17:37:48.405Z",
+ "screens": {
+  "landing": {
+   "path": "/",
+   "widths": {
+    "360": {
+     "overflow": null,
+     "small_targets": 0,
+     "console_errors": [
+      "Failed to load resource: the server responded with a status of 404 (Not Found)"
+     ],
+     "failed_requests": [],
+     "axe": []
+    },
+    "390": {
+     "overflow": null,
+     "small_targets": 0,
+     "console_errors": [],
+     "failed_requests": []
+    },
+    "768": {
+     "overflow": null,
+     "small_targets": 0,
+     "console_errors": [],
+     "failed_requests": []
+    },
+    "1024": {
+     "overflow": null,
+     "small_targets": 0,
+     "console_errors": [],
+     "failed_requests": []
+    },
+    "1440": {
+     "overflow": null,
+     "small_targets": 0,
+     "console_errors": [],
+     "failed_requests": [],
+     "axe": []
+    },
+    "1920": {
+     "overflow": null,
+     "small_targets": 0,
+     "console_errors": [],
+     "failed_requests": []
+    }
+   }
+  },
+  "login": {
+   "path": "/login",
+   "widths": {
+    "360": {
+     "overflow": null,
+     "small_targets": 1,
+     "console_errors": [],
+     "failed_requests": [],
+     "axe": [
+      {
+       "id": "label-content-name-mismatch",
+       "impact": "serious",
+       "nodes": 1,
+       "help": "Elements must have their visible text as part of their accessible name"
+      }
+     ]
+    },
+    "390": {
+     "overflow": null,
+     "small_targets": 1,
+     "console_errors": [],
+     "failed_requests": []
+    },
+    "768": {
+     "overflow": null,
+     "small_targets": 1,
+     "console_errors": [],
+     "failed_requests": []
+    },
+    "1024": {
+     "overflow": null,
+     "small_targets": 1,
+     "console_errors": [],
+     "failed_requests": []
+    },
+    "1440": {
+     "overflow": null,
+     "small_targets": 1,
+     "console_errors": [],
+     "failed_requests": [],
+     "axe": [
+      {
+       "id": "label-content-name-mismatch",
+       "impact": "serious",
+       "nodes": 1,
+       "help": "Elements must have their visible text as part of their accessible name"
+      }
+     ]
+    },
+    "1920": {
+     "overflow": null,
+     "small_targets": 1,
+     "console_errors": [],
+     "failed_requests": []
+    }
+   }
+  },
+  "client-dashboard": {
+   "path": "/client",
+   "widths": {
+    "360": {
+     "overflow": null,
+     "small_targets": 1,
+     "console_errors": [],
+     "failed_requests": [
+      "failed /api/ui/business",
+      "failed /api/ui/inbox",
+      "failed /api/ui/registers"
+     ],
+     "axe": [
+      {
+       "id": "scrollable-region-focusable",
+       "impact": "serious",
+       "nodes": 2,
+       "help": "Scrollable region must have keyboard access"
+      }
+     ]
+    },
+    "390": {
+     "overflow": null,
+     "small_targets": 1,
+     "console_errors": [],
+     "failed_requests": [
+      "failed /api/ui/business",
+      "failed /api/ui/inbox",
+      "failed /api/ui/registers"
+     ]
+    },
+    "768": {
+     "overflow": null,
+     "small_targets": 1,
+     "console_errors": [],
+     "failed_requests": [
+      "failed /api/ui/business",
+      "failed /api/ui/inbox",
+      "failed /api/ui/registers"
+     ]
+    },
+    "1024": {
+     "overflow": null,
+     "small_targets": 1,
+     "console_errors": [],
+     "failed_requests": [
+      "failed /api/ui/business",
+      "failed /api/ui/inbox",
+      "failed /api/ui/registers"
+     ]
+    },
+    "1440": {
+     "overflow": null,
+     "small_targets": 1,
+     "console_errors": [],
+     "failed_requests": [
+      "failed /api/ui/business",
+      "failed /api/ui/inbox",
+      "failed /api/ui/registers"
+     ],
+     "axe": [
+      {
+       "id": "label-content-name-mismatch",
+       "impact": "serious",
+       "nodes": 1,
+       "help": "Elements must have their visible text as part of their accessible name"
+      },
+      {
+       "id": "scrollable-region-focusable",
+       "impact": "serious",
+       "nodes": 1,
+       "help": "Scrollable region must have keyboard access"
+      }
+     ]
+    },
+    "1920": {
+     "overflow": null,
+     "small_targets": 1,
+     "console_errors": [],
+     "failed_requests": [
+      "failed /api/ui/business",
+      "failed /api/ui/inbox",
+      "failed /api/ui/registers"
+     ]
+    }
+   }
+  },
+  "client-business": {
+   "path": "/client/business",
+   "widths": {
+    "360": {
+     "overflow": null,
+     "small_targets": 0,
+     "console_errors": [],
+     "failed_requests": [
+      "failed /api/ui/business"
+     ],
+     "axe": []
+    },
+    "390": {
+     "overflow": null,
+     "small_targets": 0,
+     "console_errors": [],
+     "failed_requests": [
+      "failed /api/ui/business"
+     ]
+    },
+    "768": {
+     "overflow": null,
+     "small_targets": 0,
+     "console_errors": [],
+     "failed_requests": [
+      "failed /api/ui/business"
+     ]
+    },
+    "1024": {
+     "overflow": null,
+     "small_targets": 0,
+     "console_errors": [],
+     "failed_requests": [
+      "failed /api/ui/business"
+     ]
+    },
+    "1440": {
+     "overflow": null,
+     "small_targets": 0,
+     "console_errors": [],
+     "failed_requests": [
+      "failed /api/ui/business"
+     ],
+     "axe": [
+      {
+       "id": "label-content-name-mismatch",
+       "impact": "serious",
+       "nodes": 1,
+       "help": "Elements must have their visible text as part of their accessible name"
+      }
+     ]
+    },
+    "1920": {
+     "overflow": null,
+     "small_targets": 0,
+     "console_errors": [],
+     "failed_requests": [
+      "failed /api/ui/business"
+     ]
+    }
+   }
+  },
+  "client-registers": {
+   "path": "/client/registers",
+   "widths": {
+    "360": {
+     "overflow": null,
+     "small_targets": 0,
+     "console_errors": [],
+     "failed_requests": [
+      "failed /api/ui/registers"
+     ],
+     "axe": [
+      {
+       "id": "scrollable-region-focusable",
+       "impact": "serious",
+       "nodes": 2,
+       "help": "Scrollable region must have keyboard access"
+      }
+     ]
+    },
+    "390": {
+     "overflow": null,
+     "small_targets": 0,
+     "console_errors": [],
+     "failed_requests": [
+      "failed /api/ui/registers"
+     ]
+    },
+    "768": {
+     "overflow": null,
+     "small_targets": 0,
+     "console_errors": [],
+     "failed_requests": [
+      "failed /api/ui/registers"
+     ]
+    },
+    "1024": {
+     "overflow": null,
+     "small_targets": 0,
+     "console_errors": [],
+     "failed_requests": [
+      "failed /api/ui/registers"
+     ]
+    },
+    "1440": {
+     "overflow": null,
+     "small_targets": 0,
+     "console_errors": [],
+     "failed_requests": [
+      "failed /api/ui/registers"
+     ],
+     "axe": [
+      {
+       "id": "label-content-name-mismatch",
+       "impact": "serious",
+       "nodes": 1,
+       "help": "Elements must have their visible text as part of their accessible name"
+      },
+      {
+       "id": "scrollable-region-focusable",
+       "impact": "serious",
+       "nodes": 1,
+       "help": "Scrollable region must have keyboard access"
+      }
+     ]
+    },
+    "1920": {
+     "overflow": null,
+     "small_targets": 0,
+     "console_errors": [],
+     "failed_requests": [
+      "failed /api/ui/registers"
+     ]
+    }
+   }
+  },
+  "client-inbox": {
+   "path": "/client/evidence-requests",
+   "widths": {
+    "360": {
+     "overflow": null,
+     "small_targets": 0,
+     "console_errors": [],
+     "failed_requests": [
+      "failed /api/ui/inbox"
+     ],
+     "axe": []
+    },
+    "390": {
+     "overflow": null,
+     "small_targets": 0,
+     "console_errors": [],
+     "failed_requests": [
+      "failed /api/ui/inbox"
+     ]
+    },
+    "768": {
+     "overflow": null,
+     "small_targets": 0,
+     "console_errors": [],
+     "failed_requests": [
+      "failed /api/ui/inbox"
+     ]
+    },
+    "1024": {
+     "overflow": null,
+     "small_targets": 0,
+     "console_errors": [],
+     "failed_requests": [
+      "failed /api/ui/inbox"
+     ]
+    },
+    "1440": {
+     "overflow": null,
+     "small_targets": 0,
+     "console_errors": [],
+     "failed_requests": [
+      "failed /api/ui/inbox"
+     ],
+     "axe": [
+      {
+       "id": "label-content-name-mismatch",
+       "impact": "serious",
+       "nodes": 1,
+       "help": "Elements must have their visible text as part of their accessible name"
+      }
+     ]
+    },
+    "1920": {
+     "overflow": null,
+     "small_targets": 0,
+     "console_errors": [],
+     "failed_requests": [
+      "failed /api/ui/inbox"
+     ]
+    }
+   }
+  },
+  "auditor-overview": {
+   "path": "/auditor",
+   "widths": {
+    "360": {
+     "overflow": null,
+     "small_targets": 1,
+     "console_errors": [],
+     "failed_requests": [
+      "failed /api/ui/runs",
+      "failed /api/ui/registers",
+      "failed /api/ui/runs/P3-b82ca561b4567c43d6/context"
+     ],
+     "axe": [
+      {
+       "id": "label-content-name-mismatch",
+       "impact": "serious",
+       "nodes": 6,
+       "help": "Elements must have their visible text as part of their accessible name"
+      }
+     ]
+    },
+    "390": {
+     "overflow": null,
+     "small_targets": 1,
+     "console_errors": [],
+     "failed_requests": [
+      "failed /api/ui/runs",
+      "failed /api/ui/registers",
+      "failed /api/ui/runs/P3-b82ca561b4567c43d6/context"
+     ]
+    },
+    "768": {
+     "overflow": null,
+     "small_targets": 1,
+     "console_errors": [],
+     "failed_requests": [
+      "failed /api/ui/runs",
+      "failed /api/ui/registers",
+      "failed /api/ui/runs/P3-b82ca561b4567c43d6/context"
+     ]
+    },
+    "1024": {
+     "overflow": null,
+     "small_targets": 1,
+     "console_errors": [],
+     "failed_requests": [
+      "failed /api/ui/runs",
+      "failed /api/ui/registers",
+      "failed /api/ui/runs/P3-b82ca561b4567c43d6/context"
+     ]
+    },
+    "1440": {
+     "overflow": null,
+     "small_targets": 1,
+     "console_errors": [],
+     "failed_requests": [
+      "failed /api/ui/runs",
+      "failed /api/ui/registers",
+      "failed /api/ui/runs/P3-b82ca561b4567c43d6/context"
+     ],
+     "axe": [
+      {
+       "id": "color-contrast",
+       "impact": "serious",
+       "nodes": 6,
+       "help": "Elements must meet minimum color contrast ratio thresholds"
+      },
+      {
+       "id": "label-content-name-mismatch",
+       "impact": "serious",
+       "nodes": 7,
+       "help": "Elements must have their visible text as part of their accessible name"
+      }
+     ]
+    },
+    "1920": {
+     "overflow": null,
+     "small_targets": 1,
+     "console_errors": [],
+     "failed_requests": [
+      "failed /api/ui/runs",
+      "failed /api/ui/registers",
+      "failed /api/ui/runs/P3-b82ca561b4567c43d6/context"
+     ]
+    }
+   }
+  },
+  "auditor-new-run": {
+   "path": "/auditor/runs/new",
+   "widths": {
+    "360": {
+     "overflow": null,
+     "small_targets": 0,
+     "console_errors": [],
+     "failed_requests": [
+      "failed /api/ui/audit-setup"
+     ],
+     "axe": []
+    },
+    "390": {
+     "overflow": null,
+     "small_targets": 0,
+     "console_errors": [],
+     "failed_requests": [
+      "failed /api/ui/audit-setup"
+     ]
+    },
+    "768": {
+     "overflow": null,
+     "small_targets": 0,
+     "console_errors": [],
+     "failed_requests": [
+      "failed /api/ui/audit-setup"
+     ]
+    },
+    "1024": {
+     "overflow": null,
+     "small_targets": 0,
+     "console_errors": [],
+     "failed_requests": [
+      "failed /api/ui/audit-setup"
+     ]
+    },
+    "1440": {
+     "overflow": null,
+     "small_targets": 0,
+     "console_errors": [],
+     "failed_requests": [
+      "failed /api/ui/audit-setup"
+     ],
+     "axe": [
+      {
+       "id": "label-content-name-mismatch",
+       "impact": "serious",
+       "nodes": 1,
+       "help": "Elements must have their visible text as part of their accessible name"
+      }
+     ]
+    },
+    "1920": {
+     "overflow": null,
+     "small_targets": 0,
+     "console_errors": [],
+     "failed_requests": [
+      "failed /api/ui/audit-setup"
+     ]
+    }
+   }
+  },
+  "run-summary": {
+   "path": "/auditor/runs/<run>",
+   "widths": {
+    "360": {
+     "overflow": {
+      "scrollWidth": 370,
+      "clientWidth": 360
+     },
+     "small_targets": 9,
+     "console_errors": [],
+     "failed_requests": [
+      "failed /api/ui/runs/P3-b82ca561b4567c43d6/context"
+     ],
+     "axe": [
+      {
+       "id": "label-content-name-mismatch",
+       "impact": "serious",
+       "nodes": 7,
+       "help": "Elements must have their visible text as part of their accessible name"
+      },
+      {
+       "id": "scrollable-region-focusable",
+       "impact": "serious",
+       "nodes": 1,
+       "help": "Scrollable region must have keyboard access"
+      },
+      {
+       "id": "target-size",
+       "impact": "serious",
+       "nodes": 1,
+       "help": "All touch targets must be 24px large, or leave sufficient space"
+      }
+     ]
+    },
+    "390": {
+     "overflow": {
+      "scrollWidth": 400,
+      "clientWidth": 390
+     },
+     "small_targets": 9,
+     "console_errors": [],
+     "failed_requests": [
+      "failed /api/ui/runs/P3-b82ca561b4567c43d6/context"
+     ]
+    },
+    "768": {
+     "overflow": null,
+     "small_targets": 9,
+     "console_errors": [],
+     "failed_requests": [
+      "failed /api/ui/runs/P3-b82ca561b4567c43d6/context"
+     ]
+    },
+    "1024": {
+     "overflow": null,
+     "small_targets": 9,
+     "console_errors": [],
+     "failed_requests": [
+      "failed /api/ui/runs/P3-b82ca561b4567c43d6/context"
+     ]
+    },
+    "1440": {
+     "overflow": null,
+     "small_targets": 9,
+     "console_errors": [],
+     "failed_requests": [
+      "failed /api/ui/runs/P3-b82ca561b4567c43d6/context"
+     ],
+     "axe": [
+      {
+       "id": "color-contrast",
+       "impact": "serious",
+       "nodes": 7,
+       "help": "Elements must meet minimum color contrast ratio thresholds"
+      },
+      {
+       "id": "label-content-name-mismatch",
+       "impact": "serious",
+       "nodes": 15,
+       "help": "Elements must have their visible text as part of their accessible name"
+      }
+     ]
+    },
+    "1920": {
+     "overflow": null,
+     "small_targets": 9,
+     "console_errors": [],
+     "failed_requests": [
+      "failed /api/ui/runs/P3-b82ca561b4567c43d6/context"
+     ]
+    }
+   }
+  },
+  "run-findings": {
+   "path": "/auditor/runs/<run>/findings",
+   "widths": {
+    "360": {
+     "overflow": null,
+     "small_targets": 1,
+     "console_errors": [],
+     "failed_requests": [
+      "failed /api/ui/runs/P3-b82ca561b4567c43d6/context"
+     ],
+     "axe": []
+    },
+    "390": {
+     "overflow": null,
+     "small_targets": 1,
+     "console_errors": [],
+     "failed_requests": [
+      "failed /api/ui/runs/P3-b82ca561b4567c43d6/context"
+     ]
+    },
+    "768": {
+     "overflow": null,
+     "small_targets": 1,
+     "console_errors": [],
+     "failed_requests": [
+      "failed /api/ui/runs/P3-b82ca561b4567c43d6/context"
+     ]
+    },
+    "1024": {
+     "overflow": null,
+     "small_targets": 1,
+     "console_errors": [],
+     "failed_requests": [
+      "failed /api/ui/runs/P3-b82ca561b4567c43d6/context"
+     ]
+    },
+    "1440": {
+     "overflow": null,
+     "small_targets": 1,
+     "console_errors": [],
+     "failed_requests": [
+      "failed /api/ui/runs/P3-b82ca561b4567c43d6/context"
+     ],
+     "axe": [
+      {
+       "id": "label-content-name-mismatch",
+       "impact": "serious",
+       "nodes": 1,
+       "help": "Elements must have their visible text as part of their accessible name"
+      }
+     ]
+    },
+    "1920": {
+     "overflow": null,
+     "small_targets": 1,
+     "console_errors": [],
+     "failed_requests": [
+      "failed /api/ui/runs/P3-b82ca561b4567c43d6/context"
+     ]
+    }
+   }
+  },
+  "run-samples": {
+   "path": "/auditor/runs/<run>/samples",
+   "widths": {
+    "360": {
+     "overflow": null,
+     "small_targets": 1,
+     "console_errors": [],
+     "failed_requests": [
+      "failed /api/ui/runs/P3-b82ca561b4567c43d6/context"
+     ],
+     "axe": []
+    },
+    "390": {
+     "overflow": null,
+     "small_targets": 1,
+     "console_errors": [],
+     "failed_requests": [
+      "failed /api/ui/runs/P3-b82ca561b4567c43d6/context"
+     ]
+    },
+    "768": {
+     "overflow": null,
+     "small_targets": 1,
+     "console_errors": [],
+     "failed_requests": [
+      "failed /api/ui/runs/P3-b82ca561b4567c43d6/context"
+     ]
+    },
+    "1024": {
+     "overflow": null,
+     "small_targets": 1,
+     "console_errors": [],
+     "failed_requests": [
+      "failed /api/ui/runs/P3-b82ca561b4567c43d6/context"
+     ]
+    },
+    "1440": {
+     "overflow": null,
+     "small_targets": 1,
+     "console_errors": [],
+     "failed_requests": [
+      "failed /api/ui/runs/P3-b82ca561b4567c43d6/context"
+     ],
+     "axe": [
+      {
+       "id": "label-content-name-mismatch",
+       "impact": "serious",
+       "nodes": 1,
+       "help": "Elements must have their visible text as part of their accessible name"
+      }
+     ]
+    },
+    "1920": {
+     "overflow": null,
+     "small_targets": 1,
+     "console_errors": [],
+     "failed_requests": [
+      "failed /api/ui/runs/P3-b82ca561b4567c43d6/context"
+     ]
+    }
+   }
+  },
+  "run-workpapers": {
+   "path": "/auditor/runs/<run>/workpapers",
+   "widths": {
+    "360": {
+     "overflow": null,
+     "small_targets": 1,
+     "console_errors": [],
+     "failed_requests": [
+      "failed /api/ui/runs/P3-b82ca561b4567c43d6/context",
+      "failed /api/ui/runs"
+     ],
+     "axe": []
+    },
+    "390": {
+     "overflow": null,
+     "small_targets": 1,
+     "console_errors": [],
+     "failed_requests": [
+      "failed /api/ui/runs/P3-b82ca561b4567c43d6/context",
+      "failed /api/ui/runs"
+     ]
+    },
+    "768": {
+     "overflow": null,
+     "small_targets": 1,
+     "console_errors": [],
+     "failed_requests": [
+      "failed /api/ui/runs/P3-b82ca561b4567c43d6/context",
+      "failed /api/ui/runs"
+     ]
+    },
+    "1024": {
+     "overflow": null,
+     "small_targets": 1,
+     "console_errors": [],
+     "failed_requests": [
+      "failed /api/ui/runs/P3-b82ca561b4567c43d6/context",
+      "failed /api/ui/runs"
+     ]
+    },
+    "1440": {
+     "overflow": null,
+     "small_targets": 1,
+     "console_errors": [],
+     "failed_requests": [
+      "failed /api/ui/runs/P3-b82ca561b4567c43d6/context",
+      "failed /api/ui/runs"
+     ],
+     "axe": [
+      {
+       "id": "label-content-name-mismatch",
+       "impact": "serious",
+       "nodes": 1,
+       "help": "Elements must have their visible text as part of their accessible name"
+      }
+     ]
+    },
+    "1920": {
+     "overflow": null,
+     "small_targets": 1,
+     "console_errors": [],
+     "failed_requests": [
+      "failed /api/ui/runs/P3-b82ca561b4567c43d6/context",
+      "failed /api/ui/runs"
+     ]
+    }
+   }
+  },
+  "run-integrity": {
+   "path": "/auditor/runs/<run>/integrity",
+   "widths": {
+    "360": {
+     "overflow": null,
+     "small_targets": 1,
+     "console_errors": [],
+     "failed_requests": [
+      "failed /api/ui/runs/P3-b82ca561b4567c43d6/context",
+      "failed /api/ui/runs/P3-b82ca561b4567c43d6/integrity",
+      "failed /api/p4/audit-runs/P3-b82ca561b4567c43d6/changes",
+      "failed /api/ui/events"
+     ],
+     "axe": [
+      {
+       "id": "scrollable-region-focusable",
+       "impact": "serious",
+       "nodes": 1,
+       "help": "Scrollable region must have keyboard access"
+      }
+     ]
+    },
+    "390": {
+     "overflow": null,
+     "small_targets": 1,
+     "console_errors": [],
+     "failed_requests": [
+      "failed /api/ui/runs/P3-b82ca561b4567c43d6/context",
+      "failed /api/ui/runs/P3-b82ca561b4567c43d6/integrity",
+      "failed /api/p4/audit-runs/P3-b82ca561b4567c43d6/changes",
+      "failed /api/ui/events"
+     ]
+    },
+    "768": {
+     "overflow": null,
+     "small_targets": 1,
+     "console_errors": [],
+     "failed_requests": [
+      "failed /api/ui/runs/P3-b82ca561b4567c43d6/context",
+      "failed /api/ui/runs/P3-b82ca561b4567c43d6/integrity",
+      "failed /api/p4/audit-runs/P3-b82ca561b4567c43d6/changes",
+      "failed /api/ui/events"
+     ]
+    },
+    "1024": {
+     "overflow": null,
+     "small_targets": 1,
+     "console_errors": [],
+     "failed_requests": [
+      "failed /api/ui/runs/P3-b82ca561b4567c43d6/context",
+      "failed /api/ui/runs/P3-b82ca561b4567c43d6/integrity",
+      "failed /api/p4/audit-runs/P3-b82ca561b4567c43d6/changes",
+      "failed /api/ui/events"
+     ]
+    },
+    "1440": {
+     "overflow": null,
+     "small_targets": 1,
+     "console_errors": [],
+     "failed_requests": [
+      "failed /api/ui/runs/P3-b82ca561b4567c43d6/context",
+      "failed /api/ui/runs/P3-b82ca561b4567c43d6/integrity",
+      "failed /api/p4/audit-runs/P3-b82ca561b4567c43d6/changes",
+      "failed /api/ui/events"
+     ],
+     "axe": [
+      {
+       "id": "label-content-name-mismatch",
+       "impact": "serious",
+       "nodes": 1,
+       "help": "Elements must have their visible text as part of their accessible name"
+      }
+     ]
+    },
+    "1920": {
+     "overflow": null,
+     "small_targets": 1,
+     "console_errors": [],
+     "failed_requests": [
+      "failed /api/ui/runs/P3-b82ca561b4567c43d6/context",
+      "failed /api/ui/runs/P3-b82ca561b4567c43d6/integrity",
+      "failed /api/p4/audit-runs/P3-b82ca561b4567c43d6/changes",
+      "failed /api/ui/events"
+     ]
+    }
+   }
+  },
+  "finding-detail": {
+   "path": "/auditor/findings/<finding>?run=<run>",
+   "widths": {
+    "360": {
+     "overflow": null,
+     "small_targets": 10,
+     "console_errors": [],
+     "failed_requests": [
+      "failed /api/ui/runs/P3-b82ca561b4567c43d6/context"
+     ],
+     "axe": [
+      {
+       "id": "nested-interactive",
+       "impact": "serious",
+       "nodes": 9,
+       "help": "Interactive controls must not be nested"
+      },
+      {
+       "id": "target-size",
+       "impact": "serious",
+       "nodes": 9,
+       "help": "All touch targets must be 24px large, or leave sufficient space"
+      }
+     ]
+    },
+    "390": {
+     "overflow": null,
+     "small_targets": 10,
+     "console_errors": [],
+     "failed_requests": [
+      "failed /api/ui/runs/P3-b82ca561b4567c43d6/context"
+     ]
+    },
+    "768": {
+     "overflow": null,
+     "small_targets": 10,
+     "console_errors": [],
+     "failed_requests": [
+      "failed /api/ui/runs/P3-b82ca561b4567c43d6/context"
+     ]
+    },
+    "1024": {
+     "overflow": null,
+     "small_targets": 10,
+     "console_errors": [],
+     "failed_requests": [
+      "failed /api/ui/runs/P3-b82ca561b4567c43d6/context"
+     ]
+    },
+    "1440": {
+     "overflow": null,
+     "small_targets": 10,
+     "console_errors": [],
+     "failed_requests": [
+      "failed /api/ui/runs/P3-b82ca561b4567c43d6/context"
+     ],
+     "axe": [
+      {
+       "id": "label-content-name-mismatch",
+       "impact": "serious",
+       "nodes": 1,
+       "help": "Elements must have their visible text as part of their accessible name"
+      },
+      {
+       "id": "nested-interactive",
+       "impact": "serious",
+       "nodes": 9,
+       "help": "Interactive controls must not be nested"
+      },
+      {
+       "id": "target-size",
+       "impact": "serious",
+       "nodes": 9,
+       "help": "All touch targets must be 24px large, or leave sufficient space"
+      }
+     ]
+    },
+    "1920": {
+     "overflow": null,
+     "small_targets": 10,
+     "console_errors": [],
+     "failed_requests": [
+      "failed /api/ui/runs/P3-b82ca561b4567c43d6/context"
+     ]
+    }
+   }
+  },
+  "assistant": {
+   "path": "/auditor/assistant?run=<run>",
+   "widths": {
+    "360": {
+     "overflow": null,
+     "small_targets": 1,
+     "console_errors": [],
+     "failed_requests": [
+      "failed /api/ui/runs",
+      "failed /api/ui/events",
+      "failed /api/ui/runs/P3-b82ca561b4567c43d6/context"
+     ],
+     "axe": []
+    },
+    "390": {
+     "overflow": null,
+     "small_targets": 1,
+     "console_errors": [],
+     "failed_requests": [
+      "failed /api/ui/runs",
+      "failed /api/ui/events",
+      "failed /api/ui/runs/P3-b82ca561b4567c43d6/context"
+     ]
+    },
+    "768": {
+     "overflow": null,
+     "small_targets": 1,
+     "console_errors": [],
+     "failed_requests": [
+      "failed /api/ui/runs",
+      "failed /api/ui/events",
+      "failed /api/ui/runs/P3-b82ca561b4567c43d6/context"
+     ]
+    },
+    "1024": {
+     "overflow": null,
+     "small_targets": 1,
+     "console_errors": [],
+     "failed_requests": [
+      "failed /api/ui/runs",
+      "failed /api/ui/events",
+      "failed /api/ui/runs/P3-b82ca561b4567c43d6/context"
+     ]
+    },
+    "1440": {
+     "overflow": null,
+     "small_targets": 1,
+     "console_errors": [],
+     "failed_requests": [
+      "failed /api/ui/runs",
+      "failed /api/ui/events",
+      "failed /api/ui/runs/P3-b82ca561b4567c43d6/context"
+     ],
+     "axe": [
+      {
+       "id": "label-content-name-mismatch",
+       "impact": "serious",
+       "nodes": 1,
+       "help": "Elements must have their visible text as part of their accessible name"
+      }
+     ]
+    },
+    "1920": {
+     "overflow": null,
+     "small_targets": 1,
+     "console_errors": [],
+     "failed_requests": [
+      "failed /api/ui/runs",
+      "failed /api/ui/events",
+      "failed /api/ui/runs/P3-b82ca561b4567c43d6/context"
+     ]
+    }
+   }
+  }
+ },
+ "states": {
+  "loading": "captured",
+  "error": "captured",
+  "empty": "captured",
+  "drawer": "captured"
+ }
+}
