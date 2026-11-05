@@ -72,7 +72,7 @@ export function Login(){
     </footer>
   </div>
 }
-function Brand(){return <Link className="brand" to="/" aria-label="Pramaan home"><span className="brand-mark"><i/><i/><i/></span><span>Pramaan<small>REVENUE AUDIT</small></span></Link>}
+function Brand(){return <Link className="brand" to="/"><span className="brand-mark"><i/><i/><i/></span><span>Pramaan<small>REVENUE AUDIT</small></span></Link>}
 export function Guard({role}:{role:'client_employee'|'auditor'}){const {identity,restoring}=useSession();return restoring?<div className="skeleton-loader" role="status" aria-label="Restoring session"/>:!identity?<Navigate to="/login" replace/>:identity.role!==role?<Navigate to="/unauthorized" replace/>:<Outlet/>}
 function Shell(){
   const {identity,signOut}=useSession();
