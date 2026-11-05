@@ -18,6 +18,8 @@ export function useUpdatedAt(data:unknown){
   useEffect(()=>{const timer=setInterval(()=>setNow(Date.now()),1000);return()=>clearInterval(timer)},[])
   return Math.max(0,Math.round((now-at)/1000))
 }
+// U8: saved audit runs are immutable, so they say so instead of implying live data.
+export function FrozenPill(){return <span className="live-pill frozen-pill" title="Saved audit runs never change; rerun to test current data"><span className="frozen-dot"/>Frozen snapshot</span>}
 export function LivePill({data}:{data:unknown}){const ago=useUpdatedAt(data);return <span className="live-pill" title="Charts refresh automatically from the backend"><span className="live-dot"/><Radio size={13}/>Live<small>{ago<2?'just now':ago<60?`${ago}s ago`:`${Math.floor(ago/60)}m ago`}</small></span>}
 
 // ---- Domain vocabulary ----------------------------------------------------
@@ -71,7 +73,7 @@ export function Donut({slices,center,caption,active,onSelect}:{slices:Slice[];ce
 // ---- Horizontal bars ------------------------------------------------------
 export function HBars({rows,active,onSelect,color='var(--viz-1)',unit='findings',format=(v:number)=>String(v)}:{rows:{key:string;label:string;sub?:string;value:number}[];active?:string;onSelect?:(key:string)=>void;color?:string;unit?:string;format?:(value:number)=>string}){
   const {tip,show,hide}=useTip();const max=Math.max(...rows.map(r=>r.value),1)
-  return <div className="chart hbars">{rows.map(r=><button type="button" key={r.key} className={'hbar'+(active===r.key?' on':'')+(active&&active!==r.key?' dim':'')} onClick={()=>onSelect?.(r.key)} disabled={!onSelect} onMouseMove={e=>show(e,r.label,`${format(r.value)} ${unit}`.trim())} onMouseLeave={hide}><span className="hbar-label">{r.label}{r.sub&&<small>{r.sub}</small>}</span><span className="hbar-track"><i style={{width:`${r.value/max*100}%`,background:color}}/></span><b>{format(r.value)}</b></button>)}<TipBox tip={tip}/></div>
+  return <div className="chart hbars">{rows.map(r=><button type="button" key={r.key} className={'hbar'+(active===r.key?' on':'')+(active&&active!==r.key?' dim':'')} onClick={()=>onSelect?.(r.key)} disabled={!onSelect} onMouseMove={e=>show(e,r.label,`${format(r.value)} ${unit}`.trim())} aria-label={`${r.label}${r.sub?' ('+r.sub+')':''}: ${format(r.value)} ${unit}`.trim()} onMouseLeave={hide}><span className="hbar-label" title={r.label}>{r.label}{r.sub&&<small>{r.sub}</small>}</span><span className="hbar-track"><i style={{width:`${r.value/max*100}%`,background:color}}/></span><b>{format(r.value)}</b></button>)}<TipBox tip={tip}/></div>
 }
 
 // ---- Column chart (single series, time on x) ------------------------------

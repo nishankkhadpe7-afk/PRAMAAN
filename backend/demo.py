@@ -161,8 +161,8 @@ def rehearsal(name):
             changes = call(client, credentials["auditor"], "GET", f"/p4/audit-runs/{new_run['run_id']}/changes").json()
             assert changes["changed"] and changes["affected_samples"]
             call(client, credentials["auditor"], "POST", "/p2/customers", {"customer_id": "FORBIDDEN", "name": "auditor write"}, 403)
-            events = call(client, credentials["auditor"], "GET", "/ui/events").json()["events"]
-            assert any(e["action"] == "security_denied" and e["actor"] == "demo-auditor" for e in events)
+            denials = call(client, credentials["auditor"], "GET", "/ui/events").json()["access_denials"]
+            assert any(e["decision"] == "denied" and e["subject"] == "demo-auditor" for e in denials)
             business = call(client, credentials["client"], "GET", "/ui/business").json()
             assert not any(c["customer_id"] == "FORBIDDEN" for c in business["customers"])
             saved = call(client, credentials["auditor"], "POST", f"/p3/audit-runs/{new_run['run_id']}/reproduce").json()
@@ -183,19 +183,43 @@ def rehearsal(name):
         log_file.close()
 
 
+def empty(name="runtime"):
+    """Fresh workspace with schema and credentials only: no customers, sales, registers, fixtures or runs."""
+    root = data_path(name)
+    if root.parent != DEMO_HOME.resolve():
+        raise ValueError("unsafe reset target")
+    if root.exists():
+        shutil.rmtree(root)
+    root.mkdir(parents=True)
+    configure(root)
+    credentials = {"client": security.issue("demo-client", "client_employee"), "auditor": security.issue("demo-auditor", "auditor"),
+                   "human": security.issue("demo-human-reviewer", "auditor", human=True)}
+    with TestClient(p1.app) as client:
+        call(client, credentials["client"], "GET", "/ui/business")
+    secret_file = root / "session-credentials.json"
+    secret_file.write_text(json.dumps(credentials), encoding="utf-8")
+    secret_file.chmod(0o600)
+    state = {"data_directory": str(root), "classification": "empty workspace"}
+    (root / "demo-state.json").write_text(json.dumps(state, indent=2), encoding="utf-8")
+    return state
+
+
 def main():
     parser = argparse.ArgumentParser(description="Reset only a dedicated .demo instance; stop its servers first")
-    parser.add_argument("action", choices=["reset", "credentials", "rehearse"])
+    parser.add_argument("action", choices=["reset", "empty", "credentials", "rehearse"])
     parser.add_argument("--name", default="runtime")
-    parser.add_argument("--identity", choices=["client", "auditor", "human"], default="client")
+    parser.add_argument("--identity", choices=["client", "auditor", "human", "agent"], default="client")
     args = parser.parse_args()
     if args.action == "reset":
         print(json.dumps(reset(args.name), indent=2))
+    elif args.action == "empty":
+        print(json.dumps(empty(args.name), indent=2))
     elif args.action == "credentials":
         root = data_path(args.name)
         configure(root)
         subject = "demo-" + args.identity
-        token = security.issue(subject, "client_employee" if args.identity == "client" else "auditor", human=args.identity == "human")
+        # "agent" = an auditor credential bound to the MCP channel (H6); give only these to AI agents.
+        token = security.issue(subject, "client_employee" if args.identity == "client" else "auditor", human=args.identity == "human", agent=args.identity == "agent")
         print(token)  # Explicit trusted local provisioning command; never include in demo reports.
     else:
         results = [rehearsal(args.name + "-1"), rehearsal(args.name + "-2")]

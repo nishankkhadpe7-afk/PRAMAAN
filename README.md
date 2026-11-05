@@ -23,7 +23,7 @@ Prerequisites: Python 3.11+ (tested on 3.11.9 and 3.13.14), Node 20.19+ or 22.12
 ```powershell
 py -m venv .venv-p4
 .\.venv-p4\Scripts\python.exe -m pip install -r backend/requirements-dev.txt
-$env:PYTHONPATH = (Split-Path -Parent $PWD.Path)
+$env:PYTHONPATH = Join-Path $PWD.Path 'launcher'
 .\.venv-p4\Scripts\python.exe -m Pramaan.backend.demo reset
 Push-Location web
 npm ci
@@ -33,7 +33,7 @@ Pop-Location
 Start the API:
 
 ```powershell
-$env:PYTHONPATH = (Split-Path -Parent $PWD.Path)
+$env:PYTHONPATH = Join-Path $PWD.Path 'launcher'
 $env:PRAMAAN_DATA = Join-Path $PWD.Path '.demo/runtime'
 .\.venv-p4\Scripts\python.exe -m uvicorn Pramaan.backend.app:app --host 127.0.0.1 --port 8000 --no-access-log
 ```
@@ -48,7 +48,7 @@ npm run dev
 Open [http://127.0.0.1:5173](http://127.0.0.1:5173), then issue only the credential needed for the active session:
 
 ```powershell
-$env:PYTHONPATH = (Split-Path -Parent $PWD.Path)
+$env:PYTHONPATH = Join-Path $PWD.Path 'launcher'
 .\.venv-p4\Scripts\python.exe -m Pramaan.backend.demo credentials --identity client
 .\.venv-p4\Scripts\python.exe -m Pramaan.backend.demo credentials --identity auditor
 .\.venv-p4\Scripts\python.exe -m Pramaan.backend.demo credentials --identity human
@@ -56,7 +56,7 @@ $env:PYTHONPATH = (Split-Path -Parent $PWD.Path)
 
 reset reloads only .demo/runtime; it does not change source fixtures or backend/data. It creates synthetic business data, revocable credentials, preserved sources, reconciliation data, and a sample audit run. Do not reset an instance whose work must be retained.
 
-> **Important — Python package import.** Backend modules import themselves as `from Pramaan.backend import ...`, but there is no `Pramaan/` directory at the repository root. `START_PRAMAAN.bat` creates a small package shim at `.demo/launcher/Pramaan/__init__.py` that maps `Pramaan` to this repository root. If you start services manually instead of using the launcher, create that shim first (or set `PYTHONPATH` to a directory containing a `Pramaan` package whose `__init__.py` sets `__path__` to this repo root), otherwise `unittest discover`, `demo`, `security`, and other `Pramaan.backend.*` invocations will fail with `ModuleNotFoundError: No module named 'Pramaan'`.
+> **Important — Python package import.** Backend modules import themselves as `from Pramaan.backend import ...`. Set `PYTHONPATH` to the absolute path of the tracked `launcher/` folder; its shim maps `Pramaan` to the repository root for any checkout folder name, on every OS. `START_PRAMAAN.bat`, `start-local.ps1`, `run-local.sh`, Playwright and CI all do this.
 
 ## Demonstration
 
@@ -272,7 +272,7 @@ Schemas allow documented IDs and, where necessary, a payload; extra properties a
 With FastAPI running, use the tested stdio console:
 
 ```powershell
-$env:PYTHONPATH = (Split-Path -Parent $PWD.Path)
+$env:PYTHONPATH = Join-Path $PWD.Path 'launcher'
 $env:PRAMAAN_API_URL = 'http://127.0.0.1:8000'
 $env:PRAMAAN_TOKEN = (.\.venv-p4\Scripts\python.exe -m Pramaan.backend.demo credentials --identity auditor)
 .\.venv-p4\Scripts\python.exe -m Pramaan.backend.agent_console
@@ -319,60 +319,70 @@ See [INTEGRATION_REVIEW.md](INTEGRATION_REVIEW.md), [design.md](design.md), and 
 
 ## Installation configuration and tests
 
-For a trusted local demo, a revocable permanent credential can be issued. Do not commit it or put it in a shared environment file.
+**Package import.** The code imports itself as `Pramaan.backend`. Put the tracked `launcher/` folder on `PYTHONPATH` (absolute path); its shim resolves to the repository root whatever the checkout folder is called, on Windows, macOS and Linux.
+
+| Platform | Start the API and web UI |
+| --- | --- |
+| Windows | `START_PRAMAAN.bat` (or `start-local.ps1` for the API only) |
+| macOS / Linux | `./run-local.sh` |
+| Containers | `docker compose up --build`, then open http://127.0.0.1:8080 |
+
+**Credentials.** Issue and manage credentials with the security CLI against the same `PRAMAAN_DATA`:
 
 ```powershell
-$env:PYTHONPATH = (Split-Path -Parent $PWD.Path)
+$env:PYTHONPATH = Join-Path $PWD.Path 'launcher'
 $env:PRAMAAN_DATA = Join-Path $PWD.Path '.demo/runtime'
-$clientToken = & .\.venv-p4\Scripts\python.exe -m Pramaan.backend.security issue --subject local-client --role client_employee --permanent
-$auditorToken = & .\.venv-p4\Scripts\python.exe -m Pramaan.backend.security issue --subject local-auditor --role auditor --permanent
+.\.venv-p4\Scripts\python.exe -m Pramaan.backend.security issue --subject me --role auditor --human-auditor --ttl 28800
+.\.venv-p4\Scripts\python.exe -m Pramaan.backend.security issue --subject my-agent --role auditor --agent --ttl 900
+.\.venv-p4\Scripts\python.exe -m Pramaan.backend.security list
+.\.venv-p4\Scripts\python.exe -m Pramaan.backend.security revoke-subject --subject my-agent
 ```
 
-Revoke using python -m Pramaan.backend.security revoke with the same data root. Default credential lifetime is 15 minutes; maximum non-permanent lifetime is one hour.
+- Default lifetime is 15 minutes; the maximum is 30 days (`--permanent` exists for trusted local development only).
+- Human-review credentials expire within 7 days and can never be permanent or agent-bound.
+- **Give AI agents only `--agent` credentials.** The server then applies the agent policy (no journal reversals, no books writes, no human review) from the credential itself, whatever headers the agent sends.
 
 | Variable                    | Default               | Meaning                                                                                                         |
 | --------------------------- | --------------------- | --------------------------------------------------------------------------------------------------------------- |
 | PRAMAAN_DATA                | backend/data/         | Local storage root; use the same value for API, provisioning, MCP, and demo commands operating on one instance. |
-| PYTHONPATH                  | unset                 | Parent directory containing the Pramaan package.                                                                |
+| PYTHONPATH                  | unset                 | Absolute path of the repository's `launcher/` folder.                                                            |
 | PRAMAAN_API_URL             | http://127.0.0.1:8000 | API address used by MCP tools. Loopback HTTP or HTTPS is accepted.                                              |
-| PRAMAAN_TOKEN               | unset                 | Stdio MCP bearer credential; do not persist it in source/configuration.                                         |
+| PRAMAAN_TOKEN               | unset                 | Stdio MCP bearer credential (issue with `--agent`); do not persist it in source/configuration.                  |
 | PRAMAAN_MCP_URL             | unset                 | Optional Streamable HTTP endpoint for the supplied console.                                                     |
 | PRAMAAN_MCP_PORT            | 8001                  | Streamable HTTP MCP port.                                                                                       |
-| PRAMAAN_MAX_UPLOAD_BYTES    | 10485760              | Maximum decoded source or evidence upload accepted by local API routes (10 MiB default).                        |
+| PRAMAAN_MAX_UPLOAD_BYTES    | 10485760              | Maximum decoded upload (10 MiB). Request bodies above this as base64 JSON (+1 MiB) get HTTP 413 before parsing. |
 | PRAMAAN_DEMO_IRP_PUBLIC_KEY | unset                 | Admin-configured test Ed25519 key for the demo IRP path; not an official integration.                           |
-| PRAMAAN_E2E_INSTANCE        | browser               | Disposable browser-test data instance.                                                                          |
+| PRAMAAN_E2E_INSTANCE        | browser               | Disposable browser-test data instance (reset automatically before each e2e run).                                |
+| PRAMAAN_E2E_PYTHON          | auto-detected         | Python used by Playwright to reset the demo and start the API.                                                  |
+| PRAMAAN_E2E_CHANNEL         | chrome                | Playwright browser channel; set to empty to use Playwright's bundled Chromium.                                  |
+| PRAMAAN_E2E_VIDEO           | on                    | Set to `off` where Playwright's ffmpeg is not installed.                                                         |
+
+**Tests.** CI (`.github/workflows/ci.yml`) runs all of these on every push and pull request:
 
 ```powershell
-$env:PYTHONPATH = (Split-Path -Parent $PWD.Path)
-# Backend modules import as `from Pramaan.backend ...`; the repo root has no
-# `Pramaan/` directory, so create the package shim that START_PRAMAAN.bat uses.
-$launcherDir = Join-Path $PWD.Path '.demo\launcher'
-$shimDir = Join-Path $launcherDir 'Pramaan'
-if (-not (Test-Path -LiteralPath $shimDir)) { New-Item -ItemType Directory -Path $shimDir | Out-Null }
-Set-Content -Path (Join-Path $shimDir '__init__.py') -Value ('__path__ = [r"' + $PWD.Path + '"]')
-$env:PYTHONPATH = $launcherDir + ';' + $env:PYTHONPATH
-\.venv-p4\Scripts\python.exe -m unittest discover -s backend/tests -v
-\.venv-p4\Scripts\python.exe -m compileall -q backend
-\.venv-p4\Scripts\python.exe -m Pramaan.backend.demo rehearse --name rehearsal
-\.venv-p4\Scripts\python.exe -m Pramaan.backend.release_verify --require-quality --output .demo/release-evidence.json
+$env:PYTHONPATH = Join-Path $PWD.Path 'launcher'
+.\.venv-p4\Scripts\python.exe -m pip install -r backend/requirements-dev.txt
+.\.venv-p4\Scripts\python.exe -m pytest backend/tests -q
+.\.venv-p4\Scripts\python.exe -m Pramaan.backend.demo rehearse --name rehearsal
+.\.venv-p4\Scripts\python.exe -m Pramaan.backend.release_verify --require-quality --output .demo/release-evidence.json
 Push-Location web
-npm run build
 npm run typecheck
 npm test
+npm run build
+npx playwright install chromium ffmpeg
+npm run test:e2e          # resets .demo/browser with fresh credentials, then starts both servers
 Pop-Location
 ```
 
-Browser regression requires Chrome and Playwright ffmpeg. Stop manual servers on 8000/5173 first:
+Browser artifacts go to `web/test-results`; HTTP tracing is disabled, so artifacts never capture credential headers. The container setup (`compose.yaml`, `backend/Dockerfile`, `web/Dockerfile`) is for one company on one machine; see `docs/REMEDIATION.md` for hosted-deployment considerations.
 
-```powershell
-.\.venv-p4\Scripts\python.exe -m Pramaan.backend.demo reset --name browser
-Push-Location web
-npx playwright install ffmpeg
-npm run test:e2e
-Pop-Location
-```
+**Behaviour notes (Nov 2026 remediation).**
 
-Browser artifacts go to web/test-results; HTTP tracing is disabled so artifacts do not capture credential headers. No Docker Compose or production hosting setup is implemented.
+- Sampling seeds are drawn by the server (`srv-` + 128 random bits) unless an auditor deliberately supplies one to re-perform a documented selection.
+- Related-party records are parsed from the uploaded file (CSV or JSON) rather than taken from client JSON.
+- Access decisions are kept in the append-only `access_log` table (`/ui/access-log`), not in the hash-chained business/audit event log.
+- New snapshots reference register bytes in the vault by SHA-256; export packages embed them, so packages stay self-contained.
+- Malformed dates are rejected at entry. Any legacy unreadable dates surface as INCONSISTENT findings instead of blocking the audit.
 
 The release-evidence command records the synthetic evaluation, dataset manifest hash, ruleset/core implementation hashes, and its own manifest hash. It is a reproducibility receipt for the local prototype, not an external anchor, security certification, or independent audit review.
 
@@ -381,7 +391,7 @@ The release-evidence command records the synthetic evaluation, dataset manifest 
 Regenerate the synthetic evaluation:
 
 ```powershell
-$env:PYTHONPATH = (Split-Path -Parent $PWD.Path)
+$env:PYTHONPATH = Join-Path $PWD.Path 'launcher'
 .\.venv-p4\Scripts\python.exe -m Pramaan.backend.evaluate
 ```
 

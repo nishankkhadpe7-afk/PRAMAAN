@@ -10,7 +10,8 @@ from decimal import Decimal, InvalidOperation
 from typing import Any
 
 from fastapi import APIRouter, HTTPException, Query
-from pydantic import BaseModel, ConfigDict, Field
+from datetime import date
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 from . import app as p1
 from .upload_safety import UploadSafetyError, content_type, decode_base64
@@ -44,6 +45,16 @@ def init_p2(db: sqlite3.Connection) -> None:
       CREATE TRIGGER IF NOT EXISTS p2_journal_lines_no_delete BEFORE DELETE ON p2_journal_lines BEGIN SELECT RAISE(ABORT,'posted journal lines are immutable; post a reversal'); END;
       CREATE TRIGGER IF NOT EXISTS p2_journals_no_update BEFORE UPDATE ON p2_journals BEGIN SELECT RAISE(ABORT,'posted journals are immutable; post a reversal'); END;
       CREATE TRIGGER IF NOT EXISTS p2_journals_no_delete BEFORE DELETE ON p2_journals BEGIN SELECT RAISE(ABORT,'posted journals are immutable; post a reversal'); END;
+      CREATE TRIGGER IF NOT EXISTS p2_register_uploads_no_update BEFORE UPDATE ON p2_register_uploads BEGIN SELECT RAISE(ABORT,'preserved registers are immutable'); END;
+      CREATE TRIGGER IF NOT EXISTS p2_register_uploads_no_delete BEFORE DELETE ON p2_register_uploads BEGIN SELECT RAISE(ABORT,'preserved registers are immutable'); END;
+      CREATE TRIGGER IF NOT EXISTS p2_register_rows_no_update BEFORE UPDATE ON p2_register_rows BEGIN SELECT RAISE(ABORT,'preserved register rows are immutable'); END;
+      CREATE TRIGGER IF NOT EXISTS p2_register_rows_no_delete BEFORE DELETE ON p2_register_rows BEGIN SELECT RAISE(ABORT,'preserved register rows are immutable'); END;
+      CREATE TRIGGER IF NOT EXISTS p2_related_party_uploads_no_update BEFORE UPDATE ON p2_related_party_uploads BEGIN SELECT RAISE(ABORT,'related-party disclosures are immutable'); END;
+      CREATE TRIGGER IF NOT EXISTS p2_related_party_uploads_no_delete BEFORE DELETE ON p2_related_party_uploads BEGIN SELECT RAISE(ABORT,'related-party disclosures are immutable'); END;
+      CREATE TRIGGER IF NOT EXISTS p2_evidence_no_update BEFORE UPDATE ON p2_evidence BEGIN SELECT RAISE(ABORT,'evidence records are immutable'); END;
+      CREATE TRIGGER IF NOT EXISTS p2_evidence_no_delete BEFORE DELETE ON p2_evidence BEGIN SELECT RAISE(ABORT,'evidence records are immutable'); END;
+      CREATE TRIGGER IF NOT EXISTS p2_reconciliations_no_update BEFORE UPDATE ON p2_reconciliations BEGIN SELECT RAISE(ABORT,'reconciliations are immutable'); END;
+      CREATE TRIGGER IF NOT EXISTS p2_reconciliations_no_delete BEFORE DELETE ON p2_reconciliations BEGIN SELECT RAISE(ABORT,'reconciliations are immutable'); END;
     """)
 
 
@@ -66,59 +77,156 @@ def cents(value: Any) -> int:
         raise ValueError("invalid monetary amount") from exc
 
 
+Identifier = Field(min_length=1, max_length=120)
+
+
+def iso_date(value: str) -> str:
+    """Accept only calendar-valid ISO dates (YYYY-MM-DD); stored text stays exactly as given."""
+    if not isinstance(value, str) or len(value) != 10:
+        raise ValueError("must be an ISO date (YYYY-MM-DD)")
+    try:
+        date.fromisoformat(value)
+    except ValueError as exc:
+        raise ValueError("must be an ISO date (YYYY-MM-DD)") from exc
+    return value
+
+
+def money_amount(value: str) -> str:
+    cents(value)  # raises ValueError with a safe message
+    return value
+
+
 class CustomerIn(BaseModel):
-    customer_id: str = Field(min_length=1)
-    name: str = Field(min_length=1)
-    gstin: str | None = None
+    customer_id: str = Identifier
+    name: str = Field(min_length=1, max_length=200)
+    gstin: str | None = Field(default=None, max_length=20)
 
 
 class ReceiptIn(BaseModel):
-    receipt_id: str
+    receipt_id: str = Identifier
     amount: str
     value_date: str
-    bank_ref: str | None = None
+    bank_ref: str | None = Field(default=None, max_length=120)
+
+    check_date = field_validator("value_date")(iso_date)
+    check_amount = field_validator("amount")(money_amount)
 
 
 class CreditNoteIn(BaseModel):
-    credit_note_id: str
+    credit_note_id: str = Identifier
     credit_date: str
     amount: str
-    reason: str
+    reason: str = Field(min_length=1, max_length=500)
+
+    check_date = field_validator("credit_date")(iso_date)
+    check_amount = field_validator("amount")(money_amount)
 
 
 class EvidenceIn(BaseModel):
-    evidence_id: str
+    evidence_id: str = Identifier
     content_base64: str
     content_type: str = "application/octet-stream"
 
 
 class SaleIn(BaseModel):
-    order_id: str
-    dispatch_id: str
-    invoice_id: str
-    journal_id: str
-    customer_id: str
+    order_id: str = Identifier
+    dispatch_id: str = Identifier
+    invoice_id: str = Identifier
+    journal_id: str = Identifier
+    customer_id: str = Identifier
     order_date: str
     dispatch_date: str
     invoice_date: str
-    bill_no: str
+    bill_no: str = Identifier
     net_amount: str
     tax_amount: str = "0.00"
-    vehicle_no: str | None = None
+    vehicle_no: str | None = Field(default=None, max_length=40)
     receipt: ReceiptIn | None = None
     credit_note: CreditNoteIn | None = None
-    evidence: list[EvidenceIn] = Field(default_factory=list)
+    evidence: list[EvidenceIn] = Field(default_factory=list, max_length=50)
+
+    # C1: a single unreadable date used to block every later audit run. Dates must be
+    # calendar-valid ISO values; ordering anomalies stay allowed because the audit tests them.
+    check_dates = field_validator("order_date", "dispatch_date", "invoice_date")(iso_date)
+    check_net = field_validator("net_amount")(money_amount)
 
 
 class RegisterIn(BaseModel):
-    period: str
+    period: str = Field(min_length=1, max_length=120)
     source_base64: str
 
 
 class RelatedPartiesIn(BaseModel):
-    period: str
+    period: str = Field(min_length=1, max_length=120)
     source_base64: str
-    records: list[dict[str, Any]]
+    # Optional and advisory only: the stored records are always parsed from the source bytes (H5).
+    records: list[dict[str, Any]] | None = None
+
+
+RELATED_PARTY_PARSER = "rp-source-parser-v1"
+TRUE_WORDS, FALSE_WORDS = {"true", "yes", "y", "1"}, {"false", "no", "n", "0", ""}
+BOOLEAN_FIELDS = {"related", "related_party", "is_related_party"}
+DATE_FIELDS = {"valid_from", "valid_to"}
+
+
+def _normal_key(key: Any) -> str:
+    return "_".join(str(key).strip().lower().split())
+
+
+def _normal_value(key: str, value: Any) -> Any:
+    if isinstance(value, str):
+        value = value.strip()
+        if key in BOOLEAN_FIELDS:
+            if value.lower() in TRUE_WORDS:
+                return True
+            if value.lower() in FALSE_WORDS:
+                return False
+            raise ValueError(f"{key} must be yes/no or true/false")
+        if value == "":
+            return None
+    if key in DATE_FIELDS and value is not None:
+        iso_date(value)
+    return value
+
+
+def parse_related_parties(source: bytes) -> list[dict[str, Any]]:
+    """Derive related-party records from the preserved source bytes (JSON array or CSV).
+
+    The parsed records, not caller-supplied JSON, are what T01 later tests, so the vault
+    hash and the tested records always describe the same disclosure.
+    """
+    try:
+        text = source.decode("utf-8-sig")
+    except UnicodeDecodeError as exc:
+        raise ValueError("related-party source must be UTF-8 JSON or CSV") from exc
+    stripped = text.lstrip()
+    if stripped.startswith("["):
+        try:
+            rows = json.loads(text)
+        except json.JSONDecodeError as exc:
+            raise ValueError("related-party JSON is malformed") from exc
+        if not isinstance(rows, list) or not all(isinstance(r, dict) for r in rows):
+            raise ValueError("related-party JSON must be an array of objects")
+    else:
+        try:
+            rows = list(csv.DictReader(io.StringIO(text, newline="")))
+        except csv.Error as exc:
+            raise ValueError("related-party CSV is malformed") from exc
+    records = []
+    for row in rows:
+        record = {}
+        for key, value in row.items():
+            if key is None:
+                raise ValueError("related-party CSV row has more cells than headers")
+            name = _normal_key(key)
+            record[name] = _normal_value(name, value)
+        if any(v not in (None, "") for v in record.values()):
+            records.append(record)
+    if not records:
+        raise ValueError("related-party source contains no records")
+    if len(records) > 10000:
+        raise ValueError("related-party source exceeds 10,000 records")
+    return records
 
 
 def add_journal(db: sqlite3.Connection, journal_id: str, invoice_id: str, lines: list[tuple[str, int, int]], reverses: str | None = None) -> None:
@@ -152,8 +260,19 @@ def create_sale(payload: SaleIn) -> dict[str, Any]:
         if not tax_decimal.is_finite() or tax_decimal < 0:
             raise ValueError("tax amount must be finite and non-negative")
         net, tax = cents(payload.net_amount), cents(tax_decimal) if tax_decimal > 0 else 0
+        receipt_cents = cents(payload.receipt.amount) if payload.receipt else None
+        credit_cents = cents(payload.credit_note.amount) if payload.credit_note else None
     except (ValueError, InvalidOperation) as exc:
         raise HTTPException(422, str(exc)) from exc
+    evidence_ids = [e.evidence_id for e in payload.evidence]
+    if len(set(evidence_ids)) != len(evidence_ids):
+        raise HTTPException(422, "evidence_id values must be unique within the request")
+    decoded = []
+    for evidence in payload.evidence:
+        try:
+            decoded.append((evidence, decode_base64(evidence.content_base64, label="evidence"), content_type(evidence.content_type)))
+        except UploadSafetyError as exc:
+            raise HTTPException(422, "invalid or oversized evidence") from exc
     gross = net + tax
     db = db_open()
     try:
@@ -167,20 +286,13 @@ def create_sale(payload: SaleIn) -> dict[str, Any]:
             lines.append(("Output Tax", 0, tax))
         add_journal(db, payload.journal_id, payload.invoice_id, lines)
         if payload.receipt:
-            db.execute("INSERT INTO p2_receipts VALUES(?,?,?,?,?)", (payload.receipt.receipt_id, payload.invoice_id, cents(payload.receipt.amount), payload.receipt.value_date, payload.receipt.bank_ref))
+            db.execute("INSERT INTO p2_receipts VALUES(?,?,?,?,?)", (payload.receipt.receipt_id, payload.invoice_id, receipt_cents, payload.receipt.value_date, payload.receipt.bank_ref))
         if payload.credit_note:
-            db.execute("INSERT INTO p2_credit_notes VALUES(?,?,?,?,?)", (payload.credit_note.credit_note_id, payload.invoice_id, payload.credit_note.credit_date, cents(payload.credit_note.amount), payload.credit_note.reason))
-        evidence_ids = []
-        for evidence in payload.evidence:
-            try:
-                content = decode_base64(evidence.content_base64, label="evidence")
-                safe_content_type = content_type(evidence.content_type)
-            except UploadSafetyError as exc:
-                raise HTTPException(422, "invalid or oversized evidence") from exc
-            sha = p1.digest(content)
-            (p1.VAULT / sha).write_bytes(content)
-            db.execute("INSERT INTO p2_evidence VALUES(?,?,?,?,?)", (evidence.evidence_id, "invoice", payload.invoice_id, sha, safe_content_type))
-            evidence_ids.append(evidence.evidence_id)
+            db.execute("INSERT INTO p2_credit_notes VALUES(?,?,?,?,?)", (payload.credit_note.credit_note_id, payload.invoice_id, payload.credit_note.credit_date, credit_cents, payload.credit_note.reason))
+        for evidence, content, safe_content_type in decoded:
+            db.execute("INSERT INTO p2_evidence VALUES(?,?,?,?,?)", (evidence.evidence_id, "invoice", payload.invoice_id, p1.digest(content), safe_content_type))
+        for _, content, _ in decoded:
+            p1.store_blob(content)
         result = {"customer_id": payload.customer_id, "order_id": payload.order_id, "dispatch_id": payload.dispatch_id, "invoice_id": payload.invoice_id, "journal_id": payload.journal_id, "gross_amount": f"{gross / 100:.2f}", "evidence_ids": evidence_ids, "receipt_id": payload.receipt.receipt_id if payload.receipt else None, "credit_note_id": payload.credit_note.credit_note_id if payload.credit_note else None}
         p1.log_event(db, "client-demo", "sale_lifecycle_created", payload.invoice_id, result)
         db.commit()
@@ -234,8 +346,7 @@ def upload_register(payload: RegisterIn) -> dict[str, Any]:
         raise HTTPException(422, "register must be base64-encoded UTF-8 CSV with a header") from exc
     if not rows:
         raise HTTPException(422, "register contains no data rows")
-    sha = p1.digest(source)
-    (p1.VAULT / sha).write_bytes(source)
+    sha = p1.store_blob(source)
     upload_id = "REG-" + uuid.uuid4().hex[:12]
     db = db_open()
     try:
@@ -256,13 +367,25 @@ def upload_related_parties(payload: RelatedPartiesIn) -> dict[str, Any]:
         source = decode_base64(payload.source_base64, label="related-party source")
     except UploadSafetyError as exc:
         raise HTTPException(422, "invalid or oversized related-party source") from exc
+    try:
+        records = parse_related_parties(source)
+    except ValueError as exc:
+        raise HTTPException(422, str(exc)) from exc
+    if payload.records is not None:
+        supplied = [{_normal_key(k): v for k, v in r.items()} for r in payload.records]
+        try:
+            supplied = [{k: _normal_value(k, v) for k, v in r.items()} for r in supplied]
+        except ValueError as exc:
+            raise HTTPException(422, str(exc)) from exc
+        if p1.canonical(supplied) != p1.canonical(records):
+            raise HTTPException(422, "records do not match the uploaded source file; the source is the record of disclosure")
     sha = p1.digest(source)
-    (p1.VAULT / sha).write_bytes(source)
     upload_id = "RP-" + uuid.uuid4().hex[:12]
-    metadata = {"parsed_row_count": len(payload.records), "content_sha256": sha, "comparison": "not run in P2"}
+    metadata = {"parsed_row_count": len(records), "content_sha256": sha, "parser": RELATED_PARTY_PARSER, "comparison": "not run in P2"}
     db = db_open()
     try:
-        db.execute("INSERT INTO p2_related_party_uploads VALUES(?,?,?,?,?)", (upload_id, sha, payload.period, p1.canonical(payload.records).decode(), p1.canonical(metadata).decode()))
+        db.execute("INSERT INTO p2_related_party_uploads VALUES(?,?,?,?,?)", (upload_id, sha, payload.period, p1.canonical(records).decode(), p1.canonical(metadata).decode()))
+        p1.store_blob(source)
         p1.log_event(db, "auditor-demo", "related_parties_imported", upload_id, metadata)
         db.commit()
         return {"upload_id": upload_id, **metadata}

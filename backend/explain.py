@@ -175,6 +175,10 @@ def _t11(f: dict[str, Any], ctx: Context) -> str:
 def explain_finding(f: dict[str, Any], ctx: Context) -> str:
     test, ref, state = f.get("test_id"), f.get("object_ref"), f.get("state")
     try:
+        if f.get("category") == "UNREADABLE_DATE":
+            label = f.get("bill_no") or ref
+            recorded = f" (recorded as \"{f['recorded_value']}\")" if f.get("recorded_value") else ""
+            return f"{label}{recorded}: {f.get('reason', '')}"
         if test == "T00":
             return _t00(f, ctx)
         if test == "T01":

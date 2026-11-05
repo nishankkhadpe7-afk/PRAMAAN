@@ -585,10 +585,15 @@ observations are signals for human review, not audit conclusions.
 """
 
 
+def original_register(report):
+    from .p5 import register_bytes
+    return register_bytes(report["register"])
+
+
 def pack_bytes(report, content_hash):
     # Log verification is captured in the package model, not re-read at export.
     return deterministic_zip({"README.txt": README.encode("utf-8"), "workpaper.xlsx": workbook_bytes(report, content_hash), "findings_memo.pdf": memo_bytes(report, content_hash),
-                              "original_register.csv": base64.b64decode(report["register"]["source_base64"]),
+                              "original_register.csv": original_register(report),
                               "evidence_index.json": p1.canonical(report["evidence_index"]), "standards.json": p1.canonical(report["standards"]),
                               "receipt.json": p1.canonical({**report["receipt"], "output_content_digest": content_hash}),
                               "sample_evidence_index.json": p1.canonical([{"sample": s, "evidence_ids": sorted({e for f in report["findings"] for e in f["evidence_ids"] if any(item["sheet"] == s["sheet"] and item["object_ref"] == s["object_ref"] for item in f["samples"])})} for s in report["result"]["sample_items"]]),

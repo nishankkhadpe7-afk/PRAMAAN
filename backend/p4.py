@@ -15,6 +15,17 @@ def whoami():
     return {key: caller[key] for key in ("subject", "role", "human", "channel") if key in caller}
 
 
+@router.post("/tool-denials", status_code=204)
+def record_tool_denial():
+    """B9: explicit endpoint the MCP adapter calls when it refuses a tool call (unknown tool or
+    invalid arguments). Records a 'denied' access decision; replaces a deliberate 404 hack."""
+    from fastapi import Response
+    from .security import security_event
+    caller = identity.get()
+    security_event(caller, "mcp_tool_rejected", "denied", caller.get("channel", "mcp") if caller else "mcp", caller.get("tool") if caller else None)
+    return Response(status_code=204)
+
+
 @router.post("/egress-audit")
 def egress_audit(report: dict = Body(default={})):
     """Append the MCP egress-DLP report (categories/counts/field paths only, never
@@ -71,12 +82,40 @@ def differences(before, after, path=""):
 
 @router.get("/audit-runs/{run_id}/changes")
 def post_test_changes(run_id: str):
+    """Read-only change detection (B3): safe to call repeatedly and from agents."""
     db = p3.db_open()
     try:
+        return change_report(db, run_id)
+    finally:
+        db.close()
+
+
+@router.post("/audit-runs/{run_id}/changes")
+def record_post_test_changes(run_id: str):
+    """Record the current change report in the hash-chained log (explicit auditor action)."""
+    db = p3.db_open()
+    try:
+        report = change_report(db, run_id)
+        report["recorded"] = False
+        if report["changed"]:
+            stored = {k: v for k, v in report.items() if k != "recorded"}
+            inserted = db.execute("INSERT OR IGNORE INTO p4_changes VALUES(?,?,?)", (run_id, report["current_hash"], p1.canonical(stored).decode())).rowcount
+            if inserted:
+                p1.log_event(db, "auditor", "post_test_change_detected", run_id, stored)
+            db.commit()
+            report["recorded"] = True
+        return report
+    finally:
+        db.close()
+
+
+def change_report(db, run_id):
+    if True:
         run = db.execute("SELECT * FROM p3_audit_runs WHERE run_id=?", (run_id,)).fetchone()
         if not run:
             raise HTTPException(404, "run not found")
-        before, current = json.loads(run["snapshot_json"]), p3.build_snapshot(db)
+        before = json.loads(run["snapshot_json"])
+        current = p3.snapshot_like(db, before)
         current_hash = p1.digest(p1.canonical(current))
         covered = current["p2_evidence"] + current["p3_evidence"]
         if current["dataset_manifest"]:
@@ -112,11 +151,4 @@ def post_test_changes(run_id: str):
                   "affected_finding_ids": [f["finding_id"] for f in result["findings"] if population_change or f["object_ref"] in changed_refs],
                   "impact_mapping": "conservative-all-samples" if population_change else "linked-object",
                   "external_anchor": None}
-        if report["changed"]:
-            inserted = db.execute("INSERT OR IGNORE INTO p4_changes VALUES(?,?,?)", (run_id, current_hash, p1.canonical(report).decode())).rowcount
-            if inserted:
-                p1.log_event(db, "auditor", "post_test_change_detected", run_id, report)
-            db.commit()
         return report
-    finally:
-        db.close()

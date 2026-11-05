@@ -14,7 +14,7 @@ goto :MAIN
 :RUN_API
 cd /d "%~dp0"
 set "PROJECT_ROOT=%CD%"
-set "LAUNCH_DIR=%PROJECT_ROOT%\.demo\launcher"
+set "LAUNCH_DIR=%PROJECT_ROOT%\launcher"
 set "PYTHONPATH=%LAUNCH_DIR%"
 set "PRAMAAN_DATA=%PROJECT_ROOT%\.demo\runtime"
 "%PROJECT_ROOT%\.venv-p4\Scripts\python.exe" -m uvicorn Pramaan.backend.app:app --host 127.0.0.1 --port 8000 --no-access-log
@@ -36,7 +36,7 @@ cd /d "%~dp0"
 if errorlevel 1 goto :ROOT_FAILED
 set "PROJECT_ROOT=%CD%"
 set "ROOT_FORWARD=%CD:\=/%"
-set "LAUNCH_DIR=%PROJECT_ROOT%\.demo\launcher"
+set "LAUNCH_DIR=%PROJECT_ROOT%\launcher"
 set "PACKAGE_SHIM=%LAUNCH_DIR%\Pramaan"
 set "VENV_PY=%PROJECT_ROOT%\.venv-p4\Scripts\python.exe"
 set "DEMO_DATA=%PROJECT_ROOT%\.demo\runtime"
@@ -105,12 +105,9 @@ if not exist "%PROJECT_ROOT%\web\node_modules" (
 )
 
 REM The source imports the package as Pramaan.backend even when the downloaded
-REM repository folder is named PRAMAAN-main. This private shim maps that import
-REM name to this repository root without renaming or copying project files.
-if not exist "%PACKAGE_SHIM%" mkdir "%PACKAGE_SHIM%"
-if errorlevel 1 goto :SHIM_FAILED
-> "%PACKAGE_SHIM%\__init__.py" echo __path__ = [r"%ROOT_FORWARD%"]
-if errorlevel 1 goto :SHIM_FAILED
+REM repository folder is named PRAMAAN-main. The tracked launcher\Pramaan shim
+REM resolves that import name to this repository root at run time (no absolute paths).
+if not exist "%PACKAGE_SHIM%\__init__.py" goto :SHIM_FAILED
 
 REM Never overwrite existing local demo data automatically.
 if not exist "%DEMO_DATA%\demo-state.json" (
@@ -207,7 +204,7 @@ goto :FAIL
 echo ERROR: npm ci failed. Check your internet connection and web\package-lock.json.
 goto :FAIL
 :SHIM_FAILED
-echo ERROR: Could not prepare the Python package import shim in .demo\launcher.
+echo ERROR: The Python package import shim launcher\Pramaan\__init__.py is missing. Restore it from the repository.
 goto :FAIL
 :DATA_INCOMPLETE
 echo ERROR: .demo\runtime exists but has no demo-state.json.

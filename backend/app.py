@@ -21,6 +21,7 @@ DB_PATH = ROOT / "p1.sqlite3"
 VAULT = ROOT / "vault"
 RULESET_PATH = Path(__file__).with_name("ruleset.yaml")
 CANONICALIZATION = "json-sort-utf8-v1"
+BUSY_TIMEOUT_SECONDS = 15
 ZERO_HASH = "0" * 64
 app = FastAPI(title="Pramaan P1", version="0.1.0", description="Single-sale audit slice; synthetic/demo use.")
 
@@ -36,15 +37,19 @@ def digest(value: bytes) -> str:
 def connect() -> sqlite3.Connection:
     from .security import identity, constrain, RestrictedConnection
     if identity.get() is not None:
-        db = sqlite3.connect(DB_PATH, cached_statements=0, factory=RestrictedConnection)
+        db = sqlite3.connect(DB_PATH, cached_statements=0, factory=RestrictedConnection, timeout=BUSY_TIMEOUT_SECONDS)
         db.row_factory = sqlite3.Row
         db.execute("PRAGMA foreign_keys=ON")
+        db.execute(f"PRAGMA busy_timeout={int(BUSY_TIMEOUT_SECONDS * 1000)}")
         constrain(db, identity.get())
         return db
     ROOT.mkdir(parents=True, exist_ok=True)
     VAULT.mkdir(parents=True, exist_ok=True)
-    db = sqlite3.connect(DB_PATH)
+    db = sqlite3.connect(DB_PATH, timeout=BUSY_TIMEOUT_SECONDS)
     db.row_factory = sqlite3.Row
+    # H3: WAL lets readers proceed while one writer commits; the busy timeout queues writers
+    # instead of failing fast with "database is locked". WAL is persistent for the file.
+    db.execute("PRAGMA journal_mode=WAL")
     db.executescript("""
       PRAGMA foreign_keys=ON;
       CREATE TABLE IF NOT EXISTS sales (sale_id TEXT PRIMARY KEY, register_row TEXT NOT NULL, invoice TEXT NOT NULL, dispatch TEXT NOT NULL, source_sha256 TEXT, snapshot_hash TEXT, active_run TEXT);
@@ -199,40 +204,62 @@ def health() -> dict[str, str]:
 
 @app.post("/sales")
 def import_sale(payload: SaleIn) -> dict[str, Any]:
+    from .upload_safety import content_type, decode_base64
+    # Validate every input before touching the database or the vault (B2).
+    party_id = str(payload.party.get("party_id", ""))
+    if not party_id:
+        raise HTTPException(422, "party.party_id is required")
+    evidence_ids = [e.evidence_id for e in payload.evidence]
+    if len(set(evidence_ids)) != len(evidence_ids):
+        raise HTTPException(422, "evidence_id values must be unique within the request")
+    try:
+        source = decode_base64(payload.register_source_base64, label="register source")
+    except ValueError as exc:
+        raise HTTPException(422, "invalid or oversized register source") from exc
+    decoded = []
+    for evidence in payload.evidence:
+        try:
+            decoded.append((evidence, decode_base64(evidence.content_base64, label="evidence"), content_type(evidence.content_type)))
+        except ValueError as exc:
+            raise HTTPException(422, "invalid or oversized evidence") from exc
+    source_hash = digest(source)
     db = connect()
     try:
         if db.execute("SELECT 1 FROM sales WHERE sale_id=?", (payload.sale_id,)).fetchone():
             raise HTTPException(409, "sale_id already exists")
-        try:
-            from .upload_safety import decode_base64
-            source = decode_base64(payload.register_source_base64, label="register source")
-        except ValueError as exc:
-            raise HTTPException(422, "invalid or oversized register source") from exc
-        source_hash = digest(source)
-        (VAULT / source_hash).write_bytes(source)
-        for evidence in payload.evidence:
-            try:
-                from .upload_safety import content_type, decode_base64
-                raw = decode_base64(evidence.content_base64, label="evidence")
-                safe_content_type = content_type(evidence.content_type)
-            except ValueError as exc:
-                raise HTTPException(422, "invalid or oversized evidence") from exc
-            sha = digest(raw)
-            (VAULT / sha).write_bytes(raw)
+        for evidence, raw, safe_content_type in decoded:
             # A request field cannot certify its own evidence. P1 has no independent-verification adapter.
-            db.execute("INSERT INTO evidence VALUES(?,?,?,?,?,?,?,?)", (evidence.evidence_id, sha, safe_content_type, evidence.controller, evidence.acquisition_channel, 0, canonical(evidence.assertions).decode(), None))
+            db.execute("INSERT INTO evidence VALUES(?,?,?,?,?,?,?,?)", (evidence.evidence_id, digest(raw), safe_content_type, evidence.controller, evidence.acquisition_channel, 0, canonical(evidence.assertions).decode(), None))
         db.execute("INSERT INTO sales(sale_id,register_row,invoice,dispatch,source_sha256) VALUES(?,?,?,?,?)", (payload.sale_id, canonical(payload.register_row).decode(), canonical(payload.invoice).decode(), canonical(payload.dispatch).decode(), source_hash))
-        party_id = str(payload.party.get("party_id", ""))
-        if not party_id:
-            raise HTTPException(422, "party.party_id is required")
         db.execute("INSERT INTO parties VALUES(?,?,?)", (party_id, payload.sale_id, canonical(payload.party).decode()))
         for evidence in payload.evidence:
             db.execute("INSERT INTO links VALUES(?,?)", (payload.sale_id, evidence.evidence_id))
-        receipt = log_event(db, "client", "sale_imported", payload.sale_id, {"row": payload.register_row, "party": payload.party, "invoice": payload.invoice, "dispatch": payload.dispatch, "evidence_ids": [e.evidence_id for e in payload.evidence]})
+        receipt = log_event(db, "client", "sale_imported", payload.sale_id, {"row": payload.register_row, "party": payload.party, "invoice": payload.invoice, "dispatch": payload.dispatch, "evidence_ids": evidence_ids})
+        # Content-addressed writes happen only after every row was accepted; a later commit
+        # failure can leave an unreferenced (harmless, identical-content) file, never a dangling row.
+        store_blob(source)
+        for _, raw, _ in decoded:
+            store_blob(raw)
         db.commit()
-        return {"sale_id": payload.sale_id, "source_sha256": source_hash, "evidence_ids": [e.evidence_id for e in payload.evidence], "event": receipt}
+        return {"sale_id": payload.sale_id, "source_sha256": source_hash, "evidence_ids": evidence_ids, "event": receipt}
+    except sqlite3.IntegrityError as exc:
+        db.rollback()
+        raise HTTPException(409, "sale, party or evidence identifier already exists") from exc
     finally:
         db.close()
+
+
+def store_blob(raw: bytes) -> str:
+    """Write content-addressed bytes to the vault atomically; returns the SHA-256."""
+    sha = digest(raw)
+    target = VAULT / sha
+    if target.is_file() and digest(target.read_bytes()) == sha:
+        return sha
+    VAULT.mkdir(parents=True, exist_ok=True)
+    temp = target.with_name(sha + ".tmp-" + os.urandom(4).hex())
+    temp.write_bytes(raw)
+    os.replace(temp, target)
+    return sha
 
 
 @app.get("/sales/{sale_id}")
@@ -428,16 +455,55 @@ app.include_router(p5_router)
 from .web_views import router as web_router
 app.include_router(web_router)
 app.add_middleware(SecurityMiddleware)
+from .body_limit import BodySizeLimitMiddleware
+# Outermost: size is enforced before authentication, parsing or logging (S4).
+app.add_middleware(BodySizeLimitMiddleware)
+
+ERROR_CODES = {400: "bad_request", 401: "unauthenticated", 402: "provider_no_credit", 403: "forbidden", 404: "not_found",
+               409: "conflict", 413: "payload_too_large", 422: "invalid_input", 429: "rate_limited", 503: "unavailable"}
+GENERIC_MESSAGES = {404: "object not found", 409: "operation conflicts with current state", 422: "invalid operation input",
+                    402: "assistant provider account has no credits; add billing credit or switch provider",
+                    429: "assistant provider rate limit reached; wait briefly and retry",
+                    503: "assistant provider is temporarily unavailable; retry shortly"}
+# Provider/availability statuses keep fixed wording: their raw details can carry upstream provider text.
+FIXED_MESSAGE_STATUSES = {402, 429, 503}
+
+
+def error_body(status: int, detail: Any = None, **extra: Any) -> dict[str, Any]:
+    """Stable, client-safe error contract: {code, detail[, fields]}.
+
+    4xx details are messages authored in this codebase (never tracebacks, credentials or
+    document text), so they are returned to explain *why* an operation was rejected.
+    Server errors and provider failures keep fixed wording.
+    """
+    if status < 500 and status not in FIXED_MESSAGE_STATUSES and isinstance(detail, str) and detail.strip():
+        message = detail.strip()[:300]
+    else:
+        message = GENERIC_MESSAGES.get(status, "operation rejected")
+    return {"code": ERROR_CODES.get(status, "error"), "detail": message, **extra}
+
 
 @app.exception_handler(RequestValidationError)
 async def safe_validation_error(request, exc):
-    return JSONResponse({"detail": "invalid request schema"}, status_code=422)
+    # Field locations and validator messages only; submitted values are never reflected.
+    fields = []
+    for error in exc.errors()[:20]:
+        location = ".".join(str(part) for part in error.get("loc", ()) if part != "body")
+        message = str(error.get("msg", "invalid value")).removeprefix("Value error, ")[:160]
+        fields.append({"field": location or "body", "message": message})
+    summary = "; ".join(f"{f['field']}: {f['message']}" for f in fields[:3])
+    return JSONResponse(error_body(422, "Invalid request: " + summary if summary else "invalid request schema", fields=fields), status_code=422)
+
 
 @app.exception_handler(HTTPException)
 async def safe_operation_error(request, exc):
-    messages = {404: "object not found", 409: "operation conflicts with current state", 422: "invalid operation input",
-                402: "assistant provider account has no credits; add billing credit or switch provider",
-                429: "assistant provider rate limit reached; wait briefly and retry",
-                503: "assistant provider is temporarily unavailable; retry shortly"}
     retry = (exc.headers or {}).get("Retry-After") if exc.status_code == 429 else None
-    return JSONResponse({"detail": messages.get(exc.status_code, "operation rejected")}, status_code=exc.status_code, headers={"Retry-After": retry} if retry else None)
+    return JSONResponse(error_body(exc.status_code, exc.detail), status_code=exc.status_code, headers={"Retry-After": retry} if retry else None)
+
+
+@app.exception_handler(Exception)
+async def safe_server_error(request, exc):
+    # Never return tracebacks; the server log keeps the detail.
+    import logging
+    logging.getLogger("uvicorn.error").exception("Unhandled server error")
+    return JSONResponse(error_body(500), status_code=500)
