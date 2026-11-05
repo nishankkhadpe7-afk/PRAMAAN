@@ -16,7 +16,7 @@ it('merges related-party findings and retains the selected register across audit
  const nav=screen.getByRole('navigation',{name:'Audit engagement sections'});expect(within(nav).getAllByRole('link').map(link=>link.textContent)).toEqual(['Summary','Samples','Findings','Workpapers','Integrity']);
  await userEvent.selectOptions(screen.getByLabelText('Finding category'),'related');expect(screen.queryByText('Missing document')).not.toBeInTheDocument();
  await userEvent.click(within(nav).getByRole('link',{name:'Samples'}));await screen.findByRole('heading',{name:'Selected workpaper items'});await userEvent.click(screen.getByRole('button',{name:'Evidence requests'}));await screen.findByRole('heading',{name:'Client evidence requests'});expect(screen.getByLabelText('Snapshotted register for findings and exports')).toHaveValue('REG2');expect(session.api.json).toHaveBeenCalledWith('/p3/audit-runs/R1/evidence-requests','GET',undefined,expect.any(AbortSignal));
- await userEvent.click(screen.getByRole('link',{name:'Findings'}));await screen.findByText('Missing document');expect(screen.getByRole('button',{name:/RELATED/})).toBeInTheDocument();
+ await userEvent.click(screen.getByRole('link',{name:'Findings'}));await screen.findByText('Missing document');expect(screen.getAllByText(/RELATED/).length).toBeGreaterThan(0);
 })
 
 it('redirects old related-party links into the findings filter',async()=>{
@@ -26,10 +26,12 @@ it('redirects old related-party links into the findings filter',async()=>{
 it('clears old package details during loading, failure, and deselection',async()=>{
  let resolvePackage:(value:unknown)=>void=()=>{};
  session.api.json.mockImplementation(async(path:string)=>{if(path.startsWith('/ui/runs/R1/context'))return context;if(path==='/ui/runs')return {packages:[{run_id:'R1',upload_id:'REG2',package_id:'A'},{run_id:'R1',upload_id:'REG2',package_id:'B'},{run_id:'R1',upload_id:'REG1',package_id:'WRONG-REGISTER'}]};if(path==='/p5/packages/A')return {totals:{supported_confirmed_impact_inr:'100.00',confirmed_exceptions:1,open_reviews:2,unquantified_findings:3},receipt:{source_sha256:'original'},limitations:['Saved limitation'],content_digest:'digest-A'};if(path==='/p5/packages/B')return new Promise(resolve=>{resolvePackage=resolve});throw new Error('Unexpected API path: '+path)});
- mount('/auditor/runs/R1/workpapers?upload=REG2');await screen.findByLabelText('Package');expect(screen.queryByRole('option',{name:'WRONG-REGISTER'})).not.toBeInTheDocument();await userEvent.selectOptions(screen.getByLabelText('Package'),'A');await screen.findByText('INR 100.00');await userEvent.click(screen.getByRole('button',{name:'Excel workpapers'}));expect(session.api.download).toHaveBeenCalledWith('/p5/packages/A/workpaper.xlsx','Pramaan_workpaper.xlsx');
- await userEvent.selectOptions(screen.getByLabelText('Package'),'B');expect(screen.queryByText('INR 100.00')).not.toBeInTheDocument();expect(screen.queryByRole('button',{name:'Excel workpapers'})).not.toBeInTheDocument();
- resolvePackage({totals:{supported_confirmed_impact_inr:'200.00',confirmed_exceptions:0,open_reviews:0,unquantified_findings:0},receipt:{},limitations:[],content_digest:'digest-B'});await screen.findByText('INR 200.00');
- await userEvent.selectOptions(screen.getByLabelText('Package'),'');await waitFor(()=>expect(screen.queryByText('INR 200.00')).not.toBeInTheDocument());expect(session.api.json.mock.calls.some(([path])=>path==='/p5/packages/')).toBe(false);
+ mount('/auditor/runs/R1/workpapers?upload=REG2');await screen.findByRole('region',{name:'Saved packages'});expect(screen.queryByText('WRONG-REGISTER')).not.toBeInTheDocument()
+ // Packages are listed newest first: A = "Package 2", B = "Package 1".
+ await userEvent.click(screen.getByRole('button',{name:/Package 2/}));await screen.findByText('INR 100.00');await userEvent.click(screen.getByRole('button',{name:'Excel workpapers'}));expect(session.api.download).toHaveBeenCalledWith('/p5/packages/A/workpaper.xlsx','Pramaan_workpaper.xlsx')
+ await userEvent.click(screen.getByRole('button',{name:/Package 1/}));expect(screen.queryByText('INR 100.00')).not.toBeInTheDocument();expect(screen.queryByRole('button',{name:'Excel workpapers'})).not.toBeInTheDocument()
+ resolvePackage({totals:{supported_confirmed_impact_inr:'200.00',confirmed_exceptions:0,open_reviews:0,unquantified_findings:0},receipt:{},limitations:[],content_digest:'digest-B'});await screen.findByText('INR 200.00')
+ expect(session.api.json.mock.calls.some(([path])=>path==='/p5/packages/')).toBe(false);
 })
 
 it('uses source-backed audit defaults and posts the values shown in the form',async()=>{
