@@ -30,6 +30,9 @@ TEST_NAMES = {"T00": "Register reconciliation", "T01": "Disclosed related party"
               "T12": "Requested evidence", "T13": "E-invoice QR signature", "T14": "Pricing and promotions", "T15": "GSTR-1 vs books"}
 SIGNAL = {"IMPOSSIBLE": "Inconsistent", "INCONSISTENT": "Inconsistent", "GAP": "Evidence gap", "UNAVAILABLE": "Evidence gap", "UNVERIFIED": "Evidence gap",
           "REVIEW": "Needs review", "DISCLOSED_RELATED_PARTY": "Context", "GOVERNMENT_REGISTERED_DEMO": "Context"}
+CLEAR_STATES = {"SCREEN_CLEAR", "PASS", "VALID", "CLEAR"}
+CHECK_STATES = {"SCREEN_CLEAR": "No conflict", "REVIEW": "Needs review", "SIGNATURE_INVALID": "Signature invalid", "SIGNATURE_VALID_DEMO": "Demo signature valid",
+                "UNAVAILABLE": "Not available", "NOT_PERFORMED": "Not performed"}
 OUTCOMES = {"EXPLAINED": "Explained", "EXCEPTION_CONFIRMED": "Exception confirmed", "DATA_ERROR": "Data error"}
 TOD_SHEETS = {"Sales TOD", "Sales Cut-off TOD", "Credit Note TOD"}
 
@@ -281,6 +284,19 @@ def tables(report, content_hash):
                            [status("RECORDED"), "Ledger record in the snapshot; not independently verified"], [status("GAP"), "Expected evidence unavailable; not a confirmed exception"],
                            [status("REVIEW_REQUIRED"), "Human assessment needed"], ["DEMO_SIGNATURE_VALID", "TEST ONLY; no government registration or delivery conclusion"],
                            ["SCREEN_CLEAR", "No conflict screened; no movement assurance"]]
+    # UI-12: a linked contents list on the Overview sheet, so every sheet is one click away.
+    purposes = {"Sales Register": "Client's original register, cell for cell (unformatted)", "Sales TOD": "Sales test of details: one row per selected sale",
+                "Sales Cut-off TOD": "Cut-off test: items either side of the period end", "Credit Note TOD": "Credit notes after the period end",
+                "Findings": "Every automated observation and its human decision", "Summary": "Headline totals", "Impact Groups": "Confirmed impact by group",
+                "Import Metadata": "Source register details", "Receipt": "Identifiers needed to reproduce this package", "Provenance": "Evidence references and hashes",
+                "Coverage": "What each test could and could not evaluate", "Demonstration Checks": "Synthetic demonstration checks", "Tickmarks": "Tickmark legend"}
+    overview = sheets["Overview"]
+    overview += [[], [Cell("Contents", S_HEADER), Cell("Rows", S_HEADER), Cell("What the sheet holds (click a name to open it)", S_HEADER)]]
+    for name, rows in sheets.items():
+        if name == "Overview":
+            continue
+        overview.append([name, max(len(rows) - (3 if name in TOD_SHEETS else 1), 0), purposes.get(name, "")])
+        links.setdefault("Overview", {})[(len(overview), 1)] = f"'{name}'!A1"
     return sheets, links
 
 
@@ -364,6 +380,13 @@ def workbook_bytes(report, content_hash):
         styled = name != "Sales Register"
         header_row = 3 if name in TOD_SHEETS else 4 if name == "Overview" else 1
         sheet = Element("{" + NS + "}worksheet")
+        if not styled and rows:
+            views = SubElement(sheet, "{" + NS + "}sheetViews")
+            view = SubElement(views, "{" + NS + "}sheetView", workbookViewId="0")
+            SubElement(view, "{" + NS + "}pane", ySplit="1", state="frozen", topLeftCell="A2")
+            cols = SubElement(sheet, "{" + NS + "}cols")
+            for index in range(1, max(map(len, rows), default=1) + 1):
+                SubElement(cols, "{" + NS + "}col", min=str(index), max=str(index), width=f"{_width([r[index - 1] for r in rows if len(r) >= index]):.1f}", customWidth="1")
         if styled:
             SubElement(SubElement(sheet, "{" + NS + "}sheetPr"), "{" + NS + "}pageSetUpPr", fitToPage="1")
             views = SubElement(sheet, "{" + NS + "}sheetViews")
@@ -428,7 +451,7 @@ def memo_bytes(report, content_hash):
     from reportlab.lib.pagesizes import A4
     from reportlab.lib.styles import ParagraphStyle, getSampleStyleSheet
     from reportlab.lib.units import mm
-    from reportlab.platypus import KeepTogether, PageBreak, Paragraph, SimpleDocTemplate, Spacer, Table, TableStyle
+    from reportlab.platypus import CondPageBreak, KeepTogether, PageBreak, Paragraph, SimpleDocTemplate, Spacer, Table, TableStyle
     from reportlab.pdfgen.canvas import Canvas
     from reportlab.pdfbase import pdfmetrics
     from reportlab.pdfbase.ttfonts import TTFont
@@ -451,7 +474,7 @@ def memo_bytes(report, content_hash):
               "cell": ParagraphStyle("c", parent=base["BodyText"], fontName="PramaanVera", fontSize=8, leading=10.5, textColor=ink),
               "cellb": ParagraphStyle("cb", parent=base["BodyText"], fontName="PramaanVeraBold", fontSize=8, leading=10.5, textColor=ink),
               "head": ParagraphStyle("hd", parent=base["BodyText"], fontName="PramaanVeraBold", fontSize=8, leading=10.5, textColor=colors.white),
-              "kpi": ParagraphStyle("k", parent=base["BodyText"], fontName="PramaanVeraBold", fontSize=15, leading=18, textColor=navy),
+              "kpi": ParagraphStyle("k", parent=base["BodyText"], fontName="PramaanVeraBold", fontSize=13, leading=16, textColor=navy),
               "kpil": ParagraphStyle("kl", parent=base["BodyText"], fontName="PramaanVera", fontSize=7.5, leading=9.5, textColor=muted)}
 
     def p(value, style="body"):
@@ -477,15 +500,18 @@ def memo_bytes(report, content_hash):
     reviewed = sum(1 for f in findings if f["human_decision"])
 
     story = [p("Findings memo", "title"), p(audit_name, "subtitle")]
-    meta = [["Client", report["client_name"]], ["Audit period", period], ["Audit run", report["run_id"]], ["Export package", "P5-" + content_hash],
-            ["Snapshot", report["receipt"]["snapshot_root"]], ["Rules / sampler", f"{report['receipt']['ruleset_version']} · {report['receipt']['sampler_version']} · seed {report['receipt']['sampling_seed']}"]]
+    # UI-12: identifiers people read stay here; full hashes move to the reproducibility appendix.
+    meta = [["Client", report["client_name"]], ["Audit period", period], ["Audit run", report["run_id"]],
+            ["Export package", ("P5-" + content_hash)[:22] + "…  (full digest in the appendix)"], ["Rules", f"{report['receipt']['ruleset_version']} · sampler {report['receipt']['sampler_version']}"]]
     story.append(grid([[p(k, "cellb"), p(v, "cell")] for k, v in meta], [32 * mm, width - 32 * mm], header=False))
     story.append(Spacer(1, 8))
     flagged = explain.exposure(findings, ctx)
-    kpis = [(f"INR {Decimal(flagged['potential_misstatement_inr']):,.2f}", "Potential misstatement (unconfirmed)"),
-            (f"INR {Decimal(totals['supported_confirmed_impact_inr']):,.2f}", "Supported confirmed impact"), (str(totals["confirmed_exceptions"]), "Confirmed exceptions"),
+    kpis = [(f"{Decimal(flagged['potential_misstatement_inr']):,.2f}", "Potential misstatement, INR (unconfirmed)"),
+            (f"{Decimal(totals['supported_confirmed_impact_inr']):,.2f}", "Supported confirmed impact, INR"), (str(totals["confirmed_exceptions"]), "Confirmed exceptions"),
             (str(totals["open_reviews"]), "Open reviews"), (f"{reviewed}/{len(findings)}", "Reviewed by a human")]
-    kpi_table = Table([[p(v, "kpi") for v, _ in kpis], [p(label, "kpil") for _, label in kpis]], colWidths=[width / len(kpis)] * len(kpis))
+    # Money columns are wider so totals never wrap mid-number.
+    shares = (0.27, 0.23, 0.16, 0.16, 0.18)
+    kpi_table = Table([[p(v, "kpi") for v, _ in kpis], [p(label, "kpil") for _, label in kpis]], colWidths=[width * share for share in shares])
     kpi_table.setStyle(TableStyle([("BOX", (0, 0), (-1, -1), 0.6, line), ("INNERGRID", (0, 0), (-1, -1), 0.4, line), ("BACKGROUND", (0, 0), (-1, -1), colors.HexColor("#F7F9FC")),
                                    ("LEFTPADDING", (0, 0), (-1, -1), 7), ("TOPPADDING", (0, 0), (-1, 0), 7), ("BOTTOMPADDING", (0, 1), (-1, 1), 7)]))
     story += [kpi_table, Spacer(1, 6),
@@ -521,10 +547,14 @@ def memo_bytes(report, content_hash):
     story.append(p("Limitations", "h1"))
     story.extend(p("• " + item) for item in report["limitations"])
     if report["differentiated_checks"]:
+        checks = report["differentiated_checks"]
+        attention = [c for c in checks if c.get("state") not in CLEAR_STATES]
         story.append(p("Demonstration checks", "h2"))
-        story.extend(p(f"• {c.get('object_ref')} · {c.get('test_id')} · {c.get('state')}: {c.get('reason')}", "small") for c in report["differentiated_checks"])
+        story.append(p(f"{len(checks)} demonstration check(s) ran on synthetic, unverified inputs; {len(checks) - len(attention)} found no conflict." + (" These need attention:" if attention else ""), "small"))
+        story.extend(p(f"• {c.get('object_ref')} · {c.get('test_id')} · {CHECK_STATES.get(c.get('state'), str(c.get('state')).replace('_', ' ').capitalize())}: {c.get('reason')}", "small") for c in attention)
 
-    story.append(PageBreak())
+    # Start the detail section on a new page only when little room is left (no near-empty pages).
+    story.append(CondPageBreak(90 * mm))
     story.append(p("Findings in detail", "h1"))
     story.append(p("Each finding below is an automated signal for human review. “What was observed” is written from the frozen records; the rule note states the limits of the test.", "small"))
     for test in sorted(by_test):
@@ -534,7 +564,7 @@ def memo_bytes(report, content_hash):
             signal = SIGNAL.get(f["state"], "Needs review")
             outcome = OUTCOMES.get(review.get("outcome"), "Open review")
             evidence = f["evidence_ids"]
-            rows = [[p(f["finding_id"], "cellb"), p(f"{signal} · {f['state']}", "cell")],
+            rows = [[p(f["finding_id"], "cellb"), p(signal, "cellb")],
                     [p("Assertion: " + f["assertion"] + " · Record: " + str(f["object_ref"]), "cell"), p("Human outcome: " + outcome + (f" by {review['decided_by']}" if review.get("decided_by") else ""), "cell")],
                     [p("What was observed: " + explain.explain_finding(f, ctx), "cell"), ""],
                     [p("Rule note: " + f["reason"], "small"), ""],
@@ -545,6 +575,14 @@ def memo_bytes(report, content_hash):
                                        ("VALIGN", (0, 0), (-1, -1), "TOP"), ("LEFTPADDING", (0, 0), (-1, -1), 6), ("RIGHTPADDING", (0, 0), (-1, -1), 6),
                                        ("TOPPADDING", (0, 0), (-1, -1), 3), ("BOTTOMPADDING", (0, 0), (-1, -1), 3)]))
             story += [KeepTogether([block]), Spacer(1, 5)]
+
+    receipt = report["receipt"]
+    story += [CondPageBreak(70 * mm), p("Appendix: reproducibility", "h1"),
+              p("Anyone holding the same snapshot, rules and seed can re-create this package exactly. These values identify it.", "small"), Spacer(1, 4),
+              grid([[p(k, "cellb"), p(v, "small")] for k, v in (("Export package", "P5-" + content_hash), ("Snapshot root", receipt["snapshot_root"]),
+                    ("Ruleset", f"{receipt['ruleset_version']} · hash {receipt['ruleset_hash']}"), ("Sampler", receipt["sampler_version"]), ("Sampling seed", receipt["sampling_seed"]),
+                    ("Selection digest", receipt["selection_digest"]), ("Register source SHA-256", receipt["source_sha256"]), ("Canonicalization", receipt["canonicalization_version"]),
+                    ("Export version", receipt["export_version"]))], [42 * mm, width - 42 * mm], header=False)]
 
     output = io.BytesIO()
     doc = SimpleDocTemplate(output, pagesize=A4, rightMargin=18 * mm, leftMargin=18 * mm, topMargin=18 * mm, bottomMargin=18 * mm,
