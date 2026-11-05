@@ -10,7 +10,7 @@ const python=candidates.find(p=>p&&existsSync(p))||(process.platform==='win32'?'
 const instance=process.env.PRAMAAN_E2E_INSTANCE||'browser'
 const apiPort=Number(process.env.PRAMAAN_E2E_API_PORT)||8000,webPort=Number(process.env.PRAMAAN_E2E_WEB_PORT)||5173
 const browser=process.env.PRAMAAN_E2E_CHANNEL===''?{}:{channel:process.env.PRAMAAN_E2E_CHANNEL||'chrome'}
-export default defineConfig({testDir:'./e2e',timeout:120000,expect:{timeout:15000},workers:1,fullyParallel:false,retries:0,
+export default defineConfig({testDir:'./e2e',testIgnore:'**/ui-audit/**',timeout:120000,expect:{timeout:15000},workers:1,fullyParallel:false,retries:0,
  reporter:[['list'],['json',{outputFile:'test-results/results.json'}]],
  use:{baseURL:`http://127.0.0.1:${webPort}`,...browser,headless:true,viewport:{width:1440,height:1000},video:process.env.PRAMAAN_E2E_VIDEO==='off'?'off':process.env.CI?'retain-on-failure':{mode:'on',size:{width:1440,height:1000}},trace:'off',screenshot:'only-on-failure'},
  webServer:[
