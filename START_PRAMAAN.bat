@@ -14,7 +14,7 @@ goto :MAIN
 :RUN_API
 cd /d "%~dp0"
 set "PROJECT_ROOT=%CD%"
-set "LAUNCH_DIR=%PROJECT_ROOT%\.demo\launcher"
+set "LAUNCH_DIR=%PROJECT_ROOT%\launcher"
 set "PYTHONPATH=%LAUNCH_DIR%"
 set "PRAMAAN_DATA=%PROJECT_ROOT%\.demo\runtime"
 "%PROJECT_ROOT%\.venv-p4\Scripts\python.exe" -m uvicorn Pramaan.backend.app:app --host 127.0.0.1 --port 8000 --no-access-log
@@ -36,7 +36,7 @@ cd /d "%~dp0"
 if errorlevel 1 goto :ROOT_FAILED
 set "PROJECT_ROOT=%CD%"
 set "ROOT_FORWARD=%CD:\=/%"
-set "LAUNCH_DIR=%PROJECT_ROOT%\.demo\launcher"
+set "LAUNCH_DIR=%PROJECT_ROOT%\launcher"
 set "PACKAGE_SHIM=%LAUNCH_DIR%\Pramaan"
 set "VENV_PY=%PROJECT_ROOT%\.venv-p4\Scripts\python.exe"
 set "DEMO_DATA=%PROJECT_ROOT%\.demo\runtime"
@@ -90,27 +90,47 @@ echo [2/6] Checking Python dependencies...
 "%VENV_PY%" -m pip install --disable-pip-version-check -r "%PROJECT_ROOT%\backend\requirements-dev.txt"
 if errorlevel 1 goto :PIP_FAILED
 
-REM Install frontend dependencies on first launch.
-if not exist "%PROJECT_ROOT%\web\node_modules" (
-    echo [3/6] Installing frontend dependencies with npm ci...
+REM Install frontend dependencies on first launch, and again whenever
+REM web\package-lock.json changes (for example after pulling new packages).
+REM A copy of the lock file is kept in node_modules as the install marker.
+set "LOCK_FILE=%PROJECT_ROOT%\web\package-lock.json"
+set "LOCK_MARKER=%PROJECT_ROOT%\web\node_modules\.pramaan-installed-lock.json"
+set "NEED_NPM=0"
+if not exist "%PROJECT_ROOT%\web\node_modules" set "NEED_NPM=1"
+if not exist "%LOCK_MARKER%" set "NEED_NPM=1"
+if "%NEED_NPM%"=="0" (
+    fc /b "%LOCK_FILE%" "%LOCK_MARKER%" >nul 2>&1
+    if errorlevel 1 set "NEED_NPM=1"
+)
+if "%NEED_NPM%"=="1" (
+    echo [3/6] Installing frontend dependencies with npm ci ^(new or changed package-lock.json^)...
     pushd "%PROJECT_ROOT%\web"
     call npm ci
     if errorlevel 1 (
         popd
         goto :NPM_INSTALL_FAILED
     )
+    copy /y "%LOCK_FILE%" "%LOCK_MARKER%" >nul
     popd
 ) else (
-    echo [3/6] Frontend dependencies already present.
+    echo [3/6] Frontend dependencies are up to date.
 )
+REM Every launch: confirm each package in web\package.json is really installed
+REM (catches a partial or interrupted install). Installs anything missing.
+pushd "%PROJECT_ROOT%\web"
+call node scripts\ensure-deps.mjs
+if errorlevel 1 (
+    popd
+    goto :NPM_INSTALL_FAILED
+)
+copy /y "%LOCK_FILE%" "%LOCK_MARKER%" >nul
+popd
+echo [3/6] All frontend packages verified.
 
 REM The source imports the package as Pramaan.backend even when the downloaded
-REM repository folder is named PRAMAAN-main. This private shim maps that import
-REM name to this repository root without renaming or copying project files.
-if not exist "%PACKAGE_SHIM%" mkdir "%PACKAGE_SHIM%"
-if errorlevel 1 goto :SHIM_FAILED
-> "%PACKAGE_SHIM%\__init__.py" echo __path__ = [r"%ROOT_FORWARD%"]
-if errorlevel 1 goto :SHIM_FAILED
+REM repository folder is named PRAMAAN-main. The tracked launcher\Pramaan shim
+REM resolves that import name to this repository root at run time (no absolute paths).
+if not exist "%PACKAGE_SHIM%\__init__.py" goto :SHIM_FAILED
 
 REM Never overwrite existing local demo data automatically.
 if not exist "%DEMO_DATA%\demo-state.json" (
@@ -205,9 +225,10 @@ echo ERROR: Python dependency installation failed. Check your internet connectio
 goto :FAIL
 :NPM_INSTALL_FAILED
 echo ERROR: npm ci failed. Check your internet connection and web\package-lock.json.
+echo If files are locked: close VS Code and any running Vite window, delete web\node_modules, then run this file again.
 goto :FAIL
 :SHIM_FAILED
-echo ERROR: Could not prepare the Python package import shim in .demo\launcher.
+echo ERROR: The Python package import shim launcher\Pramaan\__init__.py is missing. Restore it from the repository.
 goto :FAIL
 :DATA_INCOMPLETE
 echo ERROR: .demo\runtime exists but has no demo-state.json.

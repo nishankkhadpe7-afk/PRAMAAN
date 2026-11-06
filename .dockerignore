@@ -1,0 +1,14 @@
+.git
+.github
+.env
+.env.*
+.demo
+.server-logs
+.venv*
+**/__pycache__
+**/.pytest_cache
+backend/data
+backend/tests/.runtime
+web/node_modules
+web/dist
+web/test-results

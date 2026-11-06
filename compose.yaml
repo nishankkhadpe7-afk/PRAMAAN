@@ -1,0 +1,26 @@
+# T5: local container deployment (single company, single auditor). Not a hosted multi-tenant setup.
+#   docker compose up --build        -> http://127.0.0.1:8080
+#   docker compose exec app python -m Pramaan.backend.security issue --subject me --role auditor --human-auditor --ttl 28800
+services:
+  app:
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
+    env_file:
+      - path: .env
+        required: false
+    environment:
+      PRAMAAN_DATA: /data
+    volumes:
+      - pramaan-data:/data
+    restart: unless-stopped
+  web:
+    build:
+      context: web
+    depends_on:
+      - app
+    ports:
+      - "127.0.0.1:8080:80"
+    restart: unless-stopped
+volumes:
+  pramaan-data:
