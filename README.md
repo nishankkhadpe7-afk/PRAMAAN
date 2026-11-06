@@ -30,6 +30,8 @@ npm ci
 Pop-Location
 ```
 
+**After pulling changes**, run `npm ci` in `web/` again whenever `web/package-lock.json` changed. Otherwise Vite fails with errors like `Failed to resolve import "@fontsource/..."`. `START_PRAMAAN.bat` and `run-local.sh` detect a changed lock file and reinstall automatically. If `npm ci` reports locked files on Windows, close VS Code and any running Vite window, delete `web\node_modules`, and retry.
+
 Start the API:
 
 ```powershell
@@ -60,7 +62,7 @@ reset reloads only .demo/runtime; it does not change source fixtures or backend/
 
 ## Demonstration
 
-No product screenshots or video are tracked in this repository, so this README intentionally does not invent media links. The repeatable browser walkthrough is [web/e2e/workflow.spec.mjs](web/e2e/workflow.spec.mjs); accurate narrated steps are in [DEMO.md](DEMO.md).
+Screenshots of every screen at six widths (360–1920 px), before and after the UI/UX audit, are in [docs/ui-audit/screenshots](docs/ui-audit/screenshots); the audit report is [docs/UI_UX_AUDIT.md](docs/UI_UX_AUDIT.md). No video is tracked. The repeatable browser walkthrough is [web/e2e/workflow.spec.mjs](web/e2e/workflow.spec.mjs); accurate narrated steps are in [DEMO.md](DEMO.md).
 
 1. A client creates business records and preserves an original register upload.
 2. An auditor reconciles the register and opens an immutable audit run.
@@ -302,8 +304,8 @@ AI cannot change role, write client records as an auditor, finalize a human conc
 
 | Artifact          | Contents                                                                                                                                                                                                                                                              |
 | ----------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| XLSX workpaper    | Register, sales/cut-off/credit-note workpapers, findings, summary, impact groups, import metadata, receipt, provenance, coverage, demonstration checks, and tickmarks. The register sheet retains original parsed cells without audit formulas/hashes/hidden columns. |
-| PDF memo          | Frozen findings/reviews and reconciled summary data.                                                                                                                                                                                                                  |
+| XLSX workpaper    | Contents sheet linking every sheet; register, sales/cut-off/credit-note workpapers, findings, summary, impact groups, import metadata, receipt, provenance, coverage, demonstration checks, and tickmarks. The register sheet retains original parsed cells without audit formulas/hashes/hidden columns. |
+| PDF memo          | Frozen findings/reviews and reconciled summary data; plain-language check results; full hashes in a reproducibility appendix.                                                                                                                                                                                                                |
 | Defensibility ZIP | Exact uploaded source bytes, workbook, memo, full report, evidence index, standards candidates, integrity verification, and receipt. Standards candidates require CA review.                                                                                          |
 | JSON/API models   | Snapshot, package, lifecycle/evidence chips, audit events, and integrity results.                                                                                                                                                                                     |
 
@@ -313,7 +315,7 @@ Review outcomes are EXCEPTION_CONFIRMED, EXPLAINED, or DATA_ERROR; a final decis
 | -------------- | ----------------------------------------------------------------------------------------------------- |
 | Client         | Business records; registers and disclosures; evidence inbox.                                          |
 | Auditor        | Run summary; samples/evidence requests; findings/provenance; workpapers; integrity/post-test changes. |
-| Human reviewer | Auditor views plus final-decision control when that credential carries human-review capability.       |
+| Human reviewer | Auditor views plus final-decision control when that credential carries human-review capability, including bulk review of selected findings (keyboard: `j`/`k` move, `x` select). |
 
 See [INTEGRATION_REVIEW.md](INTEGRATION_REVIEW.md), [design.md](design.md), and [website.md](website.md) for tested integration and UI contracts.
 
@@ -370,7 +372,10 @@ npm run typecheck
 npm test
 npm run build
 npx playwright install chromium ffmpeg
-npm run test:e2e          # resets .demo/browser with fresh credentials, then starts both servers
+npm run test:e2e          # resets .demo/browser with fresh credentials, then starts both servers;
+                          # includes keyboard-only journeys and a 360 px overflow check (e2e/journeys.spec.mjs)
+# Optional UI audit capture (screenshots + axe), about 5 minutes:
+# python e2e/ui-audit/seed_large.py, then UI_AUDIT_PHASE=after npx playwright test -c playwright.ui-audit.config.mjs
 Pop-Location
 ```
 
