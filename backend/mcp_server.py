@@ -105,7 +105,7 @@ async def call_tool(name, arguments):
         await api("GET", "/p4/identity")
         spec = TOOLS.get(name)
         if spec is None:
-            await api("POST", "/p4/denied-tool")
+            await api("POST", "/p4/tool-denials")
             raise ValueError("DENIED: unknown tool")
         validate(arguments, schema(spec))
         method, path = spec[1:3]
@@ -147,7 +147,7 @@ async def call_tool(name, arguments):
         return types.CallToolResult(isError=True, content=[types.TextContent(type="text", text="DENIED: response withheld by egress data-loss-prevention policy (" + ", ".join(denied.categories) + ")")])
     except ValidationError:
         try:
-            await api("POST", "/p4/denied-tool")
+            await api("POST", "/p4/tool-denials")
         except ValueError:
             pass
         return types.CallToolResult(isError=True, content=[types.TextContent(type="text", text="DENIED: invalid tool arguments")])

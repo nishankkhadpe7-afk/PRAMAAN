@@ -798,6 +798,7 @@ export function TransactionNetwork3D({
           <button
             type="button"
             className={`tool-btn ${filterSuspiciousOnly ? 'active' : ''}`}
+            aria-pressed={filterSuspiciousOnly}
             onClick={() => setFilterSuspiciousOnly(!filterSuspiciousOnly)}
             title="Isolate genuine risk-bearing exceptions and circular relationships"
           >
@@ -806,6 +807,7 @@ export function TransactionNetwork3D({
           <button
             type="button"
             className={`tool-btn ${is3D ? 'active' : ''}`}
+            aria-pressed={is3D}
             onClick={() => setIs3D(!is3D)}
             title="Toggle 3D Orbit / 2D Planar"
           >
@@ -815,6 +817,7 @@ export function TransactionNetwork3D({
             <button
               type="button"
               className={`tool-btn ${activeRotation ? 'active' : ''}`}
+              aria-pressed={activeRotation}
               onClick={() => setActiveRotation(!activeRotation)}
               title="Pause/Resume gentle rotation"
             >
@@ -830,7 +833,7 @@ export function TransactionNetwork3D({
             <p>No suspicious relationships identified for this audit dataset.</p>
           </div>
         ) : (
-          <canvas ref={canvasRef} className="forensic-canvas" />
+          <canvas ref={canvasRef} className="forensic-canvas" role="img" aria-label="Interactive transaction and entity relationship network" />
         )}
 
         {/* Node Inspector */}
@@ -840,7 +843,7 @@ export function TransactionNetwork3D({
               <span className={`inspector-tag ${selectedNode.risk}`}>
                 {selectedNode.type.toUpperCase()} · {selectedNode.risk.toUpperCase()}
               </span>
-              <button type="button" className="close-btn" onClick={() => setSelectedNode(null)}>
+              <button type="button" className="close-btn" aria-label="Close node details" onClick={() => setSelectedNode(null)}>
                 ×
               </button>
             </div>
@@ -880,7 +883,7 @@ export function TransactionNetwork3D({
                   )}
                   <div>
                     <span>Risk Classification</span>
-                    <strong style={{ color: selectedNode.risk === 'critical' ? '#ef4444' : selectedNode.risk === 'serious' ? '#f97316' : '#eab308' }}>
+                    <strong className={`risk-text risk-${selectedNode.risk}`}>
                       {classifyFindingState(selectedNode.findingState).label}
                     </strong>
                   </div>
@@ -951,7 +954,7 @@ export function TransactionNetwork3D({
               <span className={`inspector-tag ${selectedLink.suspicious ? 'critical' : 'normal'}`}>
                 LINK · {selectedLink.type.toUpperCase()}
               </span>
-              <button type="button" className="close-btn" onClick={() => setSelectedLink(null)}>
+              <button type="button" className="close-btn" aria-label="Close relationship details" onClick={() => setSelectedLink(null)}>
                 ×
               </button>
             </div>
@@ -973,7 +976,7 @@ export function TransactionNetwork3D({
                 <div>
                   <span>Associated Finding</span>
                   <code>{selectedLink.finding.finding_id}</code>
-                  <p style={{ marginTop: '4px', fontSize: '11.5px', color: '#94a3b8' }}>
+                  <p className="inspector-finding-reason">
                     {selectedLink.finding.reason}
                   </p>
                 </div>
@@ -1006,7 +1009,7 @@ export function TransactionNetwork3D({
   )
 }
 
-// --- Cryptographic Hash Chain & Blockchain Verifier Visualization ---
+// --- Cryptographic hash-chain verification visualization ---
 
 export function CryptographicChainView({
   events = [],
@@ -1023,11 +1026,11 @@ export function CryptographicChainView({
     <div className="cryptographic-chain-block">
       <div className="chain-stats-header">
         <div>
-          <span className="eyebrow-tech">CRYPTOGRAPHIC INTEGRITY GUARANTEE</span>
-          <h3>SHA-256 Merkle Provenance & Event Linkages</h3>
+          <span className="eyebrow-tech">CRYPTOGRAPHIC INTEGRITY CHECK</span>
+          <h3>SHA-256 Event Provenance & Hash Linkages</h3>
           <p>
-            Immutable SHA-256 back-pointer chain. Every event seals the cryptographic hash of its predecessor.
-            Any unauthorized alteration invalidates all successor hashes.
+            Tamper-evident SHA-256 back-pointer chain. Every event records the cryptographic hash of its predecessor,
+            so later verification detects alteration of a past entry.
           </p>
         </div>
         <div className="chain-status-badge">
@@ -1052,9 +1055,11 @@ export function CryptographicChainView({
           const isSnapshot = ev.action?.includes('snapshot') || ev.action?.includes('run')
 
           return (
-            <div
+            <button
+              type="button"
               key={ev.seq || idx}
               className={`chain-node-box ${isSelected ? 'selected' : ''} ${isDenial ? 'denial' : ''}`}
+              aria-pressed={isSelected}
               onClick={() => setSelectedEvent(ev)}
             >
               <div className="node-link-joint">
@@ -1077,7 +1082,7 @@ export function CryptographicChainView({
                   <code>{String(ev.entry_hash || 'e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855').slice(0, 18)}…</code>
                 </div>
               </div>
-            </div>
+            </button>
           )
         })}
       </div>
@@ -1086,7 +1091,7 @@ export function CryptographicChainView({
         <div className="chain-block-inspector">
           <div className="inspector-head">
             <h4>Block #{selectedEvent.seq} Forensic Payload Receipt</h4>
-            <button type="button" onClick={() => setSelectedEvent(null)}>×</button>
+            <button type="button" className="close-btn" aria-label="Close event details" onClick={() => setSelectedEvent(null)}>×</button>
           </div>
           <div className="inspector-grid">
             <div>
@@ -1122,121 +1127,55 @@ export function CryptographicChainView({
   )
 }
 
-// --- MCP Security & Agent Tool Execution Pipeline Visualizer ---
+// --- MCP / tool-call audit trail: real hash-chained events only, nothing simulated ---
 
-export interface McpExecutionStep {
-  id: string
-  agent: string
-  tool: string
-  operation: string
-  dlpCheck: 'clean' | 'redacted' | 'flagged'
-  authDecision: 'authorized' | 'denied' | 'requires_human_approval'
-  status: 'executed' | 'blocked' | 'pending'
-  latencyMs: number
-  timestamp: string
-}
+type TrailGroup={key:string;actor:string;action:string;role?:string;channel?:string;first:number;last:number;count:number;ref:string;hash:string;denied:boolean}
 
 export function McpSecurityPipelineView({ events = [] }: { events: Row[] }) {
-  // Translate actual audit trail events into live MCP tool inspection flows
-  const steps: McpExecutionStep[] = events
-    .filter(e => e.action?.includes('security') || e.action?.includes('run') || e.actor?.includes('auditor') || e.actor?.includes('assistant'))
-    .slice(0, 8)
-    .map((e, idx) => {
-      const isDenied = e.action === 'security_denied'
-      return {
-        id: `STEP-${e.seq || idx}`,
-        agent: e.actor || 'mcp-audit-assistant',
-        tool: isDenied ? 'p2/customers_write' : 'p3/inspect_evidence_vault',
-        operation: isDenied ? 'REJECTED: Unauthorized business state mutation' : 'Authorized read-only run digest query',
-        dlpCheck: isDenied ? 'flagged' : 'clean',
-        authDecision: isDenied ? 'denied' : 'authorized',
-        status: isDenied ? 'blocked' : 'executed',
-        latencyMs: isDenied ? 8 : 42,
-        timestamp: e.timestamp || new Date().toLocaleTimeString()
-      }
-    })
-
-  // Fallback if no matching events
-  const displaySteps = steps.length > 0 ? steps : [
-    {
-      id: 'STEP-101',
-      agent: 'mcp-audit-agent:claude-3-7-sonnet',
-      tool: 'read_run_digest',
-      operation: 'Inspect frozen snapshot invariants and T00-T15 findings',
-      dlpCheck: 'clean' as const,
-      authDecision: 'authorized' as const,
-      status: 'executed' as const,
-      latencyMs: 38,
-      timestamp: '14:20:02'
-    },
-    {
-      id: 'STEP-102',
-      agent: 'mcp-assistant:ui-auditor',
-      tool: 'p2/customers:post',
-      operation: 'Prohibited write to enterprise business records from auditor role',
-      dlpCheck: 'clean' as const,
-      authDecision: 'denied' as const,
-      status: 'blocked' as const,
-      latencyMs: 6,
-      timestamp: '14:22:15'
-    },
-    {
-      id: 'STEP-103',
-      agent: 'mcp-audit-agent:gemini-pro',
-      tool: 'query_evidence_content',
-      operation: 'Inspect company uploaded invoice PDF and SHA-256 hash',
-      dlpCheck: 'clean' as const,
-      authDecision: 'authorized' as const,
-      status: 'executed' as const,
-      latencyMs: 54,
-      timestamp: '14:24:50'
-    }
-  ]
-
+  const [all, setAll] = useState(false)
+  const ordered = [...events].sort((x, y) => y.seq - x.seq)
+  const groups: TrailGroup[] = []
+  for (const e of ordered) {
+    const key = [e.actor, e.action, e.role, e.channel].join('|')
+    const g = groups[groups.length - 1]
+    if (g && g.key === key) { g.count++; g.first = Math.min(g.first, e.seq) }
+    else groups.push({ key, actor: e.actor, action: e.action, role: e.role, channel: e.channel, first: e.seq, last: e.seq, count: 1, ref: e.object_ref, hash: e.payload_hash || '', denied: /denied|reject|blocked/i.test(e.action || '') })
+  }
+  const shown = all ? groups : groups.slice(0, 6)
   return (
     <div className="mcp-pipeline-container">
       <div className="mcp-pipeline-header">
         <div>
-          <span className="eyebrow-tech">MCP PROTOCOL SECURITY BARRIER</span>
-          <h3>Zero-Trust Agent Authorization & DLP Stream</h3>
-          <p>
-            Every AI agent tool invocation passes through deterministic server-side role validation, DLP payload screening, and audit trail logging.
-          </p>
+          <span className="eyebrow-tech">TOOL-CALL AUDIT TRAIL</span>
+          <h3>Who did what, in order</h3>
+          <p>Every call is recorded in a hash-chained, append-only log. Repeated identical calls are grouped; open the Integrity tab of a run to verify the chain.</p>
         </div>
         <div className="mcp-guard-status">
-          <span className="guard-active"><Lock size={15} /> DLP & Access Boundary Active</span>
+          <span className="guard-active"><Lock size={15} /> {events.length} logged events</span>
         </div>
       </div>
-
-      <div className="mcp-steps-flow">
-        {displaySteps.map(step => (
-          <div key={step.id} className={`mcp-step-card ${step.status}`}>
-            <div className="step-rail">
-              <span className={`status-dot ${step.status}`} />
-              <div className="status-line" />
-            </div>
+      {groups.length === 0 ? <p>No events logged yet.</p> : <div className="mcp-steps-flow">
+        {shown.map(g => (
+          <div key={g.key + g.last} className={`mcp-step-card ${g.denied ? 'blocked' : 'executed'}`}>
+            <div className="step-rail"><span className={`status-dot ${g.denied ? 'blocked' : 'executed'}`} /><div className="status-line" /></div>
             <div className="step-body">
               <div className="step-header">
-                <span className="agent-tag">{step.agent}</span>
-                <span className="tool-pill"><Zap size={12} /> {step.tool}</span>
-                <span className="latency">{step.latencyMs}ms</span>
+                <span className="agent-tag">{g.actor}</span>
+                <span className="tool-pill"><Zap size={12} /> {g.action}</span>
+                <span className="latency">{g.count > 1 ? `×${g.count} · #${g.first}–#${g.last}` : `#${g.last}`}</span>
               </div>
-              <p className="step-op">{step.operation}</p>
+              <p className="step-op">{g.ref ? `Object: ${g.ref}` : 'No object reference'}</p>
               <div className="step-security-tags">
-                <span className={`tag dlp-${step.dlpCheck}`}>
-                  DLP: {step.dlpCheck.toUpperCase()}
-                </span>
-                <span className={`tag auth-${step.authDecision}`}>
-                  Decision: {step.authDecision.replace(/_/g, ' ').toUpperCase()}
-                </span>
-                <span className={`tag status-${step.status}`}>
-                  {step.status === 'blocked' ? 'BLOCKED & LOGGED' : 'EXECUTED'}
-                </span>
+                {g.role && <span className="tag">Role: {g.role}</span>}
+                {g.channel && <span className="tag">Channel: {g.channel}</span>}
+                <span className={`tag ${g.denied ? 'status-blocked' : 'status-executed'}`}>{g.denied ? 'DENIED & LOGGED' : 'LOGGED'}</span>
+                {g.hash && <span className="tag">payload {g.hash.slice(0, 10)}…</span>}
               </div>
             </div>
           </div>
         ))}
-      </div>
+      </div>}
+      {groups.length > 6 && <button type="button" onClick={() => setAll(v => !v)}>{all ? 'Show fewer' : `Show all ${groups.length} groups`}</button>}
     </div>
   )
 }

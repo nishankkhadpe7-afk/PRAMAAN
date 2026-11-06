@@ -14,3 +14,6 @@ web/*.tsbuildinfo
 .env.*
 !.env.example
 .server-logs/
+.test-results/
+*.sqlite3-wal
+*.sqlite3-shm

@@ -22,10 +22,11 @@ def web_audit_setup():
     db = p3.db_open()
     try:
         snapshot = p3.build_snapshot(db)
-        dates = sorted(i["invoice_date"] for i in snapshot["invoices"])
+        # B4: only calendar-valid dates define the default period (string order is not date order).
+        dates = sorted(i["invoice_date"] for i in snapshot["invoices"] if p3.readable_date(i.get("invoice_date")))
         latest = db.execute("SELECT period_start,period_end FROM p3_audit_runs ORDER BY rowid DESC LIMIT 1").fetchone()
         registers = snapshot.get("register_uploads", [])
-        return {"invoice_count": len(dates), "register_count": len(registers),
+        return {"invoice_count": len(snapshot["invoices"]), "unreadable_date_count": len(snapshot["invoices"]) - len(dates), "register_count": len(registers),
                 "register_row_count": sum(r["row_count"] for r in registers),
                 "unreconciled_register_count": sum(not r.get("reconciliations") for r in registers),
                 "invoice_date_start": dates[0] if dates else None,
@@ -241,7 +242,26 @@ def web_inbox():
                 item[field] = json.loads(item[field])
             item["evidence"] = [dict(r) for r in db.execute("SELECT * FROM p3_evidence WHERE object_id=? AND object_type=? ORDER BY evidence_id", (item["sample_ref"], item["object_type"]))]
             requests.append(item)
-        return {"requests": requests, "limits": "Requests are created by the existing sampler; due dates and custom/ad-hoc requests are unavailable."}
+        # B6: the same sale is often sampled by several runs; one upload satisfies every one of
+        # them, so the client's work list is grouped by (object, document) rather than per run.
+        groups = {}
+        for item in requests:
+            key = (item["object_type"], item["sample_ref"])
+            group = groups.setdefault(key, {"object_type": item["object_type"], "sample_ref": item["sample_ref"], "request_ids": [], "audits": [], "required_docs": set(), "uploaded_docs": set()})
+            group["request_ids"].append(item["request_id"])
+            if item["audit_name"] not in group["audits"]:
+                group["audits"].append(item["audit_name"])
+            group["required_docs"].update(item["required_docs"])
+            group["uploaded_docs"].update(item["uploaded_docs"])
+        work = []
+        for group in groups.values():
+            outstanding = sorted(group["required_docs"] - group["uploaded_docs"])
+            work.append({**group, "required_docs": sorted(group["required_docs"]), "uploaded_docs": sorted(group["uploaded_docs"]), "outstanding_docs": outstanding,
+                         "status": "fulfilled" if not outstanding else "partially_fulfilled" if group["uploaded_docs"] else "pending"})
+        return {"requests": requests, "work_items": work,
+                "outstanding_documents": sum(len(w["outstanding_docs"]) for w in work),
+                "outstanding_items": sum(1 for w in work if w["outstanding_docs"]),
+                "limits": "Requests are created by the existing sampler; due dates and custom/ad-hoc requests are unavailable."}
     finally:
         db.close()
 
@@ -458,7 +478,7 @@ def run_data_checks(db, run_id, row, snapshot, result, upload_id):
     received = sum(len(json.loads(r["uploaded_docs"])) for r in requests)
     add("evidence", "Requested evidence received", "pass" if required and received >= required else "warn" if required else "pass",
         f"{received} of {required} requested documents received ({(received / required * 100) if required else 100:.0f}%)." if required else "No evidence was requested for this audit.")
-    current = p3.build_snapshot(db)
+    current = p3.snapshot_like(db, snapshot)
     changed = p1.digest(p1.canonical(current)) != row["snapshot_hash"]
     add("fresh", "Snapshot matches today's data", "warn" if changed else "pass",
         "Records, evidence or registers changed after this audit was frozen. The audit itself is unchanged; rerun it to test the current data." if changed else "No source data has changed since this audit was frozen.")
@@ -478,7 +498,25 @@ def web_events():
     db = p3.db_open()
     try:
         return {"events": [{"seq": r["seq"], "entry_hash": r["entry_hash"], **json.loads(r["event_json"])} for r in db.execute("SELECT seq,entry_hash,event_json FROM events ORDER BY seq DESC LIMIT 100")],
-                "external_anchor": None}
+                # H2: access decisions live in the append-only access_log, outside the hash chain.
+                "access_denials": access_rows(db, "denied", 50), "external_anchor": None}
+    finally:
+        db.close()
+
+
+def access_rows(db, decision=None, limit=100):
+    query = "SELECT seq,at,subject,role,action,decision,channel,tool,suppressed FROM access_log" + (" WHERE decision=?" if decision else "") + " ORDER BY seq DESC LIMIT ?"
+    return [dict(r) for r in db.execute(query, ((decision,) if decision else ()) + (limit,))]
+
+
+@router.get("/access-log")
+def web_access_log(decision: str | None = None, limit: int = 100):
+    if decision not in (None, "allowed", "denied"):
+        raise HTTPException(422, "decision must be allowed or denied")
+    db = p3.db_open()
+    try:
+        return {"entries": access_rows(db, decision, max(1, min(limit, 500))), "chained": False,
+                "note": "Operational access decisions; business and audit actions are in the hash-chained event log."}
     finally:
         db.close()
 

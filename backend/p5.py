@@ -51,7 +51,9 @@ def init_p5(db):
     """)
 
 
-def capture_registers(db):
+def capture_registers(db, inline_sources=False):
+    """Freeze register metadata, cells and rows. Source bytes are referenced by SHA-256 in the
+    vault (H7); ``inline_sources`` rebuilds the legacy shape for comparing with older snapshots."""
     registers = []
     for row in db.execute("SELECT * FROM p2_register_uploads ORDER BY upload_id"):
         path = p1.VAULT / row["sha256"]
@@ -68,7 +70,7 @@ def capture_registers(db):
             AND json_extract(event_json,'$.object_ref')=p2_reconciliations.reconciliation_id),0), rowid""", (row["upload_id"],)):
             metadata = db.execute("SELECT * FROM p2_reconciliation_rules WHERE reconciliation_id=?", (reconciliation["reconciliation_id"],)).fetchone()
             reconciliations.append({**dict(reconciliation), **({"rule": json.loads(metadata["rule_json"]), "rule_hash": metadata["rule_hash"]} if metadata else {})})
-        registers.append({**dict(row), "source_base64": base64.b64encode(raw).decode(), "source_integrity": status,
+        registers.append({**dict(row), **({"source_base64": base64.b64encode(raw).decode()} if inline_sources else {}), "source_integrity": status,
                           "cells": cells, "metadata_source_rows": [index + 2 for index, cells_row in enumerate(cells[1:]) if cells_row],
                           "parsing_warnings": ["Original cells preserved separately; dictionary metadata may normalize duplicate headers or skip empty rows."],
                           "rows": [dict(r) for r in db.execute("SELECT * FROM p2_register_rows WHERE upload_id=? ORDER BY row_no", (row["upload_id"],))],
@@ -76,16 +78,43 @@ def capture_registers(db):
     return registers
 
 
+def register_bytes(register):
+    """Original register bytes: inline in legacy snapshots, otherwise read from the vault and
+    verified against the frozen SHA-256 (H7)."""
+    if "source_base64" in register:
+        raw = base64.b64decode(register["source_base64"])
+    else:
+        path = p1.VAULT / register["sha256"]
+        raw = path.read_bytes() if path.is_file() else b""
+    if p1.digest(raw) != register["sha256"]:
+        raise HTTPException(409, "snapshot source integrity failure")
+    return raw
+
+
 def stored_run(db, run_id):
+    """Load a saved run after verifying it.
+
+    Hashes are re-checked on every load. Full reproduction (re-running every test and the
+    sampler) runs once per (run, stored result bytes, engine fingerprint) and its verdict is
+    cached (H7); any edit to the stored result or to the engine code forces a recomputation.
+    The Integrity tab always recomputes live.
+    """
     row = db.execute("SELECT * FROM p3_audit_runs WHERE run_id=?", (run_id,)).fetchone()
     if not row:
         raise HTTPException(404, "audit run not found")
     snapshot, result, rules = json.loads(row["snapshot_json"]), json.loads(row["result_json"]), json.loads(row["ruleset_json"])
     if p1.digest(p1.canonical(snapshot)) != row["snapshot_hash"] or p1.digest(p1.canonical(rules)) != result["ruleset_hash"]:
         raise HTTPException(409, "snapshot or ruleset integrity failure")
-    rebuilt, _, _ = p3.calculate(snapshot, row["period_start"], row["period_end"], row["sampling_seed"], rules, run_id)
-    if rebuilt != result:
-        raise HTTPException(409, "persisted audit result fails reproduction")
+    result_sha = p1.digest(row["result_json"].encode())
+    cached = db.execute("SELECT 1 FROM p3_run_verifications WHERE run_id=? AND result_sha=? AND snapshot_hash=? AND engine=?",
+                        (run_id, result_sha, row["snapshot_hash"], p3.ENGINE_FINGERPRINT)).fetchone()
+    if not cached:
+        rebuilt, _, _ = p3.calculate(snapshot, row["period_start"], row["period_end"], row["sampling_seed"], rules, run_id)
+        if rebuilt != result:
+            raise HTTPException(409, "persisted audit result fails reproduction")
+        db.execute("INSERT OR IGNORE INTO p3_run_verifications VALUES(?,?,?,?,?)", (run_id, result_sha, row["snapshot_hash"], p3.ENGINE_FINGERPRINT, datetime.now(timezone.utc).isoformat()))
+        if not db.in_transaction or db.isolation_level is not None:
+            db.commit()
     return dict(row), snapshot, result, rules
 
 
@@ -242,7 +271,8 @@ def propose_review_decision(run_id: str, finding_id: str, payload: ReviewIn):
 def persist_review(run_id, finding_id, payload, proposal):
     db = p3.db_open()
     try:
-        db.execute("BEGIN IMMEDIATE")
+        # H3: verify and validate before taking the write lock; the lock covers only the
+        # revision check and the append, so concurrent requests are not blocked by recomputation.
         _, snapshot, result, findings = reviewable(db, run_id)
         if finding_id not in findings:
             raise HTTPException(404, "finding not in run")
@@ -261,6 +291,7 @@ def persist_review(run_id, finding_id, payload, proposal):
             indexes.update(evidence_index(snapshot, register))
         if not set(payload.impact_basis_evidence_ids) <= indexes.keys():
             raise HTTPException(422, "impact basis does not resolve to snapshot evidence")
+        db.execute("BEGIN IMMEDIATE")
         previous = latest_reviews(db, run_id).get(finding_id, {})
         if not proposal and previous.get("revision", 0) != payload.expected_revision:
             raise HTTPException(409, "review was concurrently changed")
@@ -288,13 +319,12 @@ class PackageIn(BaseModel):
 def create_export_package(run_id: str, payload: PackageIn):
     db = p3.db_open()
     try:
-        db.execute("BEGIN IMMEDIATE")
+        # H3: the expensive verification and package assembly happen outside the write lock.
         run, snapshot, result, rules = stored_run(db, run_id)
         register = next((r for r in snapshot.get("register_uploads", []) if r["upload_id"] == payload.upload_id), None)
         if not register:
             raise HTTPException(409, "register is not in this immutable run; rerun after upload")
-        if p1.digest(base64.b64decode(register["source_base64"])) != register["sha256"]:
-            raise HTTPException(409, "snapshot source integrity failure")
+        register_bytes(register)
         index = evidence_index(snapshot, register)
         for sha in sorted({item["sha256"] for item in index.values() if item.get("sha256")}):
             path = p1.VAULT / sha
@@ -349,7 +379,10 @@ def create_export_package(run_id: str, payload: PackageIn):
         verification = {"valid": True, "events_checked": covered["seq"], "head": covered["entry_hash"], "external_anchor": None,
                         "coverage": "audit creation and included human review history"}
         details = p3.run_details(db, run_id, run["period_start"], run["period_end"])
-        report = {"client_name": payload.client_name, "audit_name": details["audit_name"], "run_id": run_id, "snapshot": snapshot, "register": register, "result": result,
+        # Packages stay self-contained: the verified original register bytes are embedded, so
+        # exports never depend on the live vault after the package is frozen.
+        packaged_register = {**register, "source_base64": base64.b64encode(register_bytes(register)).decode()}
+        report = {"client_name": payload.client_name, "audit_name": details["audit_name"], "run_id": run_id, "snapshot": snapshot, "register": packaged_register, "result": result,
                   "audit_log_verification": {**verification, "external_anchor": None},
                   "findings": findings, "evidence_index": index, "differentiated_checks": checks, "totals": totals,
                   "standards": STANDARDS, "ruleset": rules, "reconciliation_rule": selected_reconciliations(register)[-1].get("rule", T00_RULE) if selected_reconciliations(register) else T00_RULE, "demo_public_key_fingerprint": p1.digest(public_key.encode()) if public_key else None,
@@ -362,6 +395,9 @@ def create_export_package(run_id: str, payload: PackageIn):
                               **({"reconciliation_rules": [{"reconciliation_id": r["reconciliation_id"], "version": r["rule"]["version"], "hash": r["rule_hash"]} for r in selected_reconciliations(register)]} if any("rule" in r for r in selected_reconciliations(register)) else {})}}
         content_hash = p1.digest(p1.canonical(report))
         package_id = "P5-" + content_hash
+        db.execute("BEGIN IMMEDIATE")
+        if latest_reviews(db, run_id) != reviews:
+            raise HTTPException(409, "a review was recorded while the package was being built; create the package again")
         db.execute("INSERT OR IGNORE INTO p5_packages VALUES(?,?,?,?)", (package_id, run_id, p1.canonical(report).decode(), content_hash))
         p1.log_event(db, "auditor", "export_package_created", package_id, {"content_hash": content_hash, "run_id": run_id})
         db.commit()
