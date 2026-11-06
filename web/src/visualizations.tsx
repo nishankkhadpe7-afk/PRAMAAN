@@ -1175,7 +1175,7 @@ export function McpSecurityPipelineView({ events = [] }: { events: Row[] }) {
           </div>
         ))}
       </div>}
-      {groups.length > 6 && <button type="button" onClick={() => setAll(v => !v)}>{all ? 'Show fewer' : `Show all ${groups.length} groups`}</button>}
+      {groups.length > 6 && <button type="button" className="show-all-groups" onClick={() => setAll(v => !v)}>{all ? 'Show fewer' : `Show all ${groups.length} groups`}</button>}
     </div>
   )
 }
