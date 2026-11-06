@@ -115,6 +115,17 @@ if "%NEED_NPM%"=="1" (
 ) else (
     echo [3/6] Frontend dependencies are up to date.
 )
+REM Every launch: confirm each package in web\package.json is really installed
+REM (catches a partial or interrupted install). Installs anything missing.
+pushd "%PROJECT_ROOT%\web"
+call node scripts\ensure-deps.mjs
+if errorlevel 1 (
+    popd
+    goto :NPM_INSTALL_FAILED
+)
+copy /y "%LOCK_FILE%" "%LOCK_MARKER%" >nul
+popd
+echo [3/6] All frontend packages verified.
 
 REM The source imports the package as Pramaan.backend even when the downloaded
 REM repository folder is named PRAMAAN-main. The tracked launcher\Pramaan shim

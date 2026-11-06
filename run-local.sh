@@ -13,4 +13,4 @@ fi
 "$PYTHON" -m uvicorn Pramaan.backend.app:app --host 127.0.0.1 --port 8000 --no-access-log &
 API=$!
 trap 'kill $API 2>/dev/null' EXIT INT TERM
-(cd "$ROOT/web" && { [ -d node_modules ] || npm ci; } && npm run dev)
+(cd "$ROOT/web" && { cmp -s package-lock.json node_modules/.pramaan-installed-lock.json || { npm ci && cp package-lock.json node_modules/.pramaan-installed-lock.json; }; } && npm run dev)
