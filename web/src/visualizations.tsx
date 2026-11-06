@@ -1169,7 +1169,7 @@ export function McpSecurityPipelineView({ events = [] }: { events: Row[] }) {
                 {g.role && <span className="tag">Role: {g.role}</span>}
                 {g.channel && <span className="tag">Channel: {g.channel}</span>}
                 <span className={`tag ${g.denied ? 'status-blocked' : 'status-executed'}`}>{g.denied ? 'DENIED & LOGGED' : 'LOGGED'}</span>
-                {g.hash && <span className="tag">payload {g.hash.slice(0, 10)}…</span>}
+                {g.hash && <span className="tag tag-mono">payload {g.hash.slice(0, 10)}…</span>}
               </div>
             </div>
           </div>
