@@ -55,10 +55,6 @@
 .progress-track{height:8px;border-radius:var(--r-pill);background:var(--surface-4);overflow:hidden}
 .progress-track i{display:block;height:100%;background:var(--c-human);border-radius:inherit}
 .review-progress{display:grid;gap:var(--space-4);margin-bottom:var(--space-6,24px)}
-.progress-facts{display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:var(--space-3);margin:0}
-.progress-facts div{border:1px solid var(--line);border-radius:var(--r-md);padding:var(--space-3)}
-.progress-facts dt{font-size:var(--text-xs);color:var(--subtle)}
-.progress-facts dd{margin:4px 0 0;font-size:var(--text-lg);font-weight:600;color:var(--ink);font-variant-numeric:tabular-nums}
 
 /* Findings table: selection, bulk bar, keyboard hint, observation-first cells. */
 .select-col{width:44px;text-align:center}
@@ -77,14 +73,14 @@ tr.selected-row td{background:rgba(232,194,122,.07)}
 /* Bulk review drawer. */
 .bulk-form{display:grid;gap:var(--space-4)}
 .bulk-form p{margin:0;line-height:1.55}
-.bulk-preview{margin:0;padding-left:18px;display:grid;gap:4px;font-size:var(--text-sm);color:var(--muted);max-height:220px;overflow:auto}
+.bulk-preview{margin:0;padding-left:var(--space-5);display:grid;gap:4px;font-size:var(--text-sm);color:var(--muted);max-height:220px;overflow:auto}
 
 /* Evidence chips: copy action lives outside <summary> (UI-04). */
 .evidence-summary{display:flex;flex-wrap:wrap;align-items:center;gap:8px;cursor:pointer;min-height:32px}
 .copy-ref{display:inline-flex;align-items:center;gap:6px;min-height:32px;margin:var(--space-2) 0;font-size:var(--text-sm)}
 
 /* Export: what's inside a package before it is created (UI-12). */
-.export-includes{margin:0 0 var(--space-4);padding-left:18px;display:grid;gap:4px;font-size:var(--text-sm);color:var(--muted)}
+.export-includes{margin:0 0 var(--space-4);padding-left:var(--space-5);display:grid;gap:4px;font-size:var(--text-sm);color:var(--muted)}
 .export-includes b{color:var(--ink)}
 
 /* Primary buttons: no glow (UI-14). */
@@ -123,3 +119,14 @@ tr.selected-row td{background:rgba(232,194,122,.07)}
 .sidebar>.landing-brand{padding:0 10px;margin-bottom:28px}
 .show-all-groups{margin-top:var(--space-4,16px);margin-left:var(--space-2,8px)}
 .tag.tag-mono{font-family:var(--font-mono)}
+
+/* Summary hierarchy: one primary "needs your decision" block, quieter KPI cards below. */
+.decision-hero{border:1px solid var(--line-strong);border-left:3px solid var(--gold);border-radius:var(--radius);background:var(--surface);padding:var(--space-6);gap:var(--space-5)}
+.decision-hero-main{display:flex;justify-content:space-between;align-items:flex-end;gap:var(--space-6);flex-wrap:wrap}
+.decision-hero .eyebrow{margin:0 0 var(--space-2)}
+.decision-hero-count{margin:0;display:flex;align-items:baseline;gap:var(--space-3);flex-wrap:wrap}
+.decision-hero-count strong{font:var(--fw-display) 56px/1 var(--font-sans);letter-spacing:-0.02em;color:var(--ink);font-variant-numeric:tabular-nums}
+.decision-hero-count span{font-size:var(--text-lg);color:var(--muted)}
+.decision-hero-detail{margin:var(--space-2) 0 0;color:var(--subtle);font-size:var(--text-sm)}
+@media(max-width:480px){.decision-hero{padding:var(--space-5)}.decision-hero-count strong{font-size:44px}.decision-hero-main .primary{width:100%;justify-content:center}}
+.dash-viz .decision-hero{margin-bottom:0}
