@@ -16,7 +16,7 @@ export function Login(){
   const navigate=useNavigate();
 
   return <div className="login">
-    <div className="login-brand"><Link to="/" className="landing-brand"><span className="brand-mark"><i/><i/><i/></span>Pramaan</Link><Link className="login-back" to="/">← Back to home</Link></div>
+    <div className="login-brand"><Brand/><Link className="login-back" to="/">← Back to home</Link></div>
     <div className="login-layout">
       <section className="login-intro">
         <div className="eyebrow">FORENSIC ASSURANCE PLATFORM</div>
@@ -72,7 +72,8 @@ export function Login(){
     </footer>
   </div>
 }
-function Brand(){return <Link className="brand" to="/"><span className="brand-mark"><i/><i/><i/></span><span>Pramaan<small>REVENUE AUDIT</small></span></Link>}
+// One logo everywhere (landing, login, workspace sidebar).
+function Brand(){return <Link to="/" className="landing-brand"><span className="brand-mark"><i/><i/><i/></span>Pramaan</Link>}
 export function Guard({role}:{role:'client_employee'|'auditor'}){const {identity,restoring}=useSession();return restoring?<div className="skeleton-loader" role="status" aria-label="Restoring session"/>:!identity?<Navigate to="/login" replace/>:identity.role!==role?<Navigate to="/unauthorized" replace/>:<Outlet/>}
 function Shell(){
   const {identity,signOut}=useSession();

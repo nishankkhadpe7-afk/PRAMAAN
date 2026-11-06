@@ -120,3 +120,4 @@ tr.selected-row td{background:rgba(232,194,122,.07)}
 @media(max-width:768px){.chart .hbar{grid-template-columns:minmax(80px,120px) minmax(24px,1fr) auto}}
 @media(max-width:480px){.chart .hbar{grid-template-columns:minmax(0,1fr) auto;row-gap:4px}.chart .hbar .hbar-track{grid-column:1/-1;grid-row:2}}
 .drawer-backdrop>.drawer{height:100dvh;max-height:100dvh}
+.sidebar>.landing-brand{padding:0 10px;margin-bottom:28px}
