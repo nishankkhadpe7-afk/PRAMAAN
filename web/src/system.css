@@ -122,3 +122,4 @@ tr.selected-row td{background:rgba(232,194,122,.07)}
 .drawer-backdrop>.drawer{height:100dvh;max-height:100dvh}
 .sidebar>.landing-brand{padding:0 10px;margin-bottom:28px}
 .show-all-groups{margin-top:var(--space-4,16px);margin-left:var(--space-2,8px)}
+.tag.tag-mono{font-family:var(--font-mono)}

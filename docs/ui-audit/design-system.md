@@ -34,3 +34,18 @@ No gradients, glow or decorative motion in new components; primary buttons lost 
 - **AI vs human:** automated signal → `automated`; agent/MCP proposal → `proposal` (never counts as a decision); human-review credential → `human` with signer and time; assistant answer → `ai` with model or "computed from the run, no AI".
 - **Bulk actions:** select → preview (counts by severity, first items) → explicit confirm naming the signer → per-item progress → per-item results with retry of failures.
 - **Immutable data:** frozen runs show "Frozen snapshot", never a live indicator.
+
+## Typography (standardised to the landing page)
+
+One family everywhere: **Outfit** (self-hosted via `@fontsource/outfit`, weights 300–800). Monospace (**JetBrains Mono**) only for technical text and the eyebrow kicker, as on the landing page. Cinzel removed.
+
+| Token | Value | Use |
+|---|---|---|
+| `--font-sans` / `--sans` / `--display` | Outfit | All UI text and headings |
+| `--font-mono` / `--mono` | JetBrains Mono | Hashes, IDs, JSON, code, tool names, timestamps, eyebrow kicker |
+| `--fw-regular/medium/semibold/bold/display` | 400/500/600/700/800 | Body / labels, nav / section headings, buttons / page headings / hero |
+| `--lh-tight/heading/body` | 1.1 / 1.2 / 1.55 | Hero / headings / body |
+| `--tracking-tight` | -0.01em | Headings |
+| `--tracking-label` | 0.08em | Uppercase labels (table headers, metric labels, field names) |
+
+Hierarchy: hero 800 (landing, login), page `h1` 700, section `h2` 600, card headings 500–600, body 400, labels 500 uppercase with `--tracking-label`. Use `.tag.tag-mono` when a pill shows a hash.
