@@ -90,18 +90,30 @@ echo [2/6] Checking Python dependencies...
 "%VENV_PY%" -m pip install --disable-pip-version-check -r "%PROJECT_ROOT%\backend\requirements-dev.txt"
 if errorlevel 1 goto :PIP_FAILED
 
-REM Install frontend dependencies on first launch.
-if not exist "%PROJECT_ROOT%\web\node_modules" (
-    echo [3/6] Installing frontend dependencies with npm ci...
+REM Install frontend dependencies on first launch, and again whenever
+REM web\package-lock.json changes (for example after pulling new packages).
+REM A copy of the lock file is kept in node_modules as the install marker.
+set "LOCK_FILE=%PROJECT_ROOT%\web\package-lock.json"
+set "LOCK_MARKER=%PROJECT_ROOT%\web\node_modules\.pramaan-installed-lock.json"
+set "NEED_NPM=0"
+if not exist "%PROJECT_ROOT%\web\node_modules" set "NEED_NPM=1"
+if not exist "%LOCK_MARKER%" set "NEED_NPM=1"
+if "%NEED_NPM%"=="0" (
+    fc /b "%LOCK_FILE%" "%LOCK_MARKER%" >nul 2>&1
+    if errorlevel 1 set "NEED_NPM=1"
+)
+if "%NEED_NPM%"=="1" (
+    echo [3/6] Installing frontend dependencies with npm ci ^(new or changed package-lock.json^)...
     pushd "%PROJECT_ROOT%\web"
     call npm ci
     if errorlevel 1 (
         popd
         goto :NPM_INSTALL_FAILED
     )
+    copy /y "%LOCK_FILE%" "%LOCK_MARKER%" >nul
     popd
 ) else (
-    echo [3/6] Frontend dependencies already present.
+    echo [3/6] Frontend dependencies are up to date.
 )
 
 REM The source imports the package as Pramaan.backend even when the downloaded
@@ -202,6 +214,7 @@ echo ERROR: Python dependency installation failed. Check your internet connectio
 goto :FAIL
 :NPM_INSTALL_FAILED
 echo ERROR: npm ci failed. Check your internet connection and web\package-lock.json.
+echo If files are locked: close VS Code and any running Vite window, delete web\node_modules, then run this file again.
 goto :FAIL
 :SHIM_FAILED
 echo ERROR: The Python package import shim launcher\Pramaan\__init__.py is missing. Restore it from the repository.
