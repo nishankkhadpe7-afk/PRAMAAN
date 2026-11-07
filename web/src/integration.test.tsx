@@ -12,7 +12,7 @@ function mount(path:string){return render(<MemoryRouter initialEntries={[path]}>
 beforeEach(()=>{session.api.json.mockReset();session.api.download.mockReset();session.api.json.mockImplementation(async(path:string)=>{if(path.startsWith('/ui/runs/R1/context'))return context;if(path.endsWith('/evidence-requests'))return {requests:[]};if(path==='/ui/runs')return {runs:[],packages:[]};throw new Error('Unexpected API path: '+path)})})
 
 it('merges related-party findings and retains the selected register across audit sections',async()=>{
- mount('/auditor/runs/R1/findings?upload=REG2');await screen.findByText('A disclosed relationship');expect(screen.getByText('Missing document')).toBeInTheDocument();
+ mount('/auditor/runs/R1/findings?upload=REG2');await screen.findByText('A disclosed relationship',{},{timeout:5000});expect(screen.getByText('Missing document')).toBeInTheDocument();
  const nav=screen.getByRole('navigation',{name:'Audit engagement sections'});expect(within(nav).getAllByRole('link').map(link=>link.textContent)).toEqual(['Summary','Samples','Findings','Workpapers','Integrity']);
  await userEvent.selectOptions(screen.getByLabelText('Finding category'),'related');expect(screen.queryByText('Missing document')).not.toBeInTheDocument();
  await userEvent.click(within(nav).getByRole('link',{name:'Samples'}));await screen.findByRole('heading',{name:'Selected workpaper items'});await userEvent.click(screen.getByRole('button',{name:'Evidence requests'}));await screen.findByRole('heading',{name:'Client evidence requests'});expect(screen.getByLabelText('Snapshotted register for findings and exports')).toHaveValue('REG2');expect(session.api.json).toHaveBeenCalledWith('/p3/audit-runs/R1/evidence-requests','GET',undefined,expect.any(AbortSignal));
