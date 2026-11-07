@@ -178,6 +178,19 @@ class AgentTests(unittest.TestCase):
         self.assertEqual(report["summary_source"], "deterministic")
         self.assertNotIn("fraud", report["summary"].lower())
 
+    def test_llm_plan_and_question_text_get_the_same_amount_check(self):
+        invoice_id = self.by_kind["exact"][0]
+        report = self.run_llm(invoice_id, [
+            {"content": "I expect about ₹9,99,999.00 here.", "tool_calls": [self.call("get_invoice_sources", {"invoice_id": invoice_id}), self.call("match_bank_transactions", {"invoice_id": invoice_id}, 5)]},
+            {"content": None, "tool_calls": [self.call("finish", {"summary": "Traced to one matching credit.", "open_questions": ["Was ₹7,77,777.00 refunded?", "Who approved it?"], "recommended_next_action": "Treat as fraud."}, 1)]},
+        ])
+        plans = [s["summary"] for s in report["steps"] if s["kind"] == "plan"]
+        self.assertTrue(plans[0].startswith("[withheld"))
+        self.assertEqual(report["open_questions"], ["Who approved it?"])
+        self.assertNotIn("fraud", report["recommended_next_action"].lower())
+        self.assertEqual(report["narrative_check"]["model_texts_withheld"], 3)
+        self.assertEqual(report["summary_source"], "model")  # the clean summary itself is kept
+
     def test_llm_cannot_continue_after_conflict_or_leave_scope(self):
         invoice_id = self.by_kind["duplicate"][1]
         other = self.by_kind["exact"][2]
@@ -190,6 +203,57 @@ class AgentTests(unittest.TestCase):
         self.assertEqual(report["steps"][-1]["kind"], "escalation")
         self.assertNotIn("get_invoice_sources", report.get("observed_tools", []))
         self.assertFalse(any(s.get("tool") == "get_invoice_sources" and s.get("arguments", {}).get("invoice_id") == other and s["source_refs"] for s in report["steps"]))
+
+    def test_llm_is_asked_once_to_propose_when_a_gap_remains(self):
+        invoice_id = self.by_kind["partial"][1]
+        report = self.run_llm(invoice_id, [
+            {"content": None, "tool_calls": [self.call("match_bank_transactions", {"invoice_id": invoice_id})]},
+            {"content": None, "tool_calls": [self.call("finish", {"summary": "Part of the payment is not traced."}, 1)]},
+            {"content": None, "tool_calls": [self.call("propose_evidence_request", {"invoice_id": invoice_id, "documents": ["payment_receipt"], "reason": "Remainder not traced to a payment."}, 2)]},
+            {"content": None, "tool_calls": [self.call("finish", {"summary": "Part of the payment is not traced; a request was proposed."}, 3)]},
+        ])
+        self.assertEqual(report["status"], "needs_confirmation")
+        self.assertEqual([s["kind"] for s in report["steps"]].count("check"), 1)
+        self.assertEqual(len(report["pending_actions"]), 1)
+
+    def test_llm_may_decline_with_a_reason_and_is_not_nagged_twice(self):
+        invoice_id = self.by_kind["partial"][2]
+        report = self.run_llm(invoice_id, [
+            {"content": None, "tool_calls": [self.call("match_bank_transactions", {"invoice_id": invoice_id})]},
+            {"content": None, "tool_calls": [self.call("finish", {"summary": "Part of the payment is not traced."}, 1)]},
+            {"content": None, "tool_calls": [self.call("finish", {"summary": "Part of the payment is not traced.", "no_request_reason": "Auditor already asked the client by email."}, 2)]},
+        ])
+        self.assertEqual(report["status"], "unexplained")
+        self.assertEqual(report["no_request_reason"], "Auditor already asked the client by email.")
+        self.assertFalse(report["pending_actions"])
+
+    def test_llm_falls_back_to_next_model_on_rate_limit(self):
+        from Pramaan.backend import agent_llm
+        invoice_id = self.by_kind["exact"][3]
+        turns = [{"content": None, "tool_calls": [self.call("match_bank_transactions", {"invoice_id": invoice_id})]},
+                 {"content": "Traced to one matching credit.", "tool_calls": []}]
+        seen = []
+        async def poster(cfg, body):
+            seen.append(cfg["model"])
+            if cfg["model"] == "primary-model":
+                raise agent_llm.RateLimited(30, "quota")
+            if cfg["model"] == "busy-model":
+                raise RuntimeError("LLM endpoint error HTTP 503: high demand")
+            return {"choices": [{"message": {"role": "assistant", **turns.pop(0)}}]}
+        agent_llm._EXHAUSTED.clear()
+        async def go():
+            marker = security.identity.set({"subject": "agent-auditor", "role": "auditor", "human": False, "channel": "api"})
+            try:
+                return await p6_agent.run_investigation(self.run_id, None, "llm", poster=poster, invoice_id=invoice_id,
+                                                        cfg={"api_key": "x", "model": "primary-model", "fallback_models": ["busy-model", "backup-model"], "base_url": "http://local"})
+            finally:
+                security.identity.reset(marker)
+        report = asyncio.run(go())
+        agent_llm._EXHAUSTED.clear()
+        self.assertEqual(report["model"], "backup-model")
+        self.assertEqual(seen[0], "primary-model")
+        self.assertNotIn("primary-model", seen[1:])  # the limited model is skipped for the rest of the run
+        self.assertEqual(seen.count("busy-model"), 1)  # an overloaded (HTTP 503) model is also skipped
 
     # F4 ---------------------------------------------------------------
     def test_confirmation_is_human_only_hash_checked_and_once(self):

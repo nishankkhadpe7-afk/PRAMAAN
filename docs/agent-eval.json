@@ -1,8 +1,8 @@
 {
-  "generated_at": "2026-11-07T17:20:43.882424+00:00",
+  "generated_at": "2026-11-07T20:35:09.825244+00:00",
   "planner": "deterministic-baseline",
   "model": null,
-  "prompt_version": "investigate-v1",
+  "prompt_version": "investigate-v2",
   "fixture_seed": "pramaan-agentx-fixture-2026",
   "dataset": {
     "sale_lifecycles": 26,
@@ -30,7 +30,8 @@
     "false_escalations": 0,
     "median_seconds_per_exception": 0.002,
     "median_tool_calls_per_exception": 2.0,
-    "model_summaries_rejected": 0
+    "model_summaries_rejected": 0,
+    "model_texts_withheld": 0
   },
   "by_kind": {
     "exact": {
@@ -77,11 +78,13 @@
       "traced_to_source": true,
       "invented_amounts": 0,
       "model_summary_rejected": false,
+      "model_texts_withheld": 0,
       "conflict_expected": false,
       "escalated": false,
       "tool_calls": 2,
       "seconds": 0.002,
-      "summary_source": "deterministic"
+      "summary_source": "deterministic",
+      "models": null
     },
     {
       "invoice_id": "AGX-I002",
@@ -93,11 +96,13 @@
       "traced_to_source": true,
       "invented_amounts": 0,
       "model_summary_rejected": false,
+      "model_texts_withheld": 0,
       "conflict_expected": true,
       "escalated": true,
       "tool_calls": 2,
       "seconds": 0.001,
-      "summary_source": "deterministic"
+      "summary_source": "deterministic",
+      "models": null
     },
     {
       "invoice_id": "AGX-I003",
@@ -109,11 +114,13 @@
       "traced_to_source": true,
       "invented_amounts": 0,
       "model_summary_rejected": false,
+      "model_texts_withheld": 0,
       "conflict_expected": false,
       "escalated": false,
       "tool_calls": 2,
       "seconds": 0.002,
-      "summary_source": "deterministic"
+      "summary_source": "deterministic",
+      "models": null
     },
     {
       "invoice_id": "AGX-I004",
@@ -125,11 +132,13 @@
       "traced_to_source": true,
       "invented_amounts": 0,
       "model_summary_rejected": false,
+      "model_texts_withheld": 0,
       "conflict_expected": false,
       "escalated": false,
       "tool_calls": 2,
       "seconds": 0.002,
-      "summary_source": "deterministic"
+      "summary_source": "deterministic",
+      "models": null
     },
     {
       "invoice_id": "AGX-I005",
@@ -141,11 +150,13 @@
       "traced_to_source": true,
       "invented_amounts": 0,
       "model_summary_rejected": false,
+      "model_texts_withheld": 0,
       "conflict_expected": false,
       "escalated": false,
       "tool_calls": 4,
       "seconds": 0.002,
-      "summary_source": "deterministic"
+      "summary_source": "deterministic",
+      "models": null
     },
     {
       "invoice_id": "AGX-I006",
@@ -157,11 +168,13 @@
       "traced_to_source": true,
       "invented_amounts": 0,
       "model_summary_rejected": false,
+      "model_texts_withheld": 0,
       "conflict_expected": true,
       "escalated": true,
       "tool_calls": 2,
       "seconds": 0.001,
-      "summary_source": "deterministic"
+      "summary_source": "deterministic",
+      "models": null
     },
     {
       "invoice_id": "AGX-I007",
@@ -173,11 +186,13 @@
       "traced_to_source": true,
       "invented_amounts": 0,
       "model_summary_rejected": false,
+      "model_texts_withheld": 0,
       "conflict_expected": false,
       "escalated": false,
       "tool_calls": 4,
       "seconds": 0.002,
-      "summary_source": "deterministic"
+      "summary_source": "deterministic",
+      "models": null
     },
     {
       "invoice_id": "AGX-I008",
@@ -189,11 +204,13 @@
       "traced_to_source": true,
       "invented_amounts": 0,
       "model_summary_rejected": false,
+      "model_texts_withheld": 0,
       "conflict_expected": false,
       "escalated": false,
       "tool_calls": 2,
       "seconds": 0.002,
-      "summary_source": "deterministic"
+      "summary_source": "deterministic",
+      "models": null
     },
     {
       "invoice_id": "AGX-I009",
@@ -205,11 +222,13 @@
       "traced_to_source": true,
       "invented_amounts": 0,
       "model_summary_rejected": false,
+      "model_texts_withheld": 0,
       "conflict_expected": false,
       "escalated": false,
       "tool_calls": 4,
       "seconds": 0.002,
-      "summary_source": "deterministic"
+      "summary_source": "deterministic",
+      "models": null
     },
     {
       "invoice_id": "AGX-I010",
@@ -221,11 +240,13 @@
       "traced_to_source": true,
       "invented_amounts": 0,
       "model_summary_rejected": false,
+      "model_texts_withheld": 0,
       "conflict_expected": false,
       "escalated": false,
       "tool_calls": 4,
       "seconds": 0.002,
-      "summary_source": "deterministic"
+      "summary_source": "deterministic",
+      "models": null
     },
     {
       "invoice_id": "AGX-I011",
@@ -237,11 +258,13 @@
       "traced_to_source": true,
       "invented_amounts": 0,
       "model_summary_rejected": false,
+      "model_texts_withheld": 0,
       "conflict_expected": false,
       "escalated": false,
       "tool_calls": 2,
       "seconds": 0.001,
-      "summary_source": "deterministic"
+      "summary_source": "deterministic",
+      "models": null
     },
     {
       "invoice_id": "AGX-I012",
@@ -253,11 +276,13 @@
       "traced_to_source": true,
       "invented_amounts": 0,
       "model_summary_rejected": false,
+      "model_texts_withheld": 0,
       "conflict_expected": false,
       "escalated": false,
       "tool_calls": 2,
       "seconds": 0.001,
-      "summary_source": "deterministic"
+      "summary_source": "deterministic",
+      "models": null
     },
     {
       "invoice_id": "AGX-I013",
@@ -269,11 +294,13 @@
       "traced_to_source": true,
       "invented_amounts": 0,
       "model_summary_rejected": false,
+      "model_texts_withheld": 0,
       "conflict_expected": false,
       "escalated": false,
       "tool_calls": 2,
       "seconds": 0.001,
-      "summary_source": "deterministic"
+      "summary_source": "deterministic",
+      "models": null
     },
     {
       "invoice_id": "AGX-I014",
@@ -285,11 +312,13 @@
       "traced_to_source": true,
       "invented_amounts": 0,
       "model_summary_rejected": false,
+      "model_texts_withheld": 0,
       "conflict_expected": false,
       "escalated": false,
       "tool_calls": 4,
       "seconds": 0.002,
-      "summary_source": "deterministic"
+      "summary_source": "deterministic",
+      "models": null
     },
     {
       "invoice_id": "AGX-I015",
@@ -301,11 +330,13 @@
       "traced_to_source": true,
       "invented_amounts": 0,
       "model_summary_rejected": false,
+      "model_texts_withheld": 0,
       "conflict_expected": false,
       "escalated": false,
       "tool_calls": 2,
       "seconds": 0.001,
-      "summary_source": "deterministic"
+      "summary_source": "deterministic",
+      "models": null
     },
     {
       "invoice_id": "AGX-I016",
@@ -317,11 +348,13 @@
       "traced_to_source": true,
       "invented_amounts": 0,
       "model_summary_rejected": false,
+      "model_texts_withheld": 0,
       "conflict_expected": true,
       "escalated": true,
       "tool_calls": 2,
       "seconds": 0.002,
-      "summary_source": "deterministic"
+      "summary_source": "deterministic",
+      "models": null
     },
     {
       "invoice_id": "AGX-I017",
@@ -333,11 +366,13 @@
       "traced_to_source": true,
       "invented_amounts": 0,
       "model_summary_rejected": false,
+      "model_texts_withheld": 0,
       "conflict_expected": false,
       "escalated": false,
       "tool_calls": 2,
       "seconds": 0.001,
-      "summary_source": "deterministic"
+      "summary_source": "deterministic",
+      "models": null
     },
     {
       "invoice_id": "AGX-I018",
@@ -349,11 +384,13 @@
       "traced_to_source": true,
       "invented_amounts": 0,
       "model_summary_rejected": false,
+      "model_texts_withheld": 0,
       "conflict_expected": false,
       "escalated": false,
       "tool_calls": 4,
       "seconds": 0.002,
-      "summary_source": "deterministic"
+      "summary_source": "deterministic",
+      "models": null
     },
     {
       "invoice_id": "AGX-I019",
@@ -365,11 +402,13 @@
       "traced_to_source": true,
       "invented_amounts": 0,
       "model_summary_rejected": false,
+      "model_texts_withheld": 0,
       "conflict_expected": false,
       "escalated": false,
       "tool_calls": 4,
       "seconds": 0.002,
-      "summary_source": "deterministic"
+      "summary_source": "deterministic",
+      "models": null
     },
     {
       "invoice_id": "AGX-I020",
@@ -381,11 +420,13 @@
       "traced_to_source": true,
       "invented_amounts": 0,
       "model_summary_rejected": false,
+      "model_texts_withheld": 0,
       "conflict_expected": true,
       "escalated": true,
       "tool_calls": 2,
       "seconds": 0.001,
-      "summary_source": "deterministic"
+      "summary_source": "deterministic",
+      "models": null
     },
     {
       "invoice_id": "AGX-I021",
@@ -397,11 +438,13 @@
       "traced_to_source": true,
       "invented_amounts": 0,
       "model_summary_rejected": false,
+      "model_texts_withheld": 0,
       "conflict_expected": false,
       "escalated": false,
       "tool_calls": 4,
       "seconds": 0.002,
-      "summary_source": "deterministic"
+      "summary_source": "deterministic",
+      "models": null
     },
     {
       "invoice_id": "AGX-I022",
@@ -413,11 +456,13 @@
       "traced_to_source": true,
       "invented_amounts": 0,
       "model_summary_rejected": false,
+      "model_texts_withheld": 0,
       "conflict_expected": true,
       "escalated": false,
       "tool_calls": 4,
       "seconds": 0.002,
-      "summary_source": "deterministic"
+      "summary_source": "deterministic",
+      "models": null
     },
     {
       "invoice_id": "AGX-I023",
@@ -429,11 +474,13 @@
       "traced_to_source": true,
       "invented_amounts": 0,
       "model_summary_rejected": false,
+      "model_texts_withheld": 0,
       "conflict_expected": false,
       "escalated": false,
       "tool_calls": 4,
       "seconds": 0.002,
-      "summary_source": "deterministic"
+      "summary_source": "deterministic",
+      "models": null
     },
     {
       "invoice_id": "AGX-I024",
@@ -445,11 +492,13 @@
       "traced_to_source": true,
       "invented_amounts": 0,
       "model_summary_rejected": false,
+      "model_texts_withheld": 0,
       "conflict_expected": true,
       "escalated": true,
       "tool_calls": 2,
       "seconds": 0.001,
-      "summary_source": "deterministic"
+      "summary_source": "deterministic",
+      "models": null
     },
     {
       "invoice_id": "AGX-I025",
@@ -461,11 +510,13 @@
       "traced_to_source": true,
       "invented_amounts": 0,
       "model_summary_rejected": false,
+      "model_texts_withheld": 0,
       "conflict_expected": false,
       "escalated": false,
       "tool_calls": 4,
       "seconds": 0.001,
-      "summary_source": "deterministic"
+      "summary_source": "deterministic",
+      "models": null
     },
     {
       "invoice_id": "AGX-I026",
@@ -477,17 +528,20 @@
       "traced_to_source": true,
       "invented_amounts": 0,
       "model_summary_rejected": false,
+      "model_texts_withheld": 0,
       "conflict_expected": false,
       "escalated": false,
       "tool_calls": 2,
       "seconds": 0.001,
-      "summary_source": "deterministic"
+      "summary_source": "deterministic",
+      "models": null
     }
   ],
   "limitations": [
     "Synthetic data only; no real bank statements or client books were used.",
     "Seconds per exception measure the agent's machine time, not auditor time saved; no manual baseline was timed.",
     "The deterministic-baseline planner follows a fixed policy; LLM results depend on the model and provider and should be re-measured per model.",
+    "The test data's bank narrations use abbreviations the party matcher already knows (Mfg, Trdrs, Retl...), so payer matching here is easier than on real statements. On unseen spellings the matcher mostly falls to 'possible match' (escalates), but can miss ('FICTIONAL MFRS') or over-match ('Astra' vs 'Aster Components').",
     "Planted 'possible party' payers swap the customer's first name (e.g. 'Sharma Traders' -> 'Verma Traders'). When the swap leaves little in common ('Banyan Retail' -> 'Verma Retail'), the matcher scores it as an unrelated payer, so the agent treats the invoice as unpaid and proposes an evidence request instead of escalating a conflict."
   ]
 }
