@@ -1,0 +1,16 @@
+backend/data/
+backend/tests/.runtime/
+.test-tmp/
+__pycache__/
+*.py[cod]
+.p4-deps/
+.venv-p4/
+web/node_modules/
+web/dist/
+web/test-results/
+web/*.tsbuildinfo
+.demo/
+.env
+.env.*
+!.env.example
+.server-logs/

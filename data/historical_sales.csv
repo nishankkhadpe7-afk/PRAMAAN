@@ -1,0 +1,7 @@
+period,customer_id,invoice_count,gross_sales,source_type
+2024-04,CUST-001,3,120000,synthetic_prior_period
+2024-05,CUST-001,4,140000,synthetic_prior_period
+2024-06,CUST-001,3,130000,synthetic_prior_period
+2024-04,CUST-003,2,70000,synthetic_prior_period
+2024-05,CUST-003,2,75000,synthetic_prior_period
+2024-06,CUST-003,3,80000,synthetic_prior_period

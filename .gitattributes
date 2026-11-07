@@ -1,0 +1,2 @@
+# The synthetic manifest hashes canonical LF bytes, including on Windows.
+data/* text eol=lf

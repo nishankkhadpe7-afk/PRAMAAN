@@ -1,0 +1,7 @@
+GOODS RETURN NOTE (SYNTHETIC TEST DOCUMENT)
+Company: Cedar Wholesale (synthetic)
+Reference: fill in the sample reference shown in the Evidence inbox
+Prepared for: Pramaan local testing only
+
+This file is synthetic. Uploading it records company-supplied evidence;
+it does not independently verify delivery, revenue or tax treatment.

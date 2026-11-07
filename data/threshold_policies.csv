@@ -1,0 +1,3 @@
+policy_id,policy_version,effective_from,effective_to,rule_type,threshold_inr,source,notes
+POL-THR-001,synthetic-v1,2025-04-01,,high_value_transaction,100000,demo_policy_not_legal_advice,Testing-only threshold; replace with reviewed policy.
+POL-THR-002,synthetic-v1,2025-04-01,,split_transaction_window_total,250000,demo_policy_not_legal_advice,Testing-only threshold; not an asserted statutory threshold.

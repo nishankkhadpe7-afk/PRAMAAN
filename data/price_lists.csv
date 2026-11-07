@@ -1,0 +1,4 @@
+price_list_id,item_code,customer_id,valid_from,valid_to,unit_price,currency,source_type
+PL-001,ITEM-8501,CUST-001,2025-04-01,2025-06-30,1000,INR,synthetic_contract_price
+PL-002,ITEM-8501,CUST-003,2025-04-01,2025-06-30,1000,INR,synthetic_contract_price
+PL-003,ITEM-8501,CUST-007,2025-04-01,2025-06-30,1200,INR,synthetic_contract_price

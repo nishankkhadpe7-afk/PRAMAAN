@@ -1,0 +1,7 @@
+edge_id,subject_type,subject_id,object_type,object_id,relationship_type,valid_from,valid_to,source_type,source_ref,confidence
+REL-001,customer,CUST-001,person,PERSON-001,director,2024-01-01,,disclosed_register,RP-DISC-001,disclosed
+REL-002,customer,CUST-003,person,PERSON-001,common_director_candidate,2024-06-01,,synthetic_shared_identifier,SYN-IDENT-001,candidate_requires_review
+REL-003,customer,CUST-002,customer,CUST-004,shared_contact_candidate,2025-01-01,,synthetic_shared_identifier,SYN-IDENT-002,candidate_requires_review
+REL-004,customer,CUST-004,customer,CUST-006,shared_director_candidate,2025-02-01,,synthetic_shared_identifier,SYN-IDENT-003,candidate_requires_review
+REL-005,customer,CUST-006,customer,CUST-002,shared_bank_account_candidate,2025-03-01,,synthetic_shared_identifier,SYN-IDENT-004,candidate_requires_review
+REL-006,customer,CUST-002,person,PERSON-002,director,2024-01-01,,disclosed_register,RP-DISC-002,disclosed

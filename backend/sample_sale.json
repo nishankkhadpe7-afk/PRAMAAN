@@ -1,0 +1,34 @@
+{
+  "sale_id": "DEMO-SALE-001",
+  "register_source_base64": "QmlsbCBObyxEYXRlLEN1c3RvbWVyLEdyb3NzIEFtdCxFLUludm9pY2UKRy8wMDAxLzI2LDIwMjYtMDMtMjUsRGVtbyBTaGlweWFyZCBQdnQgTHRkLDEyODAuMDAsREVNTyBPTkxZCg==",
+  "register_row": {
+    "Bill No": "G/0001/26",
+    "Date": "2026-03-25",
+    "Customer": "Demo Shipyard Pvt Ltd",
+    "Gross Amt": "1180.00",
+    "E-Invoice": "DEMO ONLY"
+  },
+  "party": {"party_id": "DEMO-PARTY-001", "name": "Demo Shipyard Pvt Ltd", "kind": "customer", "synthetic": true},
+  "invoice": {"value": 1180, "quantity": 2, "invoice_date": "2026-03-25"},
+  "dispatch": {"value": 1180, "quantity": 2, "dispatch_date": "2026-03-26"},
+  "evidence": [
+    {
+      "evidence_id": "EV-DEMO-INVOICE-001",
+      "content_type": "text/plain",
+      "content_base64": "REVNTyBPTkxZOiBmaWN0aW9uYWwgYXVkaXQgZXZpZGVuY2U=",
+      "controller": "client",
+      "acquisition_channel": "company_upload",
+      "independently_verified": false,
+      "assertions": ["occurrence", "accuracy"]
+    },
+    {
+      "evidence_id": "EV-DEMO-DISPATCH-001",
+      "content_type": "text/plain",
+      "content_base64": "REVNTyBPTkxZOiBmaWN0aW9uYWwgZGlzcGF0Y2ggcmVjb3Jk",
+      "controller": "client",
+      "acquisition_channel": "company_upload",
+      "independently_verified": false,
+      "assertions": ["occurrence", "accuracy"]
+    }
+  ]
+}

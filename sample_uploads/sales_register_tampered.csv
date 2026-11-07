@@ -1,0 +1,37 @@
+Bill No,Date,Customer,Gross Amt,GST No
+DEMO/26/001,2026-03-20,Fictional Manufacturing Pvt Ltd,25900.00,
+DEMO/26/013,2026-03-20,Fictional Manufacturing Pvt Ltd,36700.00,
+DEMO/26/002,2026-03-21,Fictional Manufacturing Pvt Ltd,26800.00,
+DEMO/26/003,2026-03-22,Fictional Manufacturing Pvt Ltd,27700.00,
+DEMO/26/004,2026-03-23,Fictional Manufacturing Pvt Ltd,28600.00,
+DEMO/26/005,2026-03-24,Fictional Manufacturing Pvt Ltd,29000.00,
+DEMO/26/006,2026-03-25,Fictional Manufacturing Pvt Ltd,30400.00,
+DEMO/26/007,2026-03-26,Fictional Manufacturing Pvt Ltd,31300.00,
+DEMO/26/008,2026-03-27,Fictional Manufacturing Pvt Ltd,32200.00,
+DEMO/26/009,2026-03-28,Fictional Manufacturing Pvt Ltd,33100.00,
+DEMO/26/010,2026-03-29,Fictional Manufacturing Pvt Ltd,34000.00,
+DEMO/26/011,2026-03-30,Fictional Manufacturing Pvt Ltd,34900.00,
+DEMO/26/012,2026-03-31,Fictional Manufacturing Pvt Ltd,35800.00,
+DEMO/26/014,2026-04-01,Fictional Manufacturing Pvt Ltd,37600.00,
+DEMO/26/015,2026-04-02,Fictional Manufacturing Pvt Ltd,38500.00,
+DEMO/26/016,2026-04-03,Fictional Manufacturing Pvt Ltd,39400.00,
+DEMO/26/017,2026-04-04,Fictional Manufacturing Pvt Ltd,40300.00,
+DEMO/26/018,2026-04-05,Fictional Manufacturing Pvt Ltd,41200.00,
+DEMO/26/019,2026-04-06,Fictional Manufacturing Pvt Ltd,42100.00,
+DEMO/26/020,2026-04-07,Fictional Manufacturing Pvt Ltd,43000.00,
+DEMO/26/021,2026-04-08,Fictional Manufacturing Pvt Ltd,43900.00,
+DEMO/26/022,2026-04-09,Fictional Manufacturing Pvt Ltd,44800.00,
+DEMO/26/023,2026-04-10,Fictional Manufacturing Pvt Ltd,45700.00,
+DEMO/26/024,2026-04-11,Fictional Manufacturing Pvt Ltd,46600.00,
+DEMO/26/025,2026-04-12,Fictional Manufacturing Pvt Ltd,47500.00,
+DEMO/26/026,2026-04-13,Fictional Manufacturing Pvt Ltd,48400.00,
+PRA/25-26/001,2025-04-05,Aster Components Demo,118000.00,29ABCDE1234F1Z5
+PRA/25-26/002,2025-04-07,Banyan Retail Demo,59000.00,27ABCDE1234F1Z5
+PRA/25-26/003,2025-04-10,Cedar Industrial Demo,236000.00,29ABCDE1234F2Z5
+PRA/25-26/004,2025-04-30,Aster Components Demo,141600.00,29ABCDE1234F1Z5
+PRA/25-26/005,2025-05-02,Delta Trade Demo,88500.00,24ABCDE1234F1Z5
+PRA/25-26/006,2025-05-15,Elm Services Demo,29500.00,29ABCDE1234F3Z5
+PRA/25-26/007,2025-06-01,Fjord Wholesale Demo,354000.00,27ABCDE1234F2Z5
+PRA/25-26/008,2025-06-28,Cedar Industrial Demo,47200.00,29ABCDE1234F2Z5
+PRA/25-26/009,2025-06-20,Banyan Retail Demo,4720000.00,27ABCDE1234F1Z5
+DEMO/26/099,2026-03-31,Fictional Manufacturing Pvt Ltd,500000.00,
