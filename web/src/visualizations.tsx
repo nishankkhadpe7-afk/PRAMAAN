@@ -1108,7 +1108,7 @@ export function CryptographicChainView({
             </div>
             <div>
               <span className="label">Timestamp</span>
-              <span>{selectedEvent.timestamp || new Date().toISOString()}</span>
+              <span>{selectedEvent.timestamp || 'Not recorded'}</span>
             </div>
             <div className="span-all">
               <span className="label">SHA-256 Current Hash</span>
