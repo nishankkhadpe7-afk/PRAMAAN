@@ -46,15 +46,23 @@ AUDITOR |= {"web_business", "web_registers", "web_inbox", "web_runs", "web_run_c
 # MCP egress-DLP audit logging is available to any authenticated identity/channel.
 CLIENT |= {"egress_audit", "record_tool_denial"}
 AUDITOR |= {"egress_audit", "record_tool_denial"}
+# AgentX investigation agent (P6): deterministic tools, human-confirmed actions.
+CLIENT |= {"upload_bank_statement", "list_bank_statements"}
+AUDITOR |= {"list_bank_statements", "match_bank_transactions", "match_party", "investigate_finding", "list_investigations",
+            "get_investigation", "propose_agent_action", "list_agent_actions", "confirm_agent_action", "reject_agent_action"}
+TOOL_NAMES |= {"upload_bank_statement", "match_bank_transactions", "match_party", "investigate_finding", "propose_evidence_request", "list_agent_actions"}
+HUMAN_ONLY = {"record_review_decision", "confirm_agent_action", "reject_agent_action"}
 TOOL_NAMES |= {"create_export_package", "export_p5_workpaper", "export_memo", "propose_review_decision", "get_review_queue", "get_p5_lifecycle"}
 BUSINESS = {"sales", "parties", "evidence", "links", "p2_customers", "p2_sales_orders",
             "p2_dispatches", "p2_invoices", "p2_journals", "p2_journal_lines", "p2_receipts",
             "p2_credit_notes", "p2_evidence", "p2_register_uploads", "p2_register_rows",
-            "p2_related_party_uploads", "p4_record_versions", "p2_journal_reversals"}
+            "p2_related_party_uploads", "p4_record_versions", "p2_journal_reversals",
+            "p6_bank_statements", "p6_bank_rows"}
 AUDIT = {"runs", "p2_reconciliations", "p3_audit_runs", "p3_samples", "p3_draws",
          "p3_evidence_requests", "p4_changes"}
 AUDIT |= {"p5_packages", "p5_proposals", "p2_reconciliation_rules"}
 AUDIT |= {"p3_audit_labels", "p3_run_verifications"}
+AUDIT |= {"p6_investigations", "p6_actions"}
 # access_log is read by auditors through /ui/access-log; only the logger connection writes it.
 
 
@@ -108,6 +116,8 @@ def bootstrap():
         """)
         from .p5 import init_p5
         init_p5(db)
+        from .p6_agent import init_p6
+        init_p6(db)
         db.close()
     finally:
         identity.reset(reset)
@@ -320,7 +330,7 @@ class SecurityMiddleware:
             # returned in a response.
             caller["token"] = headers.get(b"authorization", b"").decode("latin1")[7:]
         permitted = caller and action in (CLIENT if caller["role"] == "client_employee" else AUDITOR)
-        if action == "record_review_decision":
+        if action in HUMAN_ONLY:
             permitted = permitted and caller.get("human") and channel != "mcp"
         if permitted and agent_action_blocked(action, channel):
             permitted = False

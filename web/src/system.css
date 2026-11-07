@@ -130,3 +130,26 @@ tr.selected-row td{background:rgba(232,194,122,.07)}
 .decision-hero-detail{margin:var(--space-2) 0 0;color:var(--subtle);font-size:var(--text-sm)}
 @media(max-width:480px){.decision-hero{padding:var(--space-5)}.decision-hero-count strong{font-size:44px}.decision-hero-main .primary{width:100%;justify-content:center}}
 .dash-viz .decision-hero{margin-bottom:0}
+
+/* AgentX investigation panel */
+.investigation-status{display:flex;gap:var(--space-3);align-items:flex-start;padding:var(--space-4);border:1px solid var(--line-strong);border-left:3px solid var(--gold);border-radius:var(--radius);background:var(--surface);margin-bottom:var(--space-4)}
+.investigation-status.tone-ok{border-left-color:var(--c-human)}
+.investigation-status.tone-bad{border-left-color:var(--red,#e5484d)}
+.investigation-status p{margin:var(--space-1) 0 0;color:var(--muted);font-size:var(--text-sm)}
+.investigation-summary{display:grid;gap:var(--space-2);margin-bottom:var(--space-4)}
+.investigation-summary p{margin:0}
+.investigation-steps{list-style:none;margin:0 0 var(--space-4);padding:0;display:grid;gap:var(--space-3)}
+.inv-step{border:1px solid var(--line);border-radius:var(--radius);padding:var(--space-3) var(--space-4);background:var(--surface);min-width:0}
+.inv-step p{margin:var(--space-2) 0 0;overflow-wrap:anywhere}
+.inv-step.inv-escalation{border-color:var(--red,#e5484d)}
+.source-refs{margin:var(--space-2) 0 0;padding-left:var(--space-5);display:grid;gap:var(--space-1);font-size:var(--text-sm)}
+.source-refs li{display:flex;gap:var(--space-2);flex-wrap:wrap}
+.conflict-card{margin-top:var(--space-3);display:grid;gap:var(--space-2)}
+.conflict-records{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,220px),1fr));gap:var(--space-3)}
+.conflict-record{margin:0;border:1px solid var(--line-strong);border-radius:var(--r-sm);padding:var(--space-3);display:grid;gap:var(--space-1);font-size:var(--text-sm)}
+.conflict-record dt{font-weight:var(--fw-semibold)}
+.conflict-record div{display:flex;justify-content:space-between;gap:var(--space-2);flex-wrap:wrap}
+.conflict-record span{color:var(--muted)}
+.investigation-actions{display:grid;gap:var(--space-3);margin-bottom:var(--space-4)}
+.investigation-actions h3{margin:0;font-size:var(--text-md)}
+.investigation-summary .prov,.inv-step .prov{border-radius:var(--r-sm);max-width:100%;flex-wrap:wrap}

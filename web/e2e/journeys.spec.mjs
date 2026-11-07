@@ -69,3 +69,24 @@ test('no horizontal overflow at 360 px on core screens',async({browser})=>{
   }
   expect(failures).toEqual([])
 })
+
+test('keyboard-only agent investigation with human-confirmed evidence request',async({page,request})=>{
+  // Pick a finding tied to one invoice from the frozen run (the demo instance has no bank statement,
+  // so the agent cannot trace a payment and must propose, not send, a request).
+  const ctx=await (await request.get(`/api/ui/runs/${state.run_id}/context`,{headers:{Authorization:'Bearer '+credentials.auditor}})).json()
+  const finding=ctx.findings.find(f=>f.test_id==='T03'&&/^DEMO-I/.test(f.object_ref))
+  expect(finding).toBeTruthy()
+  await keyboardSignIn(page,'human');await go(page,`/auditor/findings/${encodeURIComponent(finding.finding_id)}?run=${state.run_id}`)
+  const panel=page.getByRole('region',{name:'Agent investigation'}).or(page.locator('section.panel',{has:page.getByRole('heading',{name:'Agent investigation'})}))
+  await expect(page.getByRole('heading',{name:'Agent investigation'})).toBeVisible()
+  await tabTo(page,page.getByRole('button',{name:'Run without AI'}));await page.keyboard.press('Enter')
+  await expect(page.getByRole('status').filter({hasText:'Needs your confirmation'})).toBeVisible({timeout:30000})
+  await expect(page.getByText('deterministic baseline planner, no AI')).toBeVisible()
+  await tabTo(page,page.getByRole('button',{name:'Review and confirm'}));await page.keyboard.press('Enter')
+  const drawer=page.getByRole('dialog',{name:'Confirm the proposed evidence request'});await expect(drawer).toBeVisible()
+  await expect(drawer).toContainText("The client's evidence inbox")
+  await tabTo(page,drawer.getByRole('button',{name:'Confirm and send'}));await page.keyboard.press('Enter')
+  await expect(drawer).toHaveCount(0)
+  await expect(page.getByText(/Sent as ER-AG-/)).toBeVisible()
+  void panel
+})

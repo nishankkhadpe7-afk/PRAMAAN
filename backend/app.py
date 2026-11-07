@@ -452,6 +452,8 @@ from .p4 import router as p4_router
 app.include_router(p4_router)
 from .p5 import router as p5_router
 app.include_router(p5_router)
+from .p6_agent import router as p6_router
+app.include_router(p6_router)
 from .web_views import router as web_router
 app.include_router(web_router)
 app.add_middleware(SecurityMiddleware)

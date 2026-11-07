@@ -57,6 +57,13 @@ TOOLS = {
     "get_review_queue": ("auditor", "GET", "/p5/runs/{run_id}/reviews", ["run_id"], False),
     "propose_review_decision": ("auditor", "POST", "/p5/runs/{run_id}/findings/{finding_id}/proposal", ["run_id", "finding_id"], True),
     "get_p5_lifecycle": ("auditor", "GET", "/p5/packages/{package_id}/sales/{invoice_id}", ["package_id", "invoice_id"], False),
+    # AgentX investigation agent. There is deliberately no confirm tool: only a human confirms actions.
+    "upload_bank_statement": ("client_employee", "POST", "/p6/bank-statements", [], True),
+    "match_bank_transactions": ("auditor", "POST", "/p6/runs/{run_id}/match/bank", ["run_id"], True),
+    "match_party": ("auditor", "POST", "/p6/runs/{run_id}/match/party", ["run_id"], True),
+    "investigate_finding": ("auditor", "POST", "/p6/runs/{run_id}/investigations", ["run_id"], True),
+    "propose_evidence_request": ("auditor", "POST", "/p6/runs/{run_id}/actions", ["run_id"], True),
+    "list_agent_actions": ("auditor", "GET", "/p6/runs/{run_id}/actions", ["run_id"], False),
 }
 
 

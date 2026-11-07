@@ -81,6 +81,7 @@ Screenshots of every screen at six widths (360–1920 px), before and after the 
 - [Authentication authorization and safeguards](#authentication-authorization-and-safeguards)
 - [MCP architecture and tools](#mcp-architecture-and-tools)
 - [AI/LLM integration](#aillm-integration)
+- [Investigation agent](#investigation-agent)
 - [Outputs and user interface](#outputs-and-user-interface)
 - [Installation configuration and tests](#installation-configuration-and-tests)
 - [Measured results and limitations](#measured-results-and-limitations)
@@ -299,6 +300,34 @@ The audit engine, permissions, sampling, reconciliation, and final conclusions a
 | Read document text                                  | Returned content is marked untrusted and sensitive identifiers are filtered.                                                    |
 
 AI cannot change role, write client records as an auditor, finalize a human conclusion, invent amounts/findings/verdicts, or bypass egress policy. No successful live external-provider call is claimed by the integration verification; sending private audit data to a provider requires separate approval and deployment controls.
+
+## Investigation agent
+
+The investigation agent traces **one exception at a time** for the auditor: *goal → plan → act → check → re-plan*. It runs from the **Agent investigation** panel on any finding page, or through the `investigate_finding` MCP tool. Code: [backend/p6_agent.py](backend/p6_agent.py), [backend/party_match.py](backend/party_match.py), [web/src/investigate.tsx](web/src/investigate.tsx).
+
+| Step | What happens | Who decides |
+|---|---|---|
+| Plan | The LLM picks the next check (or the labelled deterministic baseline runs a fixed policy when no key is set) | AI or fixed policy |
+| Act | Tools read the frozen run snapshot, the sales register, recorded receipts, evidence and uploaded **bank statements** | Deterministic tools |
+| Check | Bank credits are scored on amount, date, bill reference and a local fuzzy payer match ("Sharma Traders" ↔ "M/s Sharma Trdrs") | Deterministic tools |
+| Conflict | Register vs invoice disagreement with no independent support, equal bank matches, or an uncertain payer: the server **stops** the run and shows both records | Server rule; the model cannot override |
+| Act outward | The agent may only **propose** an evidence request. A human reviewer sees exactly what will be sent and to whom, then confirms or rejects; the payload must hash-match the proposal | Human |
+
+Safeguards in code:
+- **Amounts come only from tools.** Any amount in the model's summary that no tool returned (or the word "fraud") rejects the summary, and a system summary is shown instead.
+- **Names stay on the server.** The model sees record IDs, amounts, dates, match bands and masked party references only, never names, GSTINs or bank narrations.
+- **The agent can't wander.** It is scoped to the invoice under investigation.
+- **Every step is recorded.** Each tool call is written to the hash-chained audit log, and each report is stored with its hash.
+- **Only a human confirms.** There is no confirm tool for agents; the confirm and reject routes are human-only and blocked on the MCP channel.
+
+**Try it locally**
+1. Generate a synthetic bank statement for your demo instance: `python -m Pramaan.backend.fixtures_agent --data .demo/runtime --out .demo/runtime/agent_fixtures`.
+2. As the client, upload `bank_statement.csv` (Registers & disclosures → Source type: Bank statement). Optionally also upload `register_with_variance.csv`, reconcile it and rerun the audit.
+3. As the auditor, open a finding and click **Investigate with AI**. Without an API key, click **Run without AI** for the deterministic baseline.
+
+Or seed a ready-made instance with planted cases: `python -m Pramaan.backend.evaluate_agent --seed-instance .demo/agentx`, then start the API with `PRAMAAN_DATA=.demo/agentx`.
+
+**Measured results** (`python -m Pramaan.backend.evaluate_agent --write-docs`; details in [docs/AGENT_EVAL.md](docs/AGENT_EVAL.md)): on 26 synthetic sale lifecycles with 26 planted cases, the deterministic baseline planner traced 26/26 to source, invented 0 amounts, reached the correct outcome in 25/26, escalated 5/6 planted conflicts with 0 false escalations. LLM-planner numbers depend on the model; measure them with `--planner llm --write-docs`. No auditor time saving is claimed: no manual baseline has been timed.
 
 ## Outputs and user interface
 
