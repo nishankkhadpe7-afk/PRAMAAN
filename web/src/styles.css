@@ -31,6 +31,20 @@
   --radius:10px;
   --radius-sm:6px;
   --radius-lg:14px;
+  /* Card system: the landing page's "Six steps" cards, as tokens shared by every dashboard card. */
+  --card-bg:linear-gradient(160deg,#171b22 0%,#101318 100%);
+  --card-bg-inset:rgba(255,255,255,.025);
+  --card-border:rgba(255,255,255,.1);
+  --card-border-inset:rgba(255,255,255,.07);
+  --card-border-hover:rgba(242,169,59,.5);
+  --card-radius:16px;
+  --card-radius-inset:12px;
+  --card-pad:24px;
+  --card-accent:#f2a93b;
+  --card-desc:#aab0b8;
+  --card-numeral:rgba(255,255,255,.07);
+  --card-shadow:0 1px 0 rgba(255,255,255,.03) inset,0 10px 30px rgba(0,0,0,.25);
+  --card-ease:.2s ease;
   --shadow-panel:0 8px 28px rgba(0,0,0,.22);
   --sans:'Outfit',-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,system-ui,sans-serif;
   /* Typography tokens: one family (Outfit, as on the landing page) plus mono for technical text only. */
@@ -320,13 +334,13 @@ small{color:var(--subtle);font-size:14px;line-height:1.4}
 .sidebar-bottom{margin-top:auto;padding-top:24px}
 .scope-card{
   padding:var(--space-4);
-  border:1px solid var(--gold-border);
-  border-radius:var(--radius);
-  background:radial-gradient(circle at top left, rgba(203, 161, 88, 0.08), transparent 70%), var(--surface);
+  border:1px solid var(--card-border);
+  border-radius:var(--card-radius-inset);
+  background:var(--card-bg);
 }
-.scope-card>svg{color:var(--gold);margin-bottom:8px}
+.scope-card>svg{color:var(--card-accent);margin-bottom:8px}
 .scope-card strong{display:block;font-size:13.5px;font-weight:600;color:#f8fafc}
-.scope-card p{font-size:13px;margin-top:6px;line-height:1.5}
+.scope-card p{font-size:13px;margin-top:6px;line-height:1.5;color:var(--card-desc)}
 .profile{
   display:flex;
   align-items:center;
@@ -416,57 +430,59 @@ small{color:var(--subtle);font-size:14px;line-height:1.4}
   margin-bottom:var(--space-6);
 }
 .metric{
-  border:1px solid var(--line);
-  background:linear-gradient(180deg, var(--surface) 0%, rgba(14, 16, 20, 0.6) 100%);
-  border-radius:var(--radius);
-  border-top-width:3px;
-  border-top-color:transparent;
-  padding:18px 20px;
+  border:1px solid var(--card-border);
+  background:var(--card-bg);
+  border-radius:var(--card-radius);
+  padding:20px 22px;
   min-width:0;
   display:flex;
   flex-direction:column;
   position:relative;
-  transition:border-color 0.2s, transform 0.2s;
+  box-shadow:var(--card-shadow);
+  transition:border-color var(--card-ease),transform var(--card-ease);
 }
-.metric-warning{border-top-color:var(--warning)}
-.metric-success{border-top-color:var(--success)}
-.metric-error{border-top-color:var(--error)}
-.metric-info{border-top-color:#3b82f6}
-.metric:hover{
-  border-color:var(--line-strong);
-  transform:translateY(-1px);
-}
+/* Tone shows in the value, as on the landing page there are no coloured stripes. */
+.metric-warning strong{color:#fbbf24}
+.metric-success strong{color:#6ee7b7}
+.metric-error strong{color:#fb7185}
+.metric-info strong{color:#93c5fd}
+.metric:hover{border-color:var(--card-border-hover);transform:translateY(-2px)}
+.metric-icon{color:var(--card-accent);margin-bottom:var(--space-3);display:block}
 .metric>span{
   font-family:var(--font-sans);
-  font-size:12px;
-  text-transform:uppercase;
-  letter-spacing:var(--tracking-label);
-  color:var(--subtle);
-  font-weight:var(--fw-medium);
+  font-size:14px;
+  color:var(--ink);
+  font-weight:600;
+  letter-spacing:.01em;
 }
 .metric strong{
-  font-size:28px;
-  font-weight:600;
+  font-size:30px;
+  font-weight:700;
   letter-spacing:-0.5px;
-  margin:var(--space-3) 0 6px;
+  margin:var(--space-2) 0 6px;
   overflow-wrap:anywhere;
   color:#fcfcfd;
+  font-variant-numeric:tabular-nums;
 }
-.metric small{font-size:13px;color:var(--subtle);line-height:1.45}
+.metric small{font-size:13.5px;color:var(--card-desc);line-height:1.5}
 
 .two-col{display:grid;grid-template-columns:1.4fr 1fr;gap:20px;align-items:start}
 .panel{
-  border:1px solid var(--line);
-  border-radius:var(--radius);
-  background:var(--surface);
+  border:1px solid var(--card-border);
+  border-radius:var(--card-radius);
+  background:var(--card-bg);
   margin-bottom:20px;
   overflow:hidden;
-  padding:24px;
+  padding:var(--card-pad);
   min-width:0;
-  box-shadow:var(--shadow-panel);
-  transition:border-color 0.2s ease;
+  box-shadow:var(--card-shadow);
+  transition:border-color var(--card-ease);
 }
-.panel:hover{border-color:var(--line-strong)}
+/* Large data panels only lift their border slightly; the accent hover is for compact cards. */
+.panel:hover{border-color:rgba(255,255,255,.16)}
+.panel-icon{color:var(--card-accent);flex:none;margin-top:3px}
+.panel-heading-main{display:flex;align-items:flex-start;gap:var(--space-3)}
+.panel-heading-main>div{min-width:0}
 .panel-heading{
   display:flex;
   align-items:flex-start;
@@ -478,12 +494,12 @@ small{color:var(--subtle);font-size:14px;line-height:1.4}
 }
 .panel-heading>div:first-child{min-width:0}
 .panel-heading-action{display:flex;align-items:center;justify-content:flex-end;flex-shrink:0;min-width:0}
-.panel-heading h2{font-size:19px;letter-spacing:0.02em}
-.panel-heading p{font-size:14px;margin-top:4px;max-width:680px;color:var(--subtle)}
+.panel-heading h2{font-size:19px;font-weight:700;letter-spacing:0.01em}
+.panel-heading p{font-size:14px;margin-top:4px;max-width:680px;color:var(--card-desc)}
 .panel-heading a{display:flex;align-items:center;gap:6px;font-size:14px;color:var(--gold)}
 .panel-heading input{font-size:14px;min-width:210px}
-.panel .table-scroll{margin:0 -24px}
-.panel>.panel{margin-top:20px;background:var(--surface-2);box-shadow:none}
+.panel .table-scroll{margin:0 calc(var(--card-pad) * -1)}
+.panel>.panel{margin-top:20px;background:var(--card-bg-inset);border-color:var(--card-border-inset);border-radius:var(--card-radius-inset);box-shadow:none}
 .table-scroll{
   overflow:auto;
   width:100%;
@@ -542,9 +558,15 @@ tbody tr:hover .row-link svg{opacity:1}
   justify-content:center;
   gap:var(--space-3);
   min-height:160px;
-  color:var(--subtle);
+  padding:var(--space-6);
+  text-align:center;
+  color:var(--card-desc);
   font-size:14.5px;
+  border:1px dashed var(--card-border);
+  border-radius:var(--card-radius-inset);
+  background:var(--card-bg-inset);
 }
+.empty svg{color:var(--card-accent)}
 .spin{animation:spin 1s linear infinite}
 @keyframes spin{to{transform:rotate(360deg)}}
 
@@ -559,7 +581,10 @@ tbody tr:hover .row-link svg{opacity:1}
 .action-list>a:first-child{padding-top:4px}
 .action-list>a:last-child{border:0;padding-bottom:0}
 .action-list>a>svg:last-child{margin-left:auto;color:var(--subtle);transition:transform 0.15s ease}
-.action-list>a:hover>svg:last-child{transform:translateX(3px);color:var(--gold)}
+.action-list>a:hover>svg:last-child{transform:translateX(3px);color:var(--card-accent)}
+.action-list>a>svg:first-child{color:var(--card-accent);flex:none}
+.action-list>a:focus-visible{outline:2px solid var(--card-accent);outline-offset:4px;border-radius:8px}
+.action-list p{color:var(--card-desc)}
 .action-list strong{font-size:14px;font-weight:500;color:var(--ink)}
 .action-list p{font-size:13px;margin-top:2px}
 .mini-icon{font-size:20px;color:var(--gold)}
@@ -632,10 +657,10 @@ tbody tr:hover .row-link svg{opacity:1}
 .mutation-body{transition:opacity .15s ease}
 .mutation-body.is-busy{pointer-events:none;opacity:.66}
 .notice{
-  border:1px solid var(--line);
-  border-left:3px solid var(--gold);
-  background:var(--surface-2);
-  border-radius:var(--radius);
+  border:1px solid var(--card-border);
+  border-left:3px solid var(--card-accent);
+  background:var(--card-bg-inset);
+  border-radius:var(--card-radius-inset);
   padding:14px 18px;
   margin:var(--space-4) 0;
   font-size:14px;
@@ -1402,8 +1427,8 @@ details[open]>summary{margin-bottom:var(--space-3)}
 .skeleton-loader{display:grid;gap:var(--space-3);padding:14px 0}
 .skeleton-row{
   height:36px;
-  border-radius:6px;
-  background:linear-gradient(90deg,var(--surface-2) 25%,var(--surface-3) 50%,var(--surface-2) 75%);
+  border-radius:8px;
+  background:linear-gradient(90deg,rgba(255,255,255,.03) 25%,rgba(255,255,255,.07) 50%,rgba(255,255,255,.03) 75%);
   background-size:200% 100%;
   animation:shimmer 1.5s infinite;
 }
@@ -1605,20 +1630,27 @@ input[aria-invalid="true"],select[aria-invalid="true"]{border-color:var(--error)
 .glossary-list dd{margin:0;color:var(--muted);font-size:14px;line-height:1.5}
 
 /* First-visit guide */
-.guide{margin:0 0 var(--space-6);padding:var(--space-5) var(--space-6);border:1px solid var(--gold-border);border-radius:var(--radius-lg);background:linear-gradient(135deg,var(--gold-dim),transparent 60%),var(--surface)}
-.guide-head{display:flex;align-items:flex-start;gap:var(--space-3);color:var(--primary)}
+.guide{margin:0 0 var(--space-6);padding:var(--card-pad);border:1px solid var(--card-border);border-radius:var(--card-radius);background:radial-gradient(ellipse at top left,rgba(242,169,59,.07),transparent 55%),var(--card-bg);box-shadow:var(--card-shadow)}
+.guide-head{display:flex;align-items:flex-start;gap:var(--space-3);color:var(--card-accent)}
 .guide-head>div{flex:1;min-width:0}
 .guide-head h2{margin:0;font-size:18px;color:var(--ink)}
-.guide-head p{margin:2px 0 0;color:var(--subtle);font-size:14px}
+.guide-head p{margin:2px 0 0;color:var(--card-desc);font-size:14px}
 .guide-steps{list-style:none;margin:var(--space-4) 0 0;padding:0;display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:var(--space-3)}
-.guide-steps li{display:flex;gap:var(--space-3);padding:var(--space-3) var(--space-4);border:1px solid var(--line);border-radius:var(--radius);background:var(--surface-2)}
-.guide-num{display:grid;place-items:center;flex:none;width:24px;height:24px;border-radius:999px;background:var(--gold-dim);color:var(--primary);font-size:13px;font-weight:600}
+.guide-steps li{position:relative;display:block;padding:var(--space-4) var(--space-5) var(--space-4) var(--space-4);border:1px solid var(--card-border-inset);border-radius:var(--card-radius-inset);background:var(--card-bg-inset);transition:border-color var(--card-ease),transform var(--card-ease)}
+.guide-steps li:hover{border-color:var(--card-border-hover);transform:translateY(-2px)}
+.guide-steps li>div{position:relative;padding-right:40px}
+/* Large, low-contrast step numerals, as on the landing page's chapter cards. */
+.guide-num{position:absolute;right:14px;top:6px;font:800 34px/1 var(--font-sans);color:var(--card-numeral);pointer-events:none}
 .guide-steps a,.guide-steps strong{display:inline;color:var(--ink);font-weight:500}
 .guide-steps a svg{display:inline-block;vertical-align:-2px;margin-left:2px}
-.guide-steps a:hover{color:var(--primary)}
-.guide-steps p{margin:4px 0 0;color:var(--subtle);font-size:13px;line-height:1.45}
+.guide-steps a:hover{color:var(--card-accent)}
+.guide-steps a:focus-visible{outline:2px solid var(--card-accent);outline-offset:3px;border-radius:4px}
+.guide-steps p{margin:4px 0 0;color:var(--card-desc);font-size:13px;line-height:1.5}
 .help .guide-steps{grid-template-columns:1fr}
 .help>button{margin-top:var(--space-3)}
 .guide-foot{margin:var(--space-4) 0 0;color:var(--subtle);font-size:13px;line-height:1.5}
 .guide-foot svg{display:inline-block;vertical-align:-2px;margin:0 2px}
 @media (max-width:640px){.help-button{padding:4px 8px}.topbar-user-name{display:none}}
+
+/* Card lifts respect reduced-motion settings. */
+@media (prefers-reduced-motion:reduce){.metric,.kpi,.check-card,.guide-steps li{transition:border-color var(--card-ease)}.metric:hover,.kpi:hover,.check-card:hover,.guide-steps li:hover{transform:none}}

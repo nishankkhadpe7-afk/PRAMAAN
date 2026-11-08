@@ -15,6 +15,7 @@ Notable changes to PRAMAAN, newest first. Dates are when the change landed on `m
 - Docs: [Getting started](docs/GETTING_STARTED.md) with screenshots, an animated agent walkthrough, [SECURITY.md](SECURITY.md), [CONTRIBUTING.md](CONTRIBUTING.md), this changelog, and a [docs index](docs/README.md).
 
 ### Changed
+- Dashboard cards follow the landing page's card design: one set of card tokens (`--card-*` in `styles.css`) for panels, metric and KPI cards, charts, integrity checks, findings, samples, the agent panel, guides, notices and empty/loading states. They share dark gradient surfaces, thin borders, 16 px corners, small orange accent icons, bold headings with muted descriptions, large low-contrast step numerals and subtle hover lifts (disabled for reduced motion). `Panel` and `Metrics` take an optional `icon`; the evidence inbox counters now use `Metrics`.
 - Sample tabs read **Sales sample / Year-end cut-off / Credit notes** instead of “Sales TOD / Cut-off TOD / Credit Note TOD”. The term “test of details” is explained in place.
 - The client activity trail shows plain events (“Sales register uploaded”) instead of codes (`register_imported`). Test-coverage statuses and test names are shown as readable text.
 - Design, phase and report documents moved from the repository root into `docs/`, with links updated.

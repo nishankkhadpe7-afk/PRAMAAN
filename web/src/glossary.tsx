@@ -100,7 +100,7 @@ export function GettingStarted({role}:{role:Role}){
   return <section className="guide" aria-labelledby="guide-title">
     <div className="guide-head"><Sparkles size={18} aria-hidden="true"/><div><h2 id="guide-title">Getting started</h2><p>{role==='client'?'Three steps to get your records ready for the audit.':'The usual route from the client\'s records to a reviewed, exported audit.'}</p></div>
       <button type="button" className="icon-button" aria-label="Hide the getting-started guide" onClick={()=>{writeDismissed(role,true);setHidden(true)}}><X size={16}/></button></div>
-    <ol className="guide-steps">{STEPS[role].map((s,i)=><li key={s.title}><span className="guide-num" aria-hidden="true">{i+1}</span><div><Link to={s.to}>{s.title} <ArrowRight size={14} aria-hidden="true"/></Link><p>{s.text}</p></div></li>)}</ol>
+    <ol className="guide-steps">{STEPS[role].map((s,i)=><li key={s.title}><span className="guide-num" aria-hidden="true">{String(i+1).padStart(2,'0')}</span><div><Link to={s.to}>{s.title} <ArrowRight size={14} aria-hidden="true"/></Link><p>{s.text}</p></div></li>)}</ol>
     <p className="guide-foot">Words marked with <CircleHelp size={13} aria-hidden="true"/><span className="sr-only">a question-mark button</span> have a plain-language explanation. You can reopen this guide from <strong>Help</strong> at the top of the page.</p>
   </section>
 }
@@ -108,7 +108,7 @@ export function GettingStarted({role}:{role:Role}){
 export function HelpContent({role,onShowGuide}:{role:Role;onShowGuide:()=>void}){
   return <div className="help">
     <h3>What to do next</h3>
-    <ol className="guide-steps">{STEPS[role].map((s,i)=><li key={s.title}><span className="guide-num" aria-hidden="true">{i+1}</span><div><strong>{s.title}</strong><p>{s.text}</p></div></li>)}</ol>
+    <ol className="guide-steps">{STEPS[role].map((s,i)=><li key={s.title}><span className="guide-num" aria-hidden="true">{String(i+1).padStart(2,'0')}</span><div><strong>{s.title}</strong><p>{s.text}</p></div></li>)}</ol>
     <button type="button" onClick={()=>{writeDismissed(role,false);window.dispatchEvent(new Event(GUIDE_EVENT));onShowGuide()}}>Show the guide on the overview page</button>
     <h3>Audit words in plain language</h3>
     <dl className="glossary-list">{Object.values(GLOSSARY).map(g=><div key={g.term}><dt>{g.term}</dt><dd>{g.meaning}</dd></div>)}</dl>

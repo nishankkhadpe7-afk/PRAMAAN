@@ -43,8 +43,8 @@
 .decision-facts dd{margin:0;color:var(--ink);overflow-wrap:anywhere}
 
 /* Empty state. */
-.empty-state{display:grid;justify-items:start;gap:6px;padding:var(--space-6);border:1px dashed var(--line-strong);border-radius:var(--r-md);color:var(--muted)}
-.empty-state svg{color:var(--subtle)}
+.empty-state{display:grid;justify-items:start;gap:6px;padding:var(--space-6);border:1px dashed var(--card-border);border-radius:var(--card-radius-inset);background:var(--card-bg-inset);color:var(--card-desc)}
+.empty-state svg{color:var(--card-accent)}
 .empty-state strong{color:var(--ink);font-size:var(--text-md)}
 .empty-state p{margin:0;font-size:var(--text-sm)}
 
@@ -121,7 +121,7 @@ tr.selected-row td{background:rgba(232,194,122,.07)}
 .tag.tag-mono{font-family:var(--font-mono)}
 
 /* Summary hierarchy: one primary "needs your decision" block, quieter KPI cards below. */
-.decision-hero{border:1px solid var(--line-strong);border-left:3px solid var(--gold);border-radius:var(--radius);background:var(--surface);padding:var(--space-6);gap:var(--space-5)}
+.decision-hero{border:1px solid var(--card-border);border-left:3px solid var(--card-accent);border-radius:var(--card-radius);background:radial-gradient(ellipse at top left,rgba(242,169,59,.08),transparent 55%),var(--card-bg);box-shadow:var(--card-shadow);padding:var(--space-6);gap:var(--space-5)}
 .decision-hero-main{display:flex;justify-content:space-between;align-items:flex-end;gap:var(--space-6);flex-wrap:wrap}
 .decision-hero .eyebrow{margin:0 0 var(--space-2)}
 .decision-hero-count{margin:0;display:flex;align-items:baseline;gap:var(--space-3);flex-wrap:wrap}
@@ -132,14 +132,14 @@ tr.selected-row td{background:rgba(232,194,122,.07)}
 .dash-viz .decision-hero{margin-bottom:0}
 
 /* AgentX investigation panel */
-.investigation-status{display:flex;gap:var(--space-3);align-items:flex-start;padding:var(--space-4);border:1px solid var(--line-strong);border-left:3px solid var(--gold);border-radius:var(--radius);background:var(--surface);margin-bottom:var(--space-4)}
+.investigation-status{display:flex;gap:var(--space-3);align-items:flex-start;padding:var(--space-4) var(--space-5);border:1px solid var(--card-border);border-left:3px solid var(--card-accent);border-radius:var(--card-radius-inset);background:var(--card-bg);margin-bottom:var(--space-4)}
 .investigation-status.tone-ok{border-left-color:var(--c-human)}
 .investigation-status.tone-bad{border-left-color:var(--red,#e5484d)}
 .investigation-status p{margin:var(--space-1) 0 0;color:var(--muted);font-size:var(--text-sm)}
 .investigation-summary{display:grid;gap:var(--space-2);margin-bottom:var(--space-4)}
 .investigation-summary p{margin:0}
 .investigation-steps{list-style:none;margin:0 0 var(--space-4);padding:0;display:grid;gap:var(--space-3)}
-.inv-step{border:1px solid var(--line);border-radius:var(--radius);padding:var(--space-3) var(--space-4);background:var(--surface);min-width:0}
+.inv-step{border:1px solid var(--card-border-inset);border-radius:var(--card-radius-inset);padding:var(--space-4) var(--space-5);background:var(--card-bg-inset);min-width:0}
 .inv-step p{margin:var(--space-2) 0 0;overflow-wrap:anywhere}
 .inv-step.inv-escalation{border-color:var(--red,#e5484d)}
 .source-refs{margin:var(--space-2) 0 0;padding-left:var(--space-5);display:grid;gap:var(--space-1);font-size:var(--text-sm)}

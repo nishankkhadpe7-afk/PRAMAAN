@@ -1,7 +1,7 @@
 /* ===== Samples, evidence requests and integrity (auditor.tsx, client.tsx) ===== */
 .sample-facts{display:flex;flex-wrap:wrap;gap:12px;margin-bottom:20px;align-items:stretch}
-.sample-facts>div:not(.sample-bases){border:1px solid var(--line);border-radius:10px;padding:12px 16px;background:var(--surface-2);min-width:140px;display:flex;flex:1 1 150px;flex-direction:column;gap:3px}
-.sample-facts span{font-size:14px;color:var(--subtle)}
+.sample-facts>div:not(.sample-bases){border:1px solid var(--card-border-inset);border-radius:var(--card-radius-inset);padding:14px 18px;background:var(--card-bg-inset);min-width:140px;display:flex;flex:1 1 150px;flex-direction:column;gap:3px}
+.sample-facts span{font-size:14px;color:var(--card-desc)}
 .sample-facts strong{font-size:22px;font-weight:600;font-variant-numeric:tabular-nums}
 .sample-bases{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin-left:auto}
 .basis-pill{display:inline-flex;align-items:center;gap:6px;padding:3px 10px;border-radius:9999px;border:1px solid var(--line-strong);background:var(--surface-2);font-size:14px;color:var(--muted);white-space:nowrap}
@@ -49,8 +49,9 @@
 .integrity-banner.slim{padding:14px 16px}
 .integrity-banner>svg{flex-shrink:0;margin-top:2px}
 .check-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:12px;margin-bottom:24px}
-.check-card{border:1px solid var(--line);border-radius:var(--radius);padding:16px;background:var(--surface);display:flex;flex-direction:column;gap:8px}
-.check-card p{font-size:15px;color:var(--muted)}
+.check-card{border:1px solid var(--card-border);border-radius:var(--card-radius);padding:20px;background:var(--card-bg);box-shadow:var(--card-shadow);transition:border-color var(--card-ease),transform var(--card-ease);display:flex;flex-direction:column;gap:8px}
+.check-card:hover{border-color:var(--card-border-hover);transform:translateY(-2px)}
+.check-card p{font-size:14.5px;color:var(--card-desc);line-height:1.5}
 .check-card small{font-size:13.5px;margin-top:auto}
 .check-title{display:flex;gap:8px;align-items:center}
 .check-title strong{font-weight:500;font-size:16px}
@@ -98,8 +99,8 @@
 /* ===== Flagged amounts and data checks ===== */
 .viz-card.exposure{margin-bottom:24px}
 .exposure-kpis{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;margin-bottom:var(--space-5)}
-.exposure-kpis>div{border:1px solid var(--line);border-radius:10px;padding:var(--space-4);background:var(--surface-2);display:flex;flex-direction:column;gap:4px}
-.exposure-kpis span{font-size:14px;color:var(--subtle)}
+.exposure-kpis>div{border:1px solid var(--card-border-inset);border-radius:var(--card-radius-inset);padding:var(--space-4) var(--space-5);background:var(--card-bg-inset);display:flex;flex-direction:column;gap:4px}
+.exposure-kpis span{font-size:14px;color:var(--card-desc)}
 .exposure-kpis strong{font-size:24px;font-weight:600;font-variant-numeric:tabular-nums}
 .exposure-kpis .t-critical{color:#f07070}
 .exposure-h{font-size:15px;font-weight:500;color:var(--muted);margin:0 0 8px}

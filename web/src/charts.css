@@ -17,11 +17,12 @@
 .span-2{grid-column:span 2}
 .insights+.viz-card{margin-bottom:24px}
 
-.kpi{border:1px solid var(--line);border-radius:var(--radius);padding:20px;background:var(--surface);display:flex;flex-direction:column;gap:6px;min-width:0;overflow:hidden}
-.kpi span{font-size:14.5px;color:var(--subtle)}
-.kpi strong{font-size:28px;font-weight:600;letter-spacing:-1px;line-height:1.1;font-variant-numeric:tabular-nums}
+.kpi{position:relative;border:1px solid var(--card-border);border-radius:var(--card-radius);padding:20px 22px;background:var(--card-bg);box-shadow:var(--card-shadow);display:flex;flex-direction:column;gap:6px;min-width:0;transition:border-color var(--card-ease),transform var(--card-ease)}
+.kpi:hover{border-color:var(--card-border-hover);transform:translateY(-2px)}
+.kpi span{font-size:14px;color:var(--ink);font-weight:600}
+.kpi strong{font-size:30px;font-weight:700;letter-spacing:-1px;line-height:1.1;font-variant-numeric:tabular-nums}
 .kpi strong em{font-style:normal;font-size:20px;color:var(--subtle);font-weight:500}
-.kpi small{font-size:14px}
+.kpi small{font-size:13.5px;color:var(--card-desc)}
 .kpi .t-critical{color:#f07070}
 .kpi .t-serious{color:var(--serious)}
 .kpi-ring{flex-direction:row;align-items:center;gap:16px}
@@ -32,15 +33,18 @@
 .ring strong{position:absolute;inset:0;display:grid;place-items:center;font-size:18px!important;letter-spacing:0!important}
 .ring-arc{transition:stroke-dasharray .8s cubic-bezier(.2,.8,.2,1)}
 
-.viz-card{border:1px solid var(--line);border-radius:var(--radius);background:var(--surface);padding:24px;min-width:0;box-shadow:var(--shadow-panel)}
+.viz-card{border:1px solid var(--card-border);border-radius:var(--card-radius);background:var(--card-bg);padding:var(--card-pad);min-width:0;display:flex;flex-direction:column;box-shadow:var(--card-shadow);transition:border-color var(--card-ease)}
+/* When a card is stretched to match a taller neighbour, the donut sits in the middle instead of leaving a gap below. */
+.viz-card>.donut-wrap{flex:1}
+.viz-card:hover{border-color:rgba(255,255,255,.16)}
 .viz-card>header{margin-bottom:var(--space-5)}
-.viz-card h3{font-size:17px;margin:0 0 4px;font-weight:600;color:var(--ink);line-height:1.4}
-.viz-card header p{font-size:14.5px;line-height:1.4}
+.viz-card h3{font-size:17px;margin:0 0 4px;font-weight:700;color:var(--ink);line-height:1.4}
+.viz-card header p{font-size:14px;line-height:1.45;color:var(--card-desc)}
 .viz-foot{display:block;margin-top:var(--space-3)}
 .viz-empty{padding:32px 0;text-align:center;font-size:15px}
 
-.callout{display:flex;gap:12px;align-items:flex-start;padding:14px 18px;border:1px solid var(--line);border-radius:var(--radius);background:var(--surface-2)}
-.callout svg{color:var(--warning);flex-shrink:0;margin-top:3px}
+.callout{display:flex;gap:12px;align-items:flex-start;padding:14px 18px;border:1px solid var(--card-border);border-radius:var(--card-radius-inset);background:var(--card-bg-inset)}
+.callout svg{color:var(--card-accent);flex-shrink:0;margin-top:3px}
 .callout p{font-size:15px}
 .callout strong{color:var(--muted);font-weight:500}
 
@@ -139,7 +143,7 @@
 .show-more small{margin-left:4px}
 
 /* finding detail */
-.finding-hero{position:relative;border:1px solid var(--line);border-radius:var(--radius);padding:24px 24px 20px 28px;margin:16px 0 24px;background:linear-gradient(120deg,var(--surface-2),var(--surface) 60%);overflow:hidden}
+.finding-hero{position:relative;border:1px solid var(--card-border);border-radius:var(--card-radius);padding:var(--card-pad) var(--card-pad) 20px 28px;margin:16px 0 24px;background:var(--card-bg);box-shadow:var(--card-shadow);overflow:hidden}
 .finding-hero::before{content:"";position:absolute;left:0;top:0;bottom:0;width:4px;background:var(--warning)}
 .finding-hero.tier-critical::before{background:var(--critical)}
 .finding-hero.tier-serious::before{background:var(--serious)}
@@ -150,11 +154,11 @@
 .finding-hero-meta{display:flex;gap:24px;flex-wrap:wrap;font-size:14.5px;color:var(--subtle)}
 .finding-hero-meta b{color:var(--muted);font-weight:500;margin-left:4px;font-family:var(--mono);font-size:14px}
 .insight-cards{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:20px}
-.insight-card{border:1px solid var(--line);border-radius:10px;padding:var(--space-5);background:var(--surface-2);display:grid;gap:var(--space-3);align-content:start}
+.insight-card{border:1px solid var(--card-border-inset);border-radius:var(--card-radius-inset);padding:var(--space-5);background:var(--card-bg-inset);display:grid;gap:var(--space-3);align-content:start}
 .insight-card-head{display:flex;align-items:center;gap:8px;font-size:14px;letter-spacing:.8px;text-transform:uppercase;color:var(--subtle);font-weight:500}
 .insight-card.known .insight-card-head svg{color:var(--viz-1)}
 .insight-card.inference .insight-card-head svg{color:var(--warning)}
-.insight-card p{color:var(--muted);font-size:16px}
+.insight-card p{color:var(--card-desc);font-size:15.5px;line-height:1.55}
 
 @media(max-width:1280px){.insight-kpis{grid-template-columns:repeat(2,minmax(0,1fr))}}
 @media(max-width:1024px){.insight-grid,.dash-viz{grid-template-columns:1fr}.span-2{grid-column:auto}}
