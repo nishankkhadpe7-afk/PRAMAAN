@@ -16,7 +16,7 @@ An invoice can show a sale was recorded; it does not itself establish that the s
 
 > Scope: a single-company SQLite prototype using fictional synthetic data. It is not a production deployment, audit opinion, official GST/IRP verification, or fraud determination.
 
-**New here?** Read **[Getting started](docs/GETTING_STARTED.md)**: install, double-click the launcher, sign in, and take a tour with screenshots. Every screen also has a **Help** button and plain-language hints on audit terms.
+**New here?** Read **[Getting started](docs/GETTING_STARTED.md)**, or the **[complete walkthrough PDF](docs/PRAMAAN_Walkthrough.pdf)** (25 pages, for both non-technical readers and engineers): install, double-click the launcher, sign in, and take a tour with screenshots. Every screen also has a **Help** button and plain-language hints on audit terms.
 
 <p align="center">
   <img src="docs/assets/agent-investigation.gif" alt="An auditor runs the investigation agent on a finding: the agent checks the invoice and bank records, finds an unexplained register difference, proposes an evidence request, and a human confirms it before anything is sent." width="760">
@@ -423,7 +423,7 @@ $env:PRAMAAN_DATA = Join-Path $PWD.Path '.demo/runtime'
 | PRAMAAN_E2E_CHANNEL         | chrome                | Playwright browser channel; set to empty to use Playwright's bundled Chromium.                                  |
 | PRAMAAN_E2E_VIDEO           | on                    | Set to `off` where Playwright's ffmpeg is not installed.                                                         |
 
-**Tests.** CI (`.github/workflows/ci.yml`) runs all of these on every push and pull request; a separate `Secret scan` workflow checks the full history for leaked credentials. Current suite: 142 backend tests, 30 UI unit tests, 8 browser journeys.
+**Tests.** CI (`.github/workflows/ci.yml`) runs all of these on every push and pull request; a separate `Secret scan` workflow checks the full history for leaked credentials. Current suite: 144 backend tests, 30 UI unit tests, 8 browser journeys.
 
 ```powershell
 $env:PYTHONPATH = Join-Path $PWD.Path 'launcher'

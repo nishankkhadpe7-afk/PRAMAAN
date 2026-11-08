@@ -7,6 +7,7 @@ Start with **[Getting started](GETTING_STARTED.md)** if you are new. The [main R
 | Document | What it covers |
 |---|---|
 | [GETTING_STARTED.md](GETTING_STARTED.md) | Install, start, sign in, and a tour of both workspaces with screenshots |
+| [PRAMAAN_Walkthrough.pdf](PRAMAAN_Walkthrough.pdf) | Complete 25-page walkthrough: plain-language and technical explanations of every part |
 | [DEMO.md](DEMO.md) | Accurate live walkthrough of the demo instance |
 | [DEMO_SCRIPT.md](DEMO_SCRIPT.md) | Talk track for presenting a demo |
 | [CLIENT_DEMO.md](CLIENT_DEMO.md) | What to upload on the client side and what each upload proves |
