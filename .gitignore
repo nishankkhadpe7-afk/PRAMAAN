@@ -24,3 +24,5 @@ CLAUDE.local.md
 .test-results/
 *.sqlite3-wal
 *.sqlite3-shm
+
+.xfer/
