@@ -1,12 +1,11 @@
 """Provision real credentials for the pre-P4 regression fixtures."""
-from starlette.routing import Match
 from fastapi import HTTPException
 from Pramaan.backend import app as p1, p3
-from Pramaan.backend.security import CLIENT, issue
+from Pramaan.backend.security import CLIENT, issue, resolve_route
 
 
 def headers(scope):
-    route = next(r for r in p1.app.routes if r.matches(scope)[0] == Match.FULL)
+    route = resolve_route(p1.app, scope)
     role = "client_employee" if route.name in CLIENT else "auditor"
     return [(b"authorization", ("Bearer " + issue("regression-" + role, role)).encode())]
 

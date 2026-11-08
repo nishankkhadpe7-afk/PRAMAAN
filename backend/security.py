@@ -298,6 +298,26 @@ def security_event(caller, action, decision, channel="api", tool=None):
         db.close()
 
 
+
+def leaf_routes(application) -> list:
+    """Every endpoint route with its full path, on old and new FastAPI.
+
+    FastAPI <= 0.13x copies included routes into ``app.routes``. Newer FastAPI keeps included
+    routers as wrapper objects and exposes the effective routes through the public
+    ``fastapi.routing.iter_route_contexts`` (the same iterator its OpenAPI generator uses).
+    The action name decides permissions, so resolution must never depend on private internals.
+    """
+    from fastapi import routing as fastapi_routing
+    iterate = getattr(fastapi_routing, "iter_route_contexts", None)
+    if iterate is None:
+        return list(application.routes)
+    return [context.route for context in iterate(application.routes)]
+
+
+def resolve_route(application, scope):
+    """The single route that fully matches this request (path and method), or None."""
+    return next((r for r in leaf_routes(application) if r.matches(scope)[0] == Match.FULL), None)
+
 class SecurityMiddleware:
     def __init__(self, app):
         self.app = app
@@ -312,7 +332,7 @@ class SecurityMiddleware:
             # Blocking SQLite work runs in the threadpool so one slow write never stalls the event loop (H3).
             await to_thread.run_sync(bootstrap)
             self.ready_path = p1.DB_PATH
-        route = next((r for r in p1.app.routes if r.matches(scope)[0] == Match.FULL), None)
+        route = resolve_route(p1.app, scope)
         action = route.name if route else "unknown_operation"
         if action == "health":
             return await self.app(scope, receive, send)
