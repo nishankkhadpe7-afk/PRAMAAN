@@ -85,6 +85,7 @@ Screenshots of every screen at six widths (360–1920 px), before and after the 
 - [Outputs and user interface](#outputs-and-user-interface)
 - [Installation configuration and tests](#installation-configuration-and-tests)
 - [Measured results and limitations](#measured-results-and-limitations)
+- [License](#license)
 
 ## What is built
 
@@ -460,3 +461,10 @@ Read [PROGRESS.md](PROGRESS.md), [PHASES.md](PHASES.md), [MASTER.md](MASTER.md),
 | [README-SYN.md](README-SYN.md)    | Generator/checker specification, not a claim that every specified feature is implemented.    |
 | [DEMO.md](DEMO.md)                | Accurate live walkthrough.                                                                   |
 
+## License
+
+Copyright (C) 2026 the PRAMAAN contributors.
+
+PRAMAAN is free software licensed under the [GNU Affero General Public License v3.0 only](LICENSE) (`AGPL-3.0-only`). You may use, study, modify and share it. If you distribute a modified version, or let others use a modified version over a network (for example as a hosted service), you must make your complete source code available to those users under the same license.
+
+The synthetic data, fixtures and documentation in this repository are covered by the same license unless a file says otherwise. This is not legal advice.
