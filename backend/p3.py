@@ -47,6 +47,9 @@ def db_open() -> sqlite3.Connection:
       CREATE TRIGGER IF NOT EXISTS p3_requests_no_delete BEFORE DELETE ON p3_evidence_requests BEGIN SELECT RAISE(ABORT,'evidence requests are retained'); END;
       CREATE TRIGGER IF NOT EXISTS p3_evidence_no_update BEFORE UPDATE ON p3_evidence BEGIN SELECT RAISE(ABORT,'received evidence is immutable'); END;
       CREATE TRIGGER IF NOT EXISTS p3_evidence_no_delete BEFORE DELETE ON p3_evidence BEGIN SELECT RAISE(ABORT,'received evidence is immutable'); END;
+      CREATE TABLE IF NOT EXISTS p3_document_reads(evidence_id TEXT PRIMARY KEY REFERENCES p3_evidence(evidence_id), parser TEXT NOT NULL, read_json TEXT NOT NULL, read_hash TEXT NOT NULL);
+      CREATE TRIGGER IF NOT EXISTS p3_document_reads_no_update BEFORE UPDATE ON p3_document_reads BEGIN SELECT RAISE(ABORT,'document reads are immutable'); END;
+      CREATE TRIGGER IF NOT EXISTS p3_document_reads_no_delete BEFORE DELETE ON p3_document_reads BEGIN SELECT RAISE(ABORT,'document reads are immutable'); END;
     """)
     return db
 
@@ -824,16 +827,49 @@ def list_evidence_requests(run_id: str) -> dict[str, Any]:
         in_snapshot = None
         if caller and caller.get("role") == "auditor":
             in_snapshot = {e["evidence_id"] for e in json.loads(db.execute("SELECT snapshot_json FROM p3_audit_runs WHERE run_id=?", (run_id,)).fetchone()["snapshot_json"])["p3_evidence"]}
+        reads = {r["evidence_id"]: json.loads(r["read_json"]) for r in db.execute("SELECT evidence_id,read_json FROM p3_document_reads")}
+        invoices: dict[str, Any] = {}
+        if in_snapshot is not None:
+            # Auditors compare what the PDF says with the invoice in this frozen snapshot.
+            invoices = {i["invoice_id"]: i for i in json.loads(db.execute("SELECT snapshot_json FROM p3_audit_runs WHERE run_id=?", (run_id,)).fetchone()["snapshot_json"]).get("invoices", [])}
         requests = []
         for row in db.execute("SELECT * FROM p3_evidence_requests WHERE run_id=? ORDER BY sheet,sample_ref", (run_id,)):
             item = dict(row)
             item["required_docs"] = json.loads(item["required_docs"])
             item["uploaded_docs"] = json.loads(item["uploaded_docs"])
-            item["evidence"] = [{**dict(r), **({"in_snapshot": r["evidence_id"] in in_snapshot} if in_snapshot is not None else {})} for r in db.execute("SELECT evidence_id,document_type,sha256,content_type,controller,acquisition_channel,independently_verified FROM p3_evidence WHERE object_id=? AND object_type=? ORDER BY evidence_id", (item["sample_ref"], item["object_type"]))]
+            item["evidence"] = [{**dict(r), **({"in_snapshot": r["evidence_id"] in in_snapshot} if in_snapshot is not None else {}), **_document_read_view(reads.get(r["evidence_id"]), invoices.get(item["sample_ref"]) if in_snapshot is not None else None, in_snapshot is not None)} for r in db.execute("SELECT evidence_id,document_type,sha256,content_type,controller,acquisition_channel,independently_verified FROM p3_evidence WHERE object_id=? AND object_type=? ORDER BY evidence_id", (item["sample_ref"], item["object_type"]))]
             requests.append(item)
         return {"run_id": run_id, "requests": requests}
     finally:
         db.close()
+
+
+READABLE_DOCUMENTS = {"invoice"}
+
+
+def read_document(db: sqlite3.Connection, evidence_id: str, document_type: str, content: bytes) -> dict[str, Any] | None:
+    """Read fields from an invoice PDF when it arrives. The reading is stored once, never edited, and
+    stays company-supplied: it helps the auditor compare, it does not verify anything."""
+    if document_type not in READABLE_DOCUMENTS or not content.startswith(b"%PDF"):
+        return None
+    from .document_import import INVOICE_PDF_PARSER, DocumentReadError, read_invoice_pdf
+    try:
+        read = read_invoice_pdf(content)
+    except DocumentReadError as exc:
+        read = {"parser": INVOICE_PDF_PARSER, "error": str(exc)}
+    body = p1.canonical(read)
+    db.execute("INSERT INTO p3_document_reads VALUES(?,?,?,?)", (evidence_id, read["parser"], body.decode(), p1.digest(body)))
+    return read
+
+
+def _document_read_view(read: dict[str, Any] | None, invoice: dict[str, Any] | None, compare: bool) -> dict[str, Any]:
+    if not read:
+        return {}
+    from .document_import import compare_invoice
+    view: dict[str, Any] = {"document_read": read}
+    if compare and "error" not in read:
+        view["document_comparison"] = compare_invoice(read, invoice)
+    return view
 
 
 @router.post("/evidence-requests/{request_id}/evidence")
@@ -870,9 +906,10 @@ def submit_requested_evidence(request_id: str, payload: EvidenceUploadIn) -> dic
                 db.execute("UPDATE p3_evidence_requests SET uploaded_docs=?,status=? WHERE request_id=?", (p1.canonical(sibling_uploaded).decode(), sibling_status, sibling["request_id"]))
                 also_satisfied.append(sibling["request_id"])
         p1.store_blob(content)
-        p1.log_event(db, "client-demo", "evidence_request_fulfilled" if status == "fulfilled" else "evidence_received", request_id, {"document_type": payload.document_type, "sha256": sha, "independently_verified": False, "also_satisfied_requests": also_satisfied})
+        document_read = read_document(db, payload.evidence_id, payload.document_type, content)
+        p1.log_event(db, "client-demo", "evidence_request_fulfilled" if status == "fulfilled" else "evidence_received", request_id, {"document_type": payload.document_type, "sha256": sha, "independently_verified": False, "also_satisfied_requests": also_satisfied, **({"document_read": document_read.get("parser")} if document_read else {})})
         db.commit()
-        return {"request_id": request_id, "evidence_id": payload.evidence_id, "sha256": sha, "uploaded_docs": uploaded, "required_docs": required, "status": status, "independently_verified": False, "also_satisfied_requests": also_satisfied}
+        return {"request_id": request_id, "evidence_id": payload.evidence_id, "sha256": sha, "uploaded_docs": uploaded, "required_docs": required, "status": status, "independently_verified": False, "also_satisfied_requests": also_satisfied, **({"document_read": document_read} if document_read else {})}
     except sqlite3.IntegrityError as exc:
         db.rollback()
         raise HTTPException(409, "evidence_id already exists or request reference invalid") from exc

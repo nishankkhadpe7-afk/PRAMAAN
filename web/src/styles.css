@@ -1654,3 +1654,13 @@ input[aria-invalid="true"],select[aria-invalid="true"]{border-color:var(--error)
 
 /* Card lifts respect reduced-motion settings. */
 @media (prefers-reduced-motion:reduce){.metric,.kpi,.check-card,.guide-steps li{transition:border-color var(--card-ease)}.metric:hover,.kpi:hover,.check-card:hover,.guide-steps li:hover{transform:none}}
+
+/* Readings from imported documents (Tally XML, PDF statements and invoices) */
+.import-skipped{margin-top:var(--space-3);font-size:14px;color:var(--card-desc)}
+.import-skipped summary{cursor:pointer;color:var(--card-accent)}
+.import-skipped ul{margin:var(--space-2) 0 0;padding-left:var(--space-5);display:grid;gap:4px}
+.doc-read{display:block;color:var(--card-desc);font-size:13px}
+.read-mark{margin-left:6px;padding:0 6px;border-radius:999px;font-size:12px;font-style:normal;border:1px solid var(--card-border)}
+.read-mark.have{color:#6ee7b7;border-color:rgba(16,185,129,.42)}
+.read-mark.differs{color:#fb7185;border-color:rgba(244,63,94,.46)}
+.read-mark.partial{color:#fbbf24;border-color:rgba(245,158,11,.42)}

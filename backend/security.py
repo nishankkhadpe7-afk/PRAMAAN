@@ -57,7 +57,7 @@ BUSINESS = {"sales", "parties", "evidence", "links", "p2_customers", "p2_sales_o
             "p2_dispatches", "p2_invoices", "p2_journals", "p2_journal_lines", "p2_receipts",
             "p2_credit_notes", "p2_evidence", "p2_register_uploads", "p2_register_rows",
             "p2_related_party_uploads", "p4_record_versions", "p2_journal_reversals",
-            "p6_bank_statements", "p6_bank_rows"}
+            "p6_bank_statements", "p6_bank_rows", "p3_document_reads"}
 AUDIT = {"runs", "p2_reconciliations", "p3_audit_runs", "p3_samples", "p3_draws",
          "p3_evidence_requests", "p4_changes"}
 AUDIT |= {"p5_packages", "p5_proposals", "p2_reconciliation_rules"}

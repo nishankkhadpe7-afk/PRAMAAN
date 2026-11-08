@@ -5,6 +5,10 @@ Notable changes to PRAMAAN, newest first. Dates are when the change landed on `m
 ## Unreleased
 
 ### Added
+- **Tally import:** a Tally XML export (Day Book or sales vouchers, UTF-8 or UTF-16) can be uploaded as the sales register. Sales vouchers become register rows; other, cancelled and optional vouchers are skipped and listed with the reason; the XML is the preserved source.
+- **PDF bank statements:** text PDFs from net banking are read using their Debit/Credit/Balance column headers, and lines that can't be placed are reported instead of guessed.
+- **Invoice PDF reading:** invoice copies uploaded as PDFs are read (number, date, GSTINs, total) and stored append-only. Auditors see *PDF matches / differs / partly read* against the frozen snapshot; clients see what was read.
+- Synthetic Tally XML, bank-statement PDF and invoice PDF samples (`sample_uploads/documents`, `python -m Pramaan.backend.fixtures_documents`) and 11 new backend tests.
 - **Plain-language help in the app:** a **?** next to audit terms (assertion, cut-off, snapshot, seed, potential misstatement and others) that explains the word on hover or tap. All definitions live in one glossary (`web/src/glossary.tsx`).
 - **Help button** in the top bar, with next steps for your role and the full glossary.
 - **Getting-started card** on the client and auditor overviews. It can be dismissed and brought back from Help.

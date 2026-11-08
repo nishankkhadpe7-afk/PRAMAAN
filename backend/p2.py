@@ -7,7 +7,7 @@ import json
 import sqlite3
 import uuid
 from decimal import Decimal, InvalidOperation
-from typing import Any
+from typing import Any, Literal
 
 from fastapi import APIRouter, HTTPException, Query
 from datetime import date
@@ -154,6 +154,9 @@ class SaleIn(BaseModel):
 class RegisterIn(BaseModel):
     period: str = Field(min_length=1, max_length=120)
     source_base64: str
+    # "csv": UTF-8 CSV register. "tally_xml": a TallyPrime / Tally.ERP 9 XML export (Day Book or sales
+    # vouchers); its sales vouchers become register rows and the XML itself is the preserved source.
+    source_format: Literal["csv", "tally_xml"] = "csv"
 
 
 class RelatedPartiesIn(BaseModel):
@@ -338,14 +341,30 @@ def reverse_journal(journal_id: str, body: ReversalIn, reversal_id: str = Query(
 
 @router.post("/registers")
 def upload_register(payload: RegisterIn) -> dict[str, Any]:
+    report: dict[str, Any] = {}
     try:
         source = decode_base64(payload.source_base64, label="register source")
-        text = source.decode("utf-8-sig")
-        rows = list(csv.DictReader(io.StringIO(text, newline="")))
-    except (UploadSafetyError, UnicodeDecodeError, csv.Error) as exc:
-        raise HTTPException(422, "register must be base64-encoded UTF-8 CSV with a header") from exc
-    if not rows:
-        raise HTTPException(422, "register contains no data rows")
+    except UploadSafetyError as exc:
+        raise HTTPException(422, "invalid or oversized register source") from exc
+    if payload.source_format == "tally_xml":
+        from .document_import import DocumentReadError, parse_tally_sales
+        try:
+            read = parse_tally_sales(source)
+        except DocumentReadError as exc:
+            raise HTTPException(422, f"Tally import: {exc}") from exc
+        rows = read["rows"]
+        report = {"source_format": "tally_xml", "parser": read["parser"], "vouchers_seen": read["vouchers_seen"],
+                  "skipped_vouchers": len(read["skipped"]), "skipped": read["skipped"][:50]}
+        if not rows:
+            raise HTTPException(422, f"Tally import: no usable sales vouchers among {read['vouchers_seen']} vouchers")
+    else:
+        try:
+            text = source.decode("utf-8-sig")
+            rows = list(csv.DictReader(io.StringIO(text, newline="")))
+        except (UnicodeDecodeError, csv.Error) as exc:
+            raise HTTPException(422, "register must be base64-encoded UTF-8 CSV with a header") from exc
+        if not rows:
+            raise HTTPException(422, "register contains no data rows")
     sha = p1.store_blob(source)
     upload_id = "REG-" + uuid.uuid4().hex[:12]
     db = db_open()
@@ -354,9 +373,9 @@ def upload_register(payload: RegisterIn) -> dict[str, Any]:
         for row_no, row in enumerate(rows, 1):
             row_json = p1.canonical(row).decode()
             db.execute("INSERT INTO p2_register_rows VALUES(?,?,?,?)", (upload_id, row_no, row_json, p1.digest(row_json.encode())))
-        p1.log_event(db, "auditor-demo", "register_imported", upload_id, {"sha256": sha, "row_count": len(rows)})
+        p1.log_event(db, "auditor-demo", "register_imported", upload_id, {"sha256": sha, "row_count": len(rows), **{k: v for k, v in report.items() if k != "skipped"}})
         db.commit()
-        return {"upload_id": upload_id, "sha256": sha, "row_count": len(rows)}
+        return {"upload_id": upload_id, "sha256": sha, "row_count": len(rows), **report}
     finally:
         db.close()
 

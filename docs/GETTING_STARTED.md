@@ -39,11 +39,11 @@ Each workspace opens with a short **Getting started** card. You can hide it and 
 
 ![Client overview with the getting-started card](assets/getting-started/2-client-overview.png)
 
-**Registers & disclosures.** Upload the original sales register (CSV). PRAMAAN fingerprints the file and keeps it exactly as sent; a new upload is stored as a new version, never an overwrite.
+**Registers & disclosures.** Upload the original sales register: a CSV, or the XML file Tally exports (*Export → Day Book*, XML format). A bank statement can be a CSV or the text PDF your net banking gives you. PRAMAAN fingerprints the file and keeps it exactly as sent; a new upload is stored as a new version, never an overwrite.
 
 ![Upload a source file](assets/getting-started/3-client-register.png)
 
-**Evidence inbox.** Each row is one sale the auditor wants documents for. Open it and upload the file; one upload answers that request for every audit.
+**Evidence inbox.** Each row is one sale the auditor wants documents for. Open it and upload the file; one upload answers that request for every audit. If you upload an invoice as a PDF, PRAMAAN shows what it read from it (invoice number, date, total).
 
 ![Evidence inbox](assets/getting-started/4-client-inbox.png)
 

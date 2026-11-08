@@ -235,12 +235,14 @@ def web_inbox():
     try:
         names = {row["run_id"]: row["audit_name"] for row in db.execute("SELECT run_id,audit_name FROM p3_audit_labels")}
         requests = []
+        # What was read from uploaded invoice PDFs, shown back to the client (no audit comparison here).
+        reads = {r["evidence_id"]: json.loads(r["read_json"]) for r in db.execute("SELECT evidence_id,read_json FROM p3_document_reads")}
         for row in db.execute("SELECT * FROM p3_evidence_requests ORDER BY rowid DESC"):
             item = dict(row)
             item["audit_name"] = names.get(item["run_id"], "Revenue audit")
             for field in ("required_docs", "uploaded_docs"):
                 item[field] = json.loads(item[field])
-            item["evidence"] = [dict(r) for r in db.execute("SELECT * FROM p3_evidence WHERE object_id=? AND object_type=? ORDER BY evidence_id", (item["sample_ref"], item["object_type"]))]
+            item["evidence"] = [{**dict(r), **({"document_read": reads[r["evidence_id"]]} if r["evidence_id"] in reads else {})} for r in db.execute("SELECT * FROM p3_evidence WHERE object_id=? AND object_type=? ORDER BY evidence_id", (item["sample_ref"], item["object_type"]))]
             requests.append(item)
         # B6: the same sale is often sampled by several runs; one upload satisfies every one of
         # them, so the client's work list is grouped by (object, document) rather than per run.

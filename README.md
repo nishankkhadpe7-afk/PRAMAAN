@@ -16,7 +16,7 @@ An invoice can show a sale was recorded; it does not itself establish that the s
 
 > Scope: a single-company SQLite prototype using fictional synthetic data. It is not a production deployment, audit opinion, official GST/IRP verification, or fraud determination.
 
-**New here?** Read **[Getting started](docs/GETTING_STARTED.md)**, or the **[complete walkthrough PDF](docs/PRAMAAN_Walkthrough.pdf)** (25 pages, for both non-technical readers and engineers): install, double-click the launcher, sign in, and take a tour with screenshots. Every screen also has a **Help** button and plain-language hints on audit terms.
+**New here?** Read **[Getting started](docs/GETTING_STARTED.md)**, or the **[complete walkthrough PDF](docs/PRAMAAN_Walkthrough.pdf)** (26 pages, for both non-technical readers and engineers): install, double-click the launcher, sign in, and take a tour with screenshots. Every screen also has a **Help** button and plain-language hints on audit terms.
 
 <p align="center">
   <img src="docs/assets/agent-investigation.gif" alt="An auditor runs the investigation agent on a finding: the agent checks the invoice and bank records, finds an unexplained register difference, proposes an evidence request, and a human confirms it before anything is sent." width="760">
@@ -84,6 +84,7 @@ Screenshots of every screen at six widths (360–1920 px), before and after the 
 - [What is built](#what-is-built)
 - [System architecture](#system-architecture)
 - [End-to-end workflow](#end-to-end-workflow)
+- [Importing Tally exports and PDFs](#importing-tally-exports-and-pdfs)
 - [Audit engine and detection rules](#audit-engine-and-detection-rules)
 - [Evidence integrity and cryptography](#evidence-integrity-and-cryptography)
 - [Authentication authorization and safeguards](#authentication-authorization-and-safeguards)
@@ -171,6 +172,20 @@ sequenceDiagram
 | Create run        | Snapshot, hash, period, seed, versions, coverage, findings, samples            | A rerun is a new immutable run.                                                   |
 | Evidence          | Persisted requests and company-supplied evidence references                    | The request-listing tool exposes requests; it does not send external messages.    |
 | Review/package    | Revisioned proposal/final decision and stored exports                          | Existing packages remain frozen after live changes.                               |
+
+## Importing Tally exports and PDFs
+
+Clients rarely have clean CSVs, so PRAMAAN reads three common real-world formats. Every reader is deterministic: it reports what it could not read instead of guessing, the original file is always the preserved source (SHA-256 in the vault), and every reading is company-supplied, never independent verification. Code: [backend/document_import.py](backend/document_import.py).
+
+| Input | Where | What happens |
+|---|---|---|
+| **Tally XML export** (TallyPrime / Tally.ERP 9: *Export → Day Book* or sales vouchers, XML format; UTF-8 or UTF-16) | Client → Registers & disclosures → *Sales register (Tally XML export)*, or `POST /p2/registers` with `"source_format": "tally_xml"` | Sales vouchers become register rows (`Bill No`, `Date`, `Customer`, `Gross Amt` from the party ledger amount, `GST No`). Receipts, purchases, orders, cancelled and optional vouchers are skipped and listed with the reason. The XML file itself is the preserved register, so reconciliation (T00) and every later step work unchanged. DOCTYPE/entity declarations are refused. |
+| **Bank statement PDF** (text PDF from net banking) | Client → *Bank statement (CSV or PDF)*, or `POST /p6/bank-statements` with the PDF | Columns are located from the header words (*Debit/Withdrawal*, *Credit/Deposit*, *Balance*, *Ref*), so each amount is assigned by position, never by guesswork. Lines with a date but no clear debit or credit are returned as `unread` with the reason. Rows feed the investigation agent exactly like CSV rows. |
+| **Invoice PDF** (uploaded as an *Invoice copy* in the evidence inbox) | Read automatically when it arrives | Invoice number, date, GSTINs and grand total are read and stored once (`p3_document_reads`, append-only). The client sees what was read; auditors also see a field-by-field comparison with the invoice in the frozen snapshot (*PDF matches* / *PDF differs* / *PDF partly read*). An unread field never counts as a match. |
+
+Synthetic samples of all three are in [sample_uploads/documents](sample_uploads/documents) (regenerate with `python -m Pramaan.backend.fixtures_documents`).
+
+**Not covered yet:** a live connection to a running Tally (port 9000) or to SAP and other ERPs, scanned PDFs (no OCR), and statement layouts without a Debit/Credit header. Those files are refused with a clear message rather than read wrongly.
 
 ## Audit engine and detection rules
 
@@ -423,7 +438,7 @@ $env:PRAMAAN_DATA = Join-Path $PWD.Path '.demo/runtime'
 | PRAMAAN_E2E_CHANNEL         | chrome                | Playwright browser channel; set to empty to use Playwright's bundled Chromium.                                  |
 | PRAMAAN_E2E_VIDEO           | on                    | Set to `off` where Playwright's ffmpeg is not installed.                                                         |
 
-**Tests.** CI (`.github/workflows/ci.yml`) runs all of these on every push and pull request; a separate `Secret scan` workflow checks the full history for leaked credentials. Current suite: 144 backend tests, 30 UI unit tests, 8 browser journeys.
+**Tests.** CI (`.github/workflows/ci.yml`) runs all of these on every push and pull request; a separate `Secret scan` workflow checks the full history for leaked credentials. Current suite: 155 backend tests, 30 UI unit tests, 8 browser journeys.
 
 ```powershell
 $env:PYTHONPATH = Join-Path $PWD.Path 'launcher'
@@ -480,7 +495,7 @@ See [docs/EVALUATION.md](docs/EVALUATION.md) for class-by-class results and cave
 | Implemented within documented prototype scope       | P1–P5: source preservation, lifecycles/reversals, reconciliation, supported deterministic rules, snapshots/sampling/evidence requests, credentialed API/MCP, DLP, human-gated review, frozen local packages.                                        |
 | Technically demonstrated; final evidence incomplete | P6 UI integration and automated clean-reset rehearsals passed. The independent-person blind rehearsal is reported but lacks participant/scenario/artifact evidence, so overall P6 remains blocked.                                                  |
 | Partial                                             | T03 needs contract/policy review; T12 lacks a complete independent-assertion workflow; T13 is demo-key verification; custom evidence requests, external notifications, general lifecycle editing, partner sign-off, and async jobs are unavailable. |
-| Not demonstrated                                    | Official GST/IRP integration, external anchoring, production deployment, PostgreSQL grants, tenant/OS isolation, OAuth, production rate limits, hosted MCP interoperability, statistical projection, certification.                                 |
+| Not demonstrated                                    | Live Tally/SAP/ERP connections and OCR of scanned PDFs (file imports only), official GST/IRP integration, external anchoring, production deployment, PostgreSQL grants, tenant/OS isolation, OAuth, production rate limits, hosted MCP interoperability, statistical projection, certification.                                 |
 
 Read [docs/PROGRESS.md](docs/PROGRESS.md), [docs/PHASES.md](docs/PHASES.md), [docs/MASTER.md](docs/MASTER.md), [backend/P5_VERIFICATION_REPORT.md](backend/P5_VERIFICATION_REPORT.md), and [backend/P6_VERIFICATION_REPORT.md](backend/P6_VERIFICATION_REPORT.md) for gate evidence and limits.
 

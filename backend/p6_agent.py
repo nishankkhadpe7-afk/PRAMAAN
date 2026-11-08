@@ -136,9 +136,17 @@ def parse_bank_csv(source: bytes) -> list[dict[str, Any]]:
 
 @router.post("/bank-statements")
 def upload_bank_statement(payload: BankStatementIn) -> dict[str, Any]:
+    report: dict[str, Any] = {}
     try:
         source = decode_base64(payload.source_base64, label="bank statement")
-        rows = parse_bank_csv(source)
+        if source.startswith(b"%PDF"):
+            # Text-based PDF statements from net banking: columns are found from the header words.
+            from .document_import import parse_bank_pdf
+            read = parse_bank_pdf(source)
+            rows = read["rows"]
+            report = {"source_format": "pdf", "parser": read["parser"], "unread_lines": len(read["unread_lines"]), "unread": read["unread_lines"][:50]}
+        else:
+            rows = parse_bank_csv(source)
     except UploadSafetyError as exc:
         raise HTTPException(422, "invalid or oversized bank statement") from exc
     except ValueError as exc:
@@ -153,9 +161,9 @@ def upload_bank_statement(payload: BankStatementIn) -> dict[str, Any]:
             db.execute("INSERT INTO p6_bank_rows VALUES(?,?,?,?,?,?,?,?,?,?)",
                        (statement_id, row["row_no"], row["txn_date"], row["amount_cents"], row["direction"], row["narration"],
                         row["reference"], row["counterparty"], row["balance_cents"], p1.digest(row_json)))
-        p1.log_event(db, _subject(), "bank_statement_imported", statement_id, {"sha256": sha, "row_count": len(rows), "period": payload.period})
+        p1.log_event(db, _subject(), "bank_statement_imported", statement_id, {"sha256": sha, "row_count": len(rows), "period": payload.period, **{k: v for k, v in report.items() if k != "unread"}})
         db.commit()
-        return {"statement_id": statement_id, "sha256": sha, "row_count": len(rows), "independently_verified": False}
+        return {"statement_id": statement_id, "sha256": sha, "row_count": len(rows), "independently_verified": False, **report}
     finally:
         db.close()
 
