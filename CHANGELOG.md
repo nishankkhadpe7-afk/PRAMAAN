@@ -5,6 +5,13 @@ Notable changes to PRAMAAN, newest first. Dates are when the change landed on `m
 ## Unreleased
 
 ### Added
+- **Import checks (from the import-pipeline audit, [docs/IMPORT_AUDIT.md](docs/IMPORT_AUDIT.md)):**
+  - Tally: the report now separates *skipped* (not a sale) from *rejected* (a sale that couldn't be read safely) and lists *warnings*: GSTIN check digit, repeated voucher numbers, unbalanced ledger entries, customer ledger credited.
+  - Bank statements: running-balance check against the opening balance (PDF and CSV, oldest- or newest-first); value-date column; wrapped narration joined; `Dr`/negative balances keep their sign; repeated rows flagged.
+  - The same bank statement file can't be imported twice (409). Overlapping statements are reported and the investigation agent counts each transaction once.
+  - Invoice PDFs: taxable value, CGST/SGST/IGST and round-off are read with page numbers; GST arithmetic is checked; IGST with CGST/SGST is flagged; conflicting values are marked ambiguous instead of picked; duplicate invoices across sales are flagged.
+  - The client sees counts (imported / skipped / rejected / warnings) and the reasons; the auditor gets a field-by-field PDF-versus-books table.
+  - 11 more backend tests and 3 UI tests, all on synthetic files.
 - **Tally import:** a Tally XML export (Day Book or sales vouchers, UTF-8 or UTF-16) can be uploaded as the sales register. Sales vouchers become register rows; other, cancelled and optional vouchers are skipped and listed with the reason; the XML is the preserved source.
 - **PDF bank statements:** text PDFs from net banking are read using their Debit/Credit/Balance column headers, and lines that can't be placed are reported instead of guessed.
 - **Invoice PDF reading:** invoice copies uploaded as PDFs are read (number, date, GSTINs, total) and stored append-only. Auditors see *PDF matches / differs / partly read* against the frozen snapshot; clients see what was read.
@@ -26,6 +33,8 @@ Notable changes to PRAMAAN, newest first. Dates are when the change landed on `m
 - AI coding-tool folders (`.claude/`, `.cursor/`, `.gemini/`, `.specstory/`) are now git-ignored.
 
 ### Fixed
+- A DOCTYPE or entity declaration is refused anywhere in a Tally XML file, not only in its first 4 KB.
+- If the invoice reader fails unexpectedly, the evidence upload still succeeds and the failure is recorded with the file.
 - The privacy filter no longer mistakes PRAMAAN's own IDs for bank account numbers. About 1 in 280 register IDs (like `REG-123456789012`) has an all-digit tail, and that withheld the assistant's run summary and agent tool results. It was also the cause of an occasional CI failure.
 - CI uses the Node 24 versions of the GitHub actions (checkout, setup-python, setup-node, upload-artifact v6), which removes the deprecation warnings.
 - The investigation agent survives a dropped connection or timeout from the model provider: it retries, then moves to the next fallback model, instead of crashing the run.

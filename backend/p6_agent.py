@@ -144,17 +144,33 @@ def upload_bank_statement(payload: BankStatementIn) -> dict[str, Any]:
             from .document_import import parse_bank_pdf
             read = parse_bank_pdf(source)
             rows = read["rows"]
-            report = {"source_format": "pdf", "parser": read["parser"], "unread_lines": len(read["unread_lines"]), "unread": read["unread_lines"][:50]}
+            opening = read.get("opening_balance_cents")
+            report = {"source_format": "pdf", "parser": read["parser"], "unread_lines": len(read["unread_lines"]), "unread": read["unread_lines"][:50],
+                      "wrapped_lines_joined": sum(r.get("wrapped_lines", 0) for r in rows)}
         else:
             rows = parse_bank_csv(source)
+            opening = None
+            report = {"source_format": "csv"}
     except UploadSafetyError as exc:
         raise HTTPException(422, "invalid or oversized bank statement") from exc
     except ValueError as exc:
         raise HTTPException(422, str(exc)) from exc
-    sha = p1.store_blob(source)
-    statement_id = "BANK-" + uuid.uuid4().hex[:12]
+    from .document_import import check_balances, duplicate_rows
+    report["balance_check"] = check_balances(rows, opening)
+    report["repeated_rows"] = duplicate_rows(rows)[:50]
+    sha = p1.digest(source)
     db = p3.db_open()
     try:
+        existing = db.execute("SELECT statement_id FROM p6_bank_statements WHERE sha256=?", (sha,)).fetchone()
+        if existing:
+            # Importing the same file twice would make every credit count twice.
+            raise HTTPException(409, f"this exact statement file was already imported as {existing['statement_id']}")
+        overlap = _overlapping_rows(db, rows)
+        report["overlapping_rows"] = len(overlap)
+        if overlap:
+            report["overlaps_statements"] = sorted({o["statement_id"] for o in overlap})
+        p1.store_blob(source)
+        statement_id = "BANK-" + uuid.uuid4().hex[:12]
         db.execute("INSERT INTO p6_bank_statements VALUES(?,?,?,?,?)", (statement_id, sha, payload.period, len(rows), _subject()))
         for row in rows:
             row_json = p1.canonical({k: row[k] for k in ("txn_date", "amount_cents", "direction", "narration", "reference", "counterparty", "balance_cents")})
@@ -228,8 +244,34 @@ def _register_rows_for(ctx: dict[str, Any], bill_no: str) -> list[dict[str, Any]
     return rows
 
 
+def _txn_key(row: dict[str, Any]) -> tuple:
+    """Identity of a bank transaction across statements. With a reference the reference decides;
+    without one the narration does. Used only *across* statements: two identical rows inside one
+    statement are two real postings until a person says otherwise."""
+    reference = (row.get("reference") or "").strip().upper()
+    narration = "" if reference else " ".join((row.get("narration") or "").lower().split())
+    return (row["txn_date"], int(row["amount_cents"]), row["direction"], reference, narration)
+
+
+def _overlapping_rows(db: sqlite3.Connection, rows: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    known = {}
+    for r in db.execute("SELECT statement_id, row_no, txn_date, amount_cents, direction, reference, narration FROM p6_bank_rows ORDER BY rowid"):
+        known.setdefault(_txn_key(dict(r)), dict(r))
+    return [{"row_no": row["row_no"], "statement_id": known[_txn_key(row)]["statement_id"], "same_as_row": known[_txn_key(row)]["row_no"]}
+            for row in rows if _txn_key(row) in known]
+
+
 def _bank_rows(db: sqlite3.Connection) -> list[dict[str, Any]]:
-    return [dict(r) for r in db.execute("SELECT r.*, s.sha256 AS statement_sha256 FROM p6_bank_rows r JOIN p6_bank_statements s USING(statement_id) WHERE r.direction='credit' ORDER BY r.statement_id, r.row_no")]
+    """Credit rows from every statement. When statements overlap (e.g. a monthly PDF and a quarterly
+    CSV), the row from the statement imported first is used and the later copy is ignored, so one
+    receipt is never counted twice."""
+    rows, first_owner = [], {}
+    for r in db.execute("SELECT r.*, s.sha256 AS statement_sha256 FROM p6_bank_rows r JOIN p6_bank_statements s USING(statement_id) WHERE r.direction='credit' ORDER BY s.rowid, r.row_no"):
+        row = dict(r)
+        owner = first_owner.setdefault(_txn_key(row), row["statement_id"])
+        if owner == row["statement_id"]:
+            rows.append(row)
+    return rows
 
 
 def _days(a: str, b: str) -> int:

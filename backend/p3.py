@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import json
+import re
 import secrets
 import sqlite3
 from datetime import date, datetime, timedelta
@@ -857,6 +858,21 @@ def read_document(db: sqlite3.Connection, evidence_id: str, document_type: str, 
         read = read_invoice_pdf(content)
     except DocumentReadError as exc:
         read = {"parser": INVOICE_PDF_PARSER, "error": str(exc)}
+    except Exception as exc:  # a reader fault must never lose the uploaded evidence
+        read = {"parser": INVOICE_PDF_PARSER, "error": f"the PDF could not be read ({type(exc).__name__})"}
+    if "error" not in read:
+        # The same invoice arriving twice (same file, or same invoice number on another sale) is
+        # worth an auditor's attention; it is recorded with the reading, nothing is blocked.
+        sha = p1.digest(content)
+        duplicates = []
+        for other in db.execute("SELECT e.evidence_id, e.object_id, e.sha256, r.read_json FROM p3_evidence e LEFT JOIN p3_document_reads r USING(evidence_id) WHERE e.evidence_id<>? AND e.document_type=?", (evidence_id, document_type)):
+            other_number = json.loads(other["read_json"]).get("invoice_number") if other["read_json"] else None
+            if other["sha256"] == sha:
+                duplicates.append({"evidence_id": other["evidence_id"], "object_id": other["object_id"], "reason": "identical file"})
+            elif read.get("invoice_number") and other_number and re.sub(r"[^A-Z0-9]", "", other_number.upper()) == re.sub(r"[^A-Z0-9]", "", read["invoice_number"].upper()):
+                duplicates.append({"evidence_id": other["evidence_id"], "object_id": other["object_id"], "reason": "same invoice number"})
+        if duplicates:
+            read["duplicates"] = duplicates[:20]
     body = p1.canonical(read)
     db.execute("INSERT INTO p3_document_reads VALUES(?,?,?,?)", (evidence_id, read["parser"], body.decode(), p1.digest(body)))
     return read

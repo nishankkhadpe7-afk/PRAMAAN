@@ -354,7 +354,9 @@ def upload_register(payload: RegisterIn) -> dict[str, Any]:
             raise HTTPException(422, f"Tally import: {exc}") from exc
         rows = read["rows"]
         report = {"source_format": "tally_xml", "parser": read["parser"], "vouchers_seen": read["vouchers_seen"],
-                  "skipped_vouchers": len(read["skipped"]), "skipped": read["skipped"][:50]}
+                  "skipped_vouchers": len(read["skipped"]), "skipped": read["skipped"][:50],
+                  "rejected_vouchers": len(read["rejected"]), "rejected": read["rejected"][:50],
+                  "warning_count": len(read["warnings"]), "warnings": read["warnings"][:50]}
         if not rows:
             raise HTTPException(422, f"Tally import: no usable sales vouchers among {read['vouchers_seen']} vouchers")
     else:
@@ -373,7 +375,7 @@ def upload_register(payload: RegisterIn) -> dict[str, Any]:
         for row_no, row in enumerate(rows, 1):
             row_json = p1.canonical(row).decode()
             db.execute("INSERT INTO p2_register_rows VALUES(?,?,?,?)", (upload_id, row_no, row_json, p1.digest(row_json.encode())))
-        p1.log_event(db, "auditor-demo", "register_imported", upload_id, {"sha256": sha, "row_count": len(rows), **{k: v for k, v in report.items() if k != "skipped"}})
+        p1.log_event(db, "auditor-demo", "register_imported", upload_id, {"sha256": sha, "row_count": len(rows), **{k: v for k, v in report.items() if k not in ("skipped", "rejected")}})
         db.commit()
         return {"upload_id": upload_id, "sha256": sha, "row_count": len(rows), **report}
     finally:

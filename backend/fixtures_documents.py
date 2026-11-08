@@ -15,8 +15,8 @@ from pathlib import Path
 from xml.sax.saxutils import escape
 
 SALES = [  # bill_no, date, party, gstin, gross_rupees
-    ("TLY/25-26/001", date(2025, 4, 12), "Sharma Traders (synthetic)", "27AAAPS1234C1Z5", "118000.00"),
-    ("TLY/25-26/002", date(2025, 5, 3), "Banyan Retail (synthetic)", "29AABCB5678D1Z2", "59000.00"),
+    ("TLY/25-26/001", date(2025, 4, 12), "Sharma Traders (synthetic)", "27AAAPS1234C1Z7", "118000.00"),
+    ("TLY/25-26/002", date(2025, 5, 3), "Banyan Retail (synthetic)", "29AABCB5678D1ZK", "59000.00"),
     ("TLY/25-26/003", date(2025, 6, 21), "Aster Components (synthetic)", "", "236000.00"),
 ]
 
@@ -52,7 +52,10 @@ BANK_ROWS = [  # date, narration, ref, withdrawal, deposit
 ]
 
 
-def bank_statement_pdf(rows=BANK_ROWS, opening: float = 250000.00, with_header: bool = True) -> bytes:
+def bank_statement_pdf(rows=BANK_ROWS, opening: float = 250000.00, with_header: bool = True, wrap: dict[int, str] | None = None,
+                       value_dates: bool = False, dr_suffix: bool = False, tamper_balance: int | None = None) -> bytes:
+    """wrap: {row index: continuation narration printed on the next line}; value_dates adds a Value Date
+    column; dr_suffix prints balances as '1,000.00 Cr' / 'Dr'; tamper_balance prints a wrong balance on that row."""
     from reportlab.lib.pagesizes import A4
     from reportlab.pdfgen import canvas
     buf = io.BytesIO()
@@ -62,11 +65,18 @@ def bank_statement_pdf(rows=BANK_ROWS, opening: float = 250000.00, with_header: 
     c.drawString(40, height - 50, "Fictional Bank of India (synthetic) - Account Statement")
     c.setFont("Helvetica", 9)
     c.drawString(40, height - 66, "Account: SYNTHETIC-ACCOUNT  Period: 01-04-2025 to 30-06-2025  (test data, not a real statement)")
-    cols = {"date": 40, "narr": 100, "ref": 290, "wd": 430, "dep": 500, "bal": 570}
+    cols = {"date": 40, "narr": 150 if value_dates else 100, "ref": 335 if value_dates else 290, "wd": 445 if value_dates else 430, "dep": 510 if value_dates else 500, "bal": 575 if value_dates else 570}
+
+    def money(value: float) -> str:
+        if not dr_suffix:
+            return f"{value:,.2f}"
+        return f"{abs(value):,.2f} {'Dr' if value < 0 else 'Cr'}"
     y = height - 100
     if with_header:
         c.setFont("Helvetica-Bold", 9)
         c.drawString(cols["date"], y, "Date")
+        if value_dates:
+            c.drawString(100, y, "Value Dt")
         c.drawString(cols["narr"], y, "Narration")
         c.drawString(cols["ref"], y, "Ref No")
         c.drawRightString(cols["wd"], y, "Withdrawal")
@@ -75,25 +85,33 @@ def bank_statement_pdf(rows=BANK_ROWS, opening: float = 250000.00, with_header: 
         y -= 16
     c.setFont("Helvetica", 9)
     c.drawString(cols["narr"], y, "Opening balance")
-    c.drawRightString(cols["bal"], y, f"{opening:,.2f}")
+    c.drawRightString(cols["bal"], y, money(opening))
     balance = opening
-    for when, narration, ref, wd, dep in rows:
+    for index, (when, narration, ref, wd, dep) in enumerate(rows):
         y -= 15
         balance += float((dep or "0").replace(",", "")) - float((wd or "0").replace(",", ""))
         c.drawString(cols["date"], y, when.strftime("%d-%m-%Y"))
+        if value_dates:
+            c.drawString(100, y, when.strftime("%d-%m-%Y"))
         c.drawString(cols["narr"], y, narration)
         c.drawString(cols["ref"], y, ref)
         if wd:
             c.drawRightString(cols["wd"], y, wd)
         if dep:
             c.drawRightString(cols["dep"], y, dep)
-        c.drawRightString(cols["bal"], y, f"{balance:,.2f}")
+        c.drawRightString(cols["bal"], y, money(balance + (1000 if index == tamper_balance else 0)))
+        if wrap and index in wrap:
+            y -= 12
+            c.drawString(cols["narr"], y, wrap[index])
     c.showPage()
     c.save()
     return buf.getvalue()
 
 
-def invoice_pdf(bill_no: str, when: date, buyer: str, buyer_gstin: str, total: str, seller_gstin: str = "27AAACF0000F1Z5") -> bytes:
+def invoice_pdf(bill_no: str, when: date, buyer: str, buyer_gstin: str, total: str, seller_gstin: str = "27AAACF0000F1ZJ",
+                tax: str = "igst", round_off: str | None = None, extra_lines: tuple[str, ...] = (), second_page: tuple[str, ...] = ()) -> bytes:
+    """tax: 'igst' | 'cgst_sgst' | 'none' | 'both' (an inconsistent invoice). round_off is printed as given.
+    extra_lines are drawn after the totals (e.g. a second, different invoice number); second_page adds a page."""
     from reportlab.lib.pagesizes import A4
     from reportlab.pdfgen import canvas
     buf = io.BytesIO()
@@ -110,19 +128,37 @@ def invoice_pdf(bill_no: str, when: date, buyer: str, buyer_gstin: str, total: s
     for line in lines:
         c.drawString(40, y, line)
         y -= 15
-    gross = float(total.replace(",", ""))
-    net = gross / 1.18
+    gross = float(total.replace(",", "")) - float(round_off or 0)
+    net = gross if tax == "none" else round(gross / 1.18, 2)
+    tax_total = round(gross - net, 2)
+    half = round(tax_total / 2, 2)
+    taxes = {"none": [], "igst": [("IGST @ 18%", tax_total)], "cgst_sgst": [("CGST @ 9%", half), ("SGST @ 9%", round(tax_total - half, 2))],
+             "both": [("CGST @ 9%", half), ("SGST @ 9%", round(tax_total - half, 2)), ("IGST @ 18%", tax_total)]}[tax]
     y -= 10
-    for label, value in (("Taxable value", net), ("IGST @ 18%", gross - net)):
+    rows = [("Taxable value", net), *taxes] + ([("Round off", float(round_off))] if round_off else [])
+    for label, value in rows:
         c.drawString(40, y, label)
         c.drawRightString(540, y, f"{value:,.2f}")
         y -= 15
+    gross += float(round_off or 0)
     c.setFont("Helvetica-Bold", 11)
     c.drawString(40, y - 5, "Grand Total")
     c.drawRightString(540, y - 5, f"Rs. {gross:,.2f}")
+    c.setFont("Helvetica", 10)
+    y -= 30
+    for line in extra_lines:
+        c.drawString(40, y, line)
+        y -= 15
     c.setFont("Helvetica", 8)
     c.drawString(40, 40, "Synthetic test document generated by PRAMAAN; not a real invoice.")
     c.showPage()
+    if second_page:
+        c.setFont("Helvetica", 10)
+        y = height - 60
+        for line in second_page:
+            c.drawString(40, y, line)
+            y -= 15
+        c.showPage()
     c.save()
     return buf.getvalue()
 
