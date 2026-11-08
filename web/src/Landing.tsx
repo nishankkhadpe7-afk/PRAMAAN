@@ -10,7 +10,7 @@ const chapters=[
  [Scale,'Evidence','Missing papers become requests to the client. Documents are hashed on arrival and tied to the sale they support.'],
  [ShieldCheck,'Conclude','AI proposes, a human decides. Every explanation cites evidence or is rejected, then ships as a defensibility pack.'],
 ] as const
-// U4: results from the project's own synthetic benchmark (EVALUATION.md), labelled as such; not a claim about real-world accuracy.
+// U4: results from the project's own synthetic benchmark (docs/EVALUATION.md), labelled as such; not a claim about real-world accuracy.
 const stats=[['8 / 8','planted irregularities flagged in the synthetic benchmark'],['3 / 8','flagged by document matching alone'],['0','false alarms on the benchmark\'s clean sales'],['16','deterministic audit checks (T00–T15)']]
 function useReveal(){const ref=useRef<HTMLDivElement>(null);useEffect(()=>{const el=ref.current;if(!el)return;if(typeof IntersectionObserver==='undefined'){el.querySelectorAll('.reveal').forEach(n=>n.classList.add('in'));return};const io=new IntersectionObserver(es=>es.forEach(e=>{if(e.isIntersecting){e.target.classList.add('in');io.unobserve(e.target)}}),{threshold:.15});el.querySelectorAll('.reveal').forEach(n=>io.observe(n));return()=>io.disconnect()},[]);return ref}
 export function Landing({to}:{to:string}){
@@ -25,7 +25,7 @@ export function Landing({to}:{to:string}){
         <h1>Did this sale <ShiftInk>really</ShiftInk> happen?</h1>
         <p className="hero-lede">An invoice shows a sale was recorded, not that it occurred. Pramaan checks every sale against its source, its papers and its counterparties, then shows you the ones that would not pass.</p>
         <div className="hero-actions"><Link className="pill-cta" to={to}><CheckCircle2 size={18}/>Open the workspace</Link><a className="pill-cta ghost" href="#how">See how it works</a></div>
-        <p className="hero-foot"><i/>Prototype evaluated on synthetic data only. Benchmark figures come from the project’s own test set (EVALUATION.md).</p>
+        <p className="hero-foot"><i/>Prototype evaluated on synthetic data only. Benchmark figures come from the project’s own test set (docs/EVALUATION.md).</p>
       </div>
       <div className="note-wrap" onMouseMove={e=>{const r=e.currentTarget.getBoundingClientRect();setTilt({x:((e.clientX-r.left)/r.width-.5)*10,y:((e.clientY-r.top)/r.height-.5)*-8})}} onMouseLeave={()=>setTilt({x:0,y:0})}>
         <div className="note" style={{transform:`perspective(900px) rotateY(${tilt.x}deg) rotateX(${tilt.y}deg)`}}>

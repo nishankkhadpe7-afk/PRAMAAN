@@ -13,6 +13,13 @@ web/*.tsbuildinfo
 .env
 .env.*
 !.env.example
+# AI coding-tool state: approved commands and chat logs can contain credentials
+.claude/
+.cursor/
+.gemini/
+.specstory/
+.aider*
+CLAUDE.local.md
 .server-logs/
 .test-results/
 *.sqlite3-wal

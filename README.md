@@ -16,6 +16,13 @@ An invoice can show a sale was recorded; it does not itself establish that the s
 
 > Scope: a single-company SQLite prototype using fictional synthetic data. It is not a production deployment, audit opinion, official GST/IRP verification, or fraud determination.
 
+**New here?** Read **[Getting started](docs/GETTING_STARTED.md)**: install, double-click the launcher, sign in, and take a tour with screenshots. Every screen also has a **Help** button and plain-language hints on audit terms.
+
+<p align="center">
+  <img src="docs/assets/agent-investigation.gif" alt="An auditor runs the investigation agent on a finding: the agent checks the invoice and bank records, finds an unexplained register difference, proposes an evidence request, and a human confirms it before anything is sent." width="760">
+  <br><sub>The investigation agent on a planted register difference (shown here with the no-AI planner; the Gemini planner follows the same steps and guardrails).</sub>
+</p>
+
 ## Quick start
 
 Prerequisites: Python 3.11+ (tested on 3.11.9 and 3.13.14), Node 20.19+ or 22.12+ (tested on Node 20.20.2), and npm. Run from this repository directory.
@@ -62,7 +69,7 @@ reset reloads only .demo/runtime; it does not change source fixtures or backend/
 
 ## Demonstration
 
-Screenshots of every screen at six widths (360–1920 px), before and after the UI/UX audit, are in [docs/ui-audit/screenshots](docs/ui-audit/screenshots); the audit report is [docs/UI_UX_AUDIT.md](docs/UI_UX_AUDIT.md). No video is tracked. The repeatable browser walkthrough is [web/e2e/workflow.spec.mjs](web/e2e/workflow.spec.mjs); accurate narrated steps are in [DEMO.md](DEMO.md).
+Screenshots of every screen at six widths (360–1920 px), before and after the UI/UX audit, are in [docs/ui-audit/screenshots](docs/ui-audit/screenshots); the audit report is [docs/UI_UX_AUDIT.md](docs/UI_UX_AUDIT.md). No video is tracked. The repeatable browser walkthrough is [web/e2e/workflow.spec.mjs](web/e2e/workflow.spec.mjs); accurate narrated steps are in [docs/DEMO.md](docs/DEMO.md).
 
 1. A client creates business records and preserves an original register upload.
 2. An auditor reconciles the register and opens an immutable audit run.
@@ -234,6 +241,8 @@ flowchart TB
 - MCP checks a fresh credential for discovery and invocation.
 - MCP egress redacts GSTIN, PAN, financial-account, phone, and email values before a tool result is returned to an external agent. Policy can deny high-sensitivity categories; filtering is logged best-effort.
 - Document text is returned under untrusted_document_content; instructions embedded in it must not be followed.
+- Agent actions are approved one sealed proposal at a time; there is no standing "always allow" rule, so no approved command or credential is ever saved for reuse.
+- Secrets stay out of the repository: `.env` and AI coding-tool folders (`.claude/`, `.cursor/`, `.gemini/`, `.specstory/`) are git-ignored, and the `Secret scan` workflow runs gitleaks over the full history (with extra rules for passwords typed inline in commands, which key-format scanners miss) and fails if any of those files is ever committed. Run it locally with `gitleaks git --config .gitleaks.toml .`.
 
 SQLite authorizers are an application boundary, not database grants. PostgreSQL grants, tenant isolation, OS/process isolation, OAuth, production rate limiting, external anchoring, and file-owner protection are not demonstrated.
 
@@ -328,7 +337,7 @@ Safeguards in code:
 
 Or seed a ready-made instance with planted cases: `python -m Pramaan.backend.evaluate_agent --seed-instance .demo/agentx`, then start the API with `PRAMAAN_DATA=.demo/agentx`.
 
-**Measured results** (`python -m Pramaan.backend.evaluate_agent --write-docs`; details in [docs/AGENT_EVAL.md](docs/AGENT_EVAL.md)): on 26 synthetic sale lifecycles with 26 planted cases, the deterministic baseline planner traced 26/26 to source, invented 0 amounts, reached the correct outcome in 25/26, escalated 5/6 planted conflicts with 0 false escalations. LLM-planner numbers depend on the model; measure them with `--planner llm --write-docs`. No auditor time saving is claimed: no manual baseline has been timed.
+**Measured results** (`python -m Pramaan.backend.evaluate_agent --write-docs`; details in [docs/AGENT_EVAL.md](docs/AGENT_EVAL.md)): on 26 synthetic sale lifecycles with 26 planted cases, the deterministic baseline planner traced 26/26 to source, invented 0 amounts, reached the correct outcome in 25/26, escalated 5/6 planted conflicts with 0 false escalations. LLM-planner numbers depend on the model; measure them with `--planner llm --write-docs`. Add `--repeats 5` to rerun every case five times on freshly rebuilt instances and report how many cases reach the same outcome on every run, the majority-vote accuracy, and per-run results. No auditor time saving is claimed: no manual baseline has been timed.
 
 ## Outputs and user interface
 
@@ -347,7 +356,7 @@ Review outcomes are EXCEPTION_CONFIRMED, EXPLAINED, or DATA_ERROR; a final decis
 | Auditor        | Run summary; samples/evidence requests; findings/provenance; workpapers; integrity/post-test changes. |
 | Human reviewer | Auditor views plus final-decision control when that credential carries human-review capability, including bulk review of selected findings (keyboard: `j`/`k` move, `x` select). |
 
-See [INTEGRATION_REVIEW.md](INTEGRATION_REVIEW.md), [design.md](design.md), and [website.md](website.md) for tested integration and UI contracts.
+See [docs/INTEGRATION_REVIEW.md](docs/INTEGRATION_REVIEW.md), [docs/design.md](docs/design.md), and [docs/website.md](docs/website.md) for tested integration and UI contracts.
 
 ## Installation configuration and tests
 
@@ -439,7 +448,7 @@ $env:PYTHONPATH = Join-Path $PWD.Path 'launcher'
 | Hard-conflict false alarms on innocent sales | 0                                                                       | Does not measure real-world false-positive performance.     |
 | Review-only innocent flags                   | INV-001 and INV-008                                                     | Threshold-pattern signals, not confirmed exceptions.        |
 
-See [EVALUATION.md](EVALUATION.md) for class-by-class results and caveats. Two clean-reset technical rehearsals preserved originals, reproduced runs, detected randomized held-out differences, denied/logged auditor writes, and regenerated frozen artifacts. They were automated, not an independent-person blind exercise; evidence is in [backend/P6_REHEARSAL_RESULTS.json](backend/P6_REHEARSAL_RESULTS.json).
+See [docs/EVALUATION.md](docs/EVALUATION.md) for class-by-class results and caveats. Two clean-reset technical rehearsals preserved originals, reproduced runs, detected randomized held-out differences, denied/logged auditor writes, and regenerated frozen artifacts. They were automated, not an independent-person blind exercise; evidence is in [backend/P6_REHEARSAL_RESULTS.json](backend/P6_REHEARSAL_RESULTS.json).
 
 | Status                                              | Scope                                                                                                                                                                                                                                               |
 | --------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -448,7 +457,7 @@ See [EVALUATION.md](EVALUATION.md) for class-by-class results and caveats. Two c
 | Partial                                             | T03 needs contract/policy review; T12 lacks a complete independent-assertion workflow; T13 is demo-key verification; custom evidence requests, external notifications, general lifecycle editing, partner sign-off, and async jobs are unavailable. |
 | Not demonstrated                                    | Official GST/IRP integration, external anchoring, production deployment, PostgreSQL grants, tenant/OS isolation, OAuth, production rate limits, hosted MCP interoperability, statistical projection, certification.                                 |
 
-Read [PROGRESS.md](PROGRESS.md), [PHASES.md](PHASES.md), [MASTER.md](MASTER.md), [backend/P5_VERIFICATION_REPORT.md](backend/P5_VERIFICATION_REPORT.md), and [backend/P6_VERIFICATION_REPORT.md](backend/P6_VERIFICATION_REPORT.md) for gate evidence and limits.
+Read [docs/PROGRESS.md](docs/PROGRESS.md), [docs/PHASES.md](docs/PHASES.md), [docs/MASTER.md](docs/MASTER.md), [backend/P5_VERIFICATION_REPORT.md](backend/P5_VERIFICATION_REPORT.md), and [backend/P6_VERIFICATION_REPORT.md](backend/P6_VERIFICATION_REPORT.md) for gate evidence and limits.
 
 ## Repository map
 
@@ -458,8 +467,11 @@ Read [PROGRESS.md](PROGRESS.md), [PHASES.md](PHASES.md), [MASTER.md](MASTER.md),
 | [web](web/)                       | React/Vite workspaces, UI tests, browser workflow.                                           |
 | [data](data/)                     | Fictional synthetic fixtures and source manifest.                                            |
 | [sample_uploads](sample_uploads/) | Synthetic register/evidence examples and test packs.                                         |
-| [README-SYN.md](README-SYN.md)    | Generator/checker specification, not a claim that every specified feature is implemented.    |
-| [DEMO.md](DEMO.md)                | Accurate live walkthrough.                                                                   |
+| [docs](docs/)                     | Documentation index: getting started, evaluations, design specs, reviews ([docs/README.md](docs/README.md)). |
+| [docs/GETTING_STARTED.md](docs/GETTING_STARTED.md) | Non-technical start guide with screenshots.                                         |
+| [docs/README-SYN.md](docs/README-SYN.md)    | Generator/checker specification, not a claim that every specified feature is implemented.    |
+| [docs/DEMO.md](docs/DEMO.md)                | Accurate live walkthrough.                                                                   |
+| [SECURITY.md](SECURITY.md) · [CONTRIBUTING.md](CONTRIBUTING.md) · [CHANGELOG.md](CHANGELOG.md) | Vulnerability reporting and protections; how to contribute; change history. |
 
 ## License
 

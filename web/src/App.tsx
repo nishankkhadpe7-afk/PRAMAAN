@@ -1,8 +1,9 @@
 import {Suspense,lazy,useEffect,useState} from 'react'
 import {Link,NavLink,Navigate,Outlet,Route,Routes,useLocation,useNavigate} from 'react-router-dom'
-import {ArrowRight,ArrowUpRight,BookOpen,Building2,ClipboardCheck,Eye,EyeOff,FileSearch,Files,LayoutDashboard,LogOut,Menu,MessageSquare,ShieldCheck,Workflow,X} from 'lucide-react'
+import {ArrowRight,ArrowUpRight,BookOpen,Building2,CircleHelp,ClipboardCheck,Eye,EyeOff,FileSearch,Files,LayoutDashboard,LogOut,Menu,MessageSquare,ShieldCheck,Workflow,X} from 'lucide-react'
 import {useSession} from './session'
-import {Header,Mutation} from './components'
+import {Drawer,Header,Mutation} from './components'
+import {HelpContent} from './glossary'
 // F8: each workspace is a separate chunk, so the landing and sign-in pages stay light.
 const client=()=>import('./client'),auditor=()=>import('./auditor')
 const ClientDashboard=lazy(()=>client().then(m=>({default:m.ClientDashboard}))),Business=lazy(()=>client().then(m=>({default:m.Business}))),Registers=lazy(()=>client().then(m=>({default:m.Registers}))),Inbox=lazy(()=>client().then(m=>({default:m.Inbox})))
@@ -78,6 +79,8 @@ export function Guard({role}:{role:'client_employee'|'auditor'}){const {identity
 function Shell(){
   const {identity,signOut}=useSession();
   const [open,setOpen]=useState(false);
+  const [help,setHelp]=useState(false);
+  const navigate=useNavigate();
   const {pathname}=useLocation();
   const auditor=identity!.role==='auditor';
   const root=auditor?'/auditor':'/client';
@@ -106,8 +109,9 @@ function Shell(){
     <div className="workspace">
       <div className="topbar">
         <div className="topbar-context"><button type="button" className="icon-button mobile" aria-label="Open navigation" aria-controls="workspace-navigation" aria-expanded={open} onClick={()=>setOpen(true)}><Menu size={19}/></button><span>Workspace</span><span className="slash">/</span><strong>{section}</strong></div>
-        <div className="topbar-user" title={identity!.subject}><span className="avatar topbar-avatar">{identity!.subject.slice(0,2).toUpperCase()}</span><span className="topbar-user-name">{identity!.subject}</span></div>
+        <div className="topbar-actions"><button type="button" className="help-button" onClick={()=>setHelp(true)}><CircleHelp size={16} aria-hidden="true"/>Help</button><div className="topbar-user" title={identity!.subject}><span className="avatar topbar-avatar">{identity!.subject.slice(0,2).toUpperCase()}</span><span className="topbar-user-name">{identity!.subject}</span></div></div>
       </div>
+      {help&&<Drawer title="Help" onClose={()=>setHelp(false)}><HelpContent role={auditor?'auditor':'client'} onShowGuide={()=>{setHelp(false);navigate(root)}}/></Drawer>}
       <main id="main" tabIndex={-1} key={identity!.subject+pathname}><Suspense fallback={<div className="skeleton-loader" role="status" aria-label="Loading"><div className="skeleton-row" style={{width:'70%'}}/><div className="skeleton-row" style={{width:'50%'}}/></div>}><Outlet/></Suspense></main>
       <footer className="workspace-footer"><span className="workspace-footer-message"><BookOpen size={14}/>Traceable records. Qualified human judgment.</span><span>Prototype · one company per instance</span></footer>
     </div>

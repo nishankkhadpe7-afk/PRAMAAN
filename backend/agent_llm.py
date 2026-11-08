@@ -138,6 +138,10 @@ class QuotaExhausted(RuntimeError):
     """The provider account has no credits or quota left; retrying will not help."""
 
 
+class ProviderUnavailable(RuntimeError):
+    """Temporary provider failure: HTTP 5xx, or the connection dropped or timed out. Another model may work."""
+
+
 def _retry_after(response: httpx.Response) -> float:
     header = response.headers.get("retry-after")
     try:
@@ -156,7 +160,14 @@ async def _default_poster(cfg: dict[str, str], body: dict[str, Any], max_wait: f
     headers = {"Authorization": "Bearer " + cfg["api_key"], "Content-Type": "application/json"}
     async with httpx.AsyncClient(timeout=120) as client:
         for attempt in range(3):
-            response = await client.post(cfg["base_url"] + "/chat/completions", headers=headers, json=body)
+            try:
+                response = await client.post(cfg["base_url"] + "/chat/completions", headers=headers, json=body)
+            except httpx.TransportError as exc:
+                # Dropped connection, reset or timeout (e.g. "Server disconnected without sending a response").
+                if attempt < 2:
+                    await asyncio.sleep(2 * (attempt + 1))
+                    continue
+                raise ProviderUnavailable(f"LLM endpoint unreachable after {attempt + 1} attempts: {type(exc).__name__}") from exc
             if response.status_code == 429 and any(marker in response.text for marker in ("insufficient_quota", "credit_balance")):
                 raise QuotaExhausted("LLM provider account has no remaining credits or quota")
             if response.status_code == 429:
@@ -166,6 +177,8 @@ async def _default_poster(cfg: dict[str, str], body: dict[str, Any], max_wait: f
                     await asyncio.sleep(wait + 0.5)
                     continue
                 raise RateLimited(wait, response.text)
+            if response.status_code >= 500:
+                raise ProviderUnavailable(f"LLM endpoint error HTTP {response.status_code}: {response.text[:300]}")
             if response.status_code >= 400:
                 raise RuntimeError(f"LLM endpoint error HTTP {response.status_code}: {response.text[:300]}")
             return response.json()

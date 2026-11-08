@@ -9,6 +9,7 @@ then investigates every planted case and measures:
 - correct outcome: explained / not explained / conflict, against the planted label
 - conflicts escalated: every planted conflict stopped the run with status "conflict"
 - median seconds and tool calls per exception
+- with --repeats N: whether each case reaches the same outcome on N independent runs
 
 Only this module reads the planted labels. The agent and its tools never see them.
 
@@ -16,6 +17,7 @@ Run:
     python -m Pramaan.backend.evaluate_agent                 # deterministic baseline planner (offline)
     python -m Pramaan.backend.evaluate_agent --planner llm   # uses the configured LLM (.env)
     python -m Pramaan.backend.evaluate_agent --write-docs    # also writes docs/agent-eval.json + AGENT_EVAL.md
+    python -m Pramaan.backend.evaluate_agent --planner llm --repeats 5   # outcome stability across 5 runs
 """
 from __future__ import annotations
 
@@ -191,6 +193,51 @@ def evaluate(planner: str = "baseline", poster=None, cfg=None, pace: float = 0.0
     }
 
 
+def consistency(results: list[dict]) -> dict:
+    """Compare N independent runs over the same planted cases.
+
+    Each run builds its own fresh instance from the same fixture seed, so any disagreement comes
+    from the planner, not from leftover state. A case is stable when every run gives the same outcome.
+    """
+    if not results:
+        raise ValueError("no runs to compare")
+    by_case: dict[str, list[dict]] = {}
+    for result in results:
+        for row in result["cases"]:
+            by_case.setdefault(row["invoice_id"], []).append(row)
+    if any(len(rows) != len(results) for rows in by_case.values()):
+        raise ValueError("runs did not cover the same cases")
+    unstable, status_varied, majority_correct, traced_every_run = [], [], 0, 0
+    for invoice_id, rows in sorted(by_case.items()):
+        counts: dict[str, int] = {}
+        for row in rows:
+            counts[row["got"]] = counts.get(row["got"], 0) + 1
+        top = max(counts.values())
+        expected = rows[0]["expected"]
+        # Majority must be strict and point at the expected outcome; a tie counts as not correct.
+        if counts.get(expected, 0) == top and list(counts.values()).count(top) == 1:
+            majority_correct += 1
+        traced_every_run += all(row["traced_to_source"] for row in rows)
+        statuses: dict[str, int] = {}
+        for row in rows:
+            statuses[row["status"]] = statuses.get(row["status"], 0) + 1
+        if len(statuses) > 1:
+            # Same outcome class can hide a different action, e.g. "needs_confirmation" (a request was drafted) vs "unexplained" (none was).
+            status_varied.append({"invoice_id": invoice_id, "kind": rows[0]["kind"], "statuses": dict(sorted(statuses.items()))})
+        if len(counts) > 1:
+            unstable.append({"invoice_id": invoice_id, "kind": rows[0]["kind"], "expected": expected, "outcomes": dict(sorted(counts.items()))})
+    return {
+        "repeats": len(results), "cases": len(by_case), "stable_cases": len(by_case) - len(unstable),
+        "status_stable_cases": len(by_case) - len(status_varied),
+        "majority_correct": majority_correct, "traced_every_run": traced_every_run,
+        "correct_per_run": [r["metrics"]["correct_outcome"] for r in results],
+        "conflicts_escalated_per_run": [r["metrics"]["conflicts_escalated"] for r in results],
+        "false_escalations_per_run": [r["metrics"]["false_escalations"] for r in results],
+        "invented_amounts_all_runs": sum(r["metrics"]["invented_amounts"] for r in results),
+        "unstable": unstable, "status_varied": status_varied,
+    }
+
+
 def markdown(result: dict) -> str:
     m = result["metrics"]
     lines = [
@@ -225,6 +272,28 @@ def markdown(result: dict) -> str:
         "## Limitations",
         "",
     ] + [f"- {item}" for item in result["limitations"]] + [""]
+    c = result.get("consistency")
+    if c:
+        runs = lambda values: ", ".join(str(v) for v in values)
+        lines[lines.index("## By planted case"):lines.index("## By planted case")] = [
+            f"## Consistency across {c['repeats']} independent runs",
+            "",
+            "Each run rebuilds the instance from the same fixture seed and investigates every case again. The table above is run 1.",
+            "",
+            "| Metric | Result |",
+            "|---|---|",
+            f"| Same outcome on every run | {c['stable_cases']}/{c['cases']} |",
+            f"| Same detailed status on every run | {c['status_stable_cases']}/{c['cases']} |",
+            f"| Majority outcome correct | {c['majority_correct']}/{c['cases']} |",
+            f"| Traced to source on every run | {c['traced_every_run']}/{c['cases']} |",
+            f"| Correct outcome per run | {runs(c['correct_per_run'])} |",
+            f"| Conflicts escalated per run | {runs(c['conflicts_escalated_per_run'])} |",
+            f"| False escalations per run | {runs(c['false_escalations_per_run'])} |",
+            f"| Invented amounts, all runs | {c['invented_amounts_all_runs']} |",
+            "",
+        ] + ([f"- `{u['invoice_id']}` ({u['kind']}, expected {u['expected'].replace('_', ' ')}): " + ", ".join(f"{k.replace('_', ' ')} ×{v}" for k, v in u["outcomes"].items()) for u in c["unstable"]] or ["- Every case reached the same outcome on every run."]) + (
+            ["", "Detailed status differed (same outcome class):", ""] + [f"- `{v['invoice_id']}` ({v['kind']}): " + ", ".join(f"{k} ×{n}" for k, n in v["statuses"].items()) for v in c["status_varied"]]
+            if c["status_varied"] else []) + [""]
     return "\n".join(lines)
 
 
@@ -234,6 +303,7 @@ def main() -> None:
     parser.add_argument("--write-docs", action="store_true")
     parser.add_argument("--pace", type=float, default=6.0, help="seconds between LLM investigations (free-tier quotas)")
     parser.add_argument("--retries", type=int, default=4, help="retries per case when every model is rate-limited")
+    parser.add_argument("--repeats", type=int, default=1, help="independent runs per case, to measure outcome stability (each rebuilds the instance)")
     parser.add_argument("--seed-instance", metavar="DIR", help="instead of evaluating, build the dataset into an empty folder for a demo")
     args = parser.parse_args()
     if args.seed_instance:
@@ -246,7 +316,19 @@ def main() -> None:
         cfg = config()
         if not cfg["api_key"]:
             raise SystemExit("No LLM API key configured; run with --planner baseline or set a key in .env")
-    result = evaluate(args.planner, cfg=cfg, pace=args.pace if args.planner == "llm" else 0.0, retries=args.retries if args.planner == "llm" else 0)
+    if args.repeats < 1:
+        raise SystemExit("--repeats must be at least 1")
+    pace = args.pace if args.planner == "llm" else 0.0
+    results = []
+    for run in range(args.repeats):
+        if args.repeats > 1:
+            print(f"[eval] run {run + 1}/{args.repeats}", flush=True)
+            if run and pace:
+                time.sleep(pace)
+        results.append(evaluate(args.planner, cfg=cfg, pace=pace, retries=args.retries if args.planner == "llm" else 0))
+    result = results[0]
+    if args.repeats > 1:
+        result["consistency"] = consistency(results)
     print(markdown(result))
     if args.write_docs:
         docs = Path(__file__).resolve().parents[1] / "docs"

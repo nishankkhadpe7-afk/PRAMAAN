@@ -1581,3 +1581,42 @@ input[aria-invalid="true"],select[aria-invalid="true"]{border-color:var(--error)
   .workspace main{padding-top:24px}
   .page-heading h1{font-size:26px;line-height:1.2}
 }
+
+/* Plain-language hints: a "?" next to audit terms, explained on hover, focus+Enter or tap. */
+.term{position:relative;display:inline-flex;align-items:center;gap:4px}
+.term-help{display:inline-grid;place-items:center;width:18px;height:18px;min-height:0;padding:0;border:0;border-radius:999px;background:transparent;color:var(--subtle);cursor:help;flex:none;vertical-align:middle}
+.term-help:hover,.term-help[aria-expanded="true"]{color:var(--primary);background:var(--gold-dim)}
+.term-help:focus-visible{outline:2px solid var(--focus);outline-offset:1px}
+.term-tip{position:absolute;z-index:40;left:0;top:calc(100% + 6px);width:max-content;max-width:300px;padding:10px 12px;border:1px solid var(--line-strong);border-radius:var(--radius-sm);background:var(--surface-4);box-shadow:var(--shadow-panel);color:var(--muted);font-size:13px;font-weight:400;line-height:1.45;letter-spacing:0;text-transform:none;white-space:normal;text-align:left}
+.term-tip strong{display:block;margin-bottom:2px;color:var(--ink);font-weight:600}
+.panel-title{display:flex;align-items:center;gap:6px}
+.tab-hint{margin:0 0 var(--space-3);color:var(--subtle);font-size:13px;line-height:1.5}
+
+/* Help button + drawer */
+.topbar-actions{display:flex;align-items:center;gap:var(--space-4);min-width:0;max-width:55%}
+.topbar-actions .topbar-user{max-width:none}
+.help-button{display:inline-flex;align-items:center;gap:6px;min-height:32px;padding:4px 10px;border:1px solid var(--line-strong);border-radius:999px;background:transparent;color:var(--muted);font-size:13px}
+.help-button:hover{border-color:var(--gold-border);color:var(--primary)}
+.help h3{margin:var(--space-6) 0 var(--space-3);font-size:15px;color:var(--ink)}
+.help h3:first-child{margin-top:0}
+.glossary-list{display:grid;gap:var(--space-3);margin:0}
+.glossary-list div{padding-bottom:var(--space-3);border-bottom:1px solid var(--line)}
+.glossary-list dt{color:var(--ink);font-weight:500;margin-bottom:2px}
+.glossary-list dd{margin:0;color:var(--muted);font-size:14px;line-height:1.5}
+
+/* First-visit guide */
+.guide{margin:0 0 var(--space-6);padding:var(--space-5) var(--space-6);border:1px solid var(--gold-border);border-radius:var(--radius-lg);background:linear-gradient(135deg,var(--gold-dim),transparent 60%),var(--surface)}
+.guide-head{display:flex;align-items:flex-start;gap:var(--space-3);color:var(--primary)}
+.guide-head>div{flex:1;min-width:0}
+.guide-head h2{margin:0;font-size:18px;color:var(--ink)}
+.guide-head p{margin:2px 0 0;color:var(--subtle);font-size:14px}
+.guide-steps{list-style:none;margin:var(--space-4) 0 0;padding:0;display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:var(--space-3)}
+.guide-steps li{display:flex;gap:var(--space-3);padding:var(--space-3) var(--space-4);border:1px solid var(--line);border-radius:var(--radius);background:var(--surface-2)}
+.guide-num{display:grid;place-items:center;flex:none;width:24px;height:24px;border-radius:999px;background:var(--gold-dim);color:var(--primary);font-size:13px;font-weight:600}
+.guide-steps a,.guide-steps strong{display:inline-flex;align-items:center;gap:4px;color:var(--ink);font-weight:500}
+.guide-steps a:hover{color:var(--primary)}
+.guide-steps p{margin:4px 0 0;color:var(--subtle);font-size:13px;line-height:1.45}
+.help .guide-steps{grid-template-columns:1fr}
+.help>button{margin-top:var(--space-3)}
+.guide-foot{margin:var(--space-4) 0 0;color:var(--subtle);font-size:13px;display:flex;align-items:center;gap:4px;flex-wrap:wrap}
+@media (max-width:640px){.help-button{padding:4px 8px}.topbar-user-name{display:none}}

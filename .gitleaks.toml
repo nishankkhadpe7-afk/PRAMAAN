@@ -1,0 +1,31 @@
+# Secret scanning for PRAMAAN (used by .github/workflows/secret-scan.yml).
+# Starts from gitleaks' built-in rules, which match known key formats (Google, AWS, GitHub...).
+# The extra rules catch passwords typed inline in commands, which those formats miss.
+title = "PRAMAAN gitleaks config"
+
+[extend]
+useDefault = true
+
+[[rules]]
+id = "inline-env-password"
+description = "Password or token assigned inline in a command (PGPASSWORD=..., MYSQL_PWD=...)"
+# Upper-case env-var names only, so code such as `token=>...` or `password=value` arguments is not flagged.
+regex = '''\b(?:PGPASSWORD|MYSQL_PWD|[A-Z_]*PASSWORD|PASSWD|[A-Z_]*API_KEY|[A-Z_]*TOKEN|[A-Z_]*SECRET)=['"]?([A-Za-z0-9_\-+/.@!#%^&*~:]{6,})'''
+secretGroup = 1
+keywords = ["password", "passwd", "pwd", "api_key", "token", "secret"]
+
+[[rules]]
+id = "inline-cli-password"
+description = "Password passed on the command line (sshpass -p, mysql -p...)"
+regex = '''(?:sshpass\s+-p\s*|mysql(?:dump)?\b[^\n]*?\s-p)['"]?([^\s'"$]{6,})'''
+secretGroup = 1
+keywords = ["sshpass", "mysql"]
+
+[allowlist]
+description = "Placeholders and test-only values"
+paths = ['''\.env\.example$''', '''web/package-lock\.json$''']
+regexes = [
+  '''(?i)(changeme|example|placeholder|your[-_]?key|xxxx+|<[^>]+>|\.\.\.)''',
+  # Labelled synthetic e-invoice signing seed in backend/p3_crypto.py ("PRAMAAN-DEMO-IRP-ED25519-SEED001"); not a real key.
+  '''UFJBTUFBTi1ERU1PLUlSUC1FRDI1NTE5LVNFRUQwMDE=''',
+]

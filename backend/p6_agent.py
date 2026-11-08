@@ -785,8 +785,8 @@ async def complete_with_fallback(inv: Investigation, cfg: dict[str, Any], messag
             agent_llm._EXHAUSTED[model] = time.monotonic() + exc.retry_after
             last = exc
         except RuntimeError as exc:
-            # Provider overload (HTTP 5xx, e.g. "high demand"): temporary, so try the next model.
-            if not re.search(r"HTTP 5\d\d", str(exc)):
+            # Provider overload (HTTP 5xx, e.g. "high demand") or a dropped connection: temporary, so try the next model.
+            if not (isinstance(exc, agent_llm.ProviderUnavailable) or re.search(r"HTTP 5\d\d", str(exc))):
                 raise
             agent_llm._EXHAUSTED[model] = time.monotonic() + 30
             last = agent_llm.RateLimited(30, str(exc))

@@ -239,13 +239,15 @@ class AgentTests(unittest.TestCase):
                 raise agent_llm.RateLimited(30, "quota")
             if cfg["model"] == "busy-model":
                 raise RuntimeError("LLM endpoint error HTTP 503: high demand")
+            if cfg["model"] == "dropped-model":
+                raise agent_llm.ProviderUnavailable("LLM endpoint unreachable after 3 attempts: RemoteProtocolError")
             return {"choices": [{"message": {"role": "assistant", **turns.pop(0)}}]}
         agent_llm._EXHAUSTED.clear()
         async def go():
             marker = security.identity.set({"subject": "agent-auditor", "role": "auditor", "human": False, "channel": "api"})
             try:
                 return await p6_agent.run_investigation(self.run_id, None, "llm", poster=poster, invoice_id=invoice_id,
-                                                        cfg={"api_key": "x", "model": "primary-model", "fallback_models": ["busy-model", "backup-model"], "base_url": "http://local"})
+                                                        cfg={"api_key": "x", "model": "primary-model", "fallback_models": ["busy-model", "dropped-model", "backup-model"], "base_url": "http://local"})
             finally:
                 security.identity.reset(marker)
         report = asyncio.run(go())
@@ -254,6 +256,38 @@ class AgentTests(unittest.TestCase):
         self.assertEqual(seen[0], "primary-model")
         self.assertNotIn("primary-model", seen[1:])  # the limited model is skipped for the rest of the run
         self.assertEqual(seen.count("busy-model"), 1)  # an overloaded (HTTP 503) model is also skipped
+        self.assertEqual(seen.count("dropped-model"), 1)  # so is one whose connection dropped
+
+    def test_poster_retries_dropped_connections_then_reports_provider_unavailable(self):
+        import httpx
+        from unittest.mock import patch
+        from Pramaan.backend import agent_llm
+        real_client = httpx.AsyncClient
+        async def no_sleep(_seconds):
+            return None
+        def run(handler):
+            calls = []
+            def counted(request):
+                calls.append(request)
+                return handler(len(calls))
+            factory = lambda **kwargs: real_client(transport=httpx.MockTransport(counted), **kwargs)
+            with patch.object(agent_llm.httpx, "AsyncClient", factory), patch.object(agent_llm.asyncio, "sleep", no_sleep):
+                try:
+                    return asyncio.run(agent_llm._default_poster({"api_key": "x", "base_url": "http://local"}, {"model": "m"})), len(calls)
+                except Exception as exc:
+                    return exc, len(calls)
+        def drop(_n):
+            raise httpx.RemoteProtocolError("Server disconnected without sending a response.")
+        result, calls = run(drop)
+        self.assertIsInstance(result, agent_llm.ProviderUnavailable)
+        self.assertEqual(calls, 3)
+        ok = {"choices": [{"message": {"role": "assistant", "content": "ok"}}]}
+        result, calls = run(lambda n: drop(n) if n == 1 else httpx.Response(200, json=ok))
+        self.assertEqual((result, calls), (ok, 2))  # one dropped connection is retried transparently
+        result, _ = run(lambda n: httpx.Response(503, text="high demand"))
+        self.assertIsInstance(result, agent_llm.ProviderUnavailable)
+        result, _ = run(lambda n: httpx.Response(400, text="bad request"))
+        self.assertNotIsInstance(result, agent_llm.ProviderUnavailable)  # client errors are not retried as outages
 
     # F4 ---------------------------------------------------------------
     def test_confirmation_is_human_only_hash_checked_and_once(self):

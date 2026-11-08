@@ -1,7 +1,7 @@
 {
-  "generated_at": "2026-11-07T20:50:17.664998+00:00",
+  "generated_at": "2026-11-08T06:04:55.043090+00:00",
   "planner": "llm",
-  "model": "gemini-3.1-flash-lite-preview, gemini-3.7-flash",
+  "model": "gemini-3.1-flash-lite-preview, gemini-3.6-flash, gemini-3.7-flash",
   "prompt_version": "investigate-v2",
   "fixture_seed": "pramaan-agentx-fixture-2026",
   "dataset": {
@@ -28,7 +28,7 @@
     "conflicts_escalated": 5,
     "conflicts_planted": 6,
     "false_escalations": 0,
-    "median_seconds_per_exception": 7.085,
+    "median_seconds_per_exception": 8.74,
     "median_tool_calls_per_exception": 3.0,
     "model_summaries_rejected": 0,
     "model_texts_withheld": 0
@@ -82,7 +82,7 @@
       "conflict_expected": false,
       "escalated": false,
       "tool_calls": 2,
-      "seconds": 4.224,
+      "seconds": 47.222,
       "summary_source": "model",
       "models": "gemini-3.1-flash-lite-preview"
     },
@@ -100,7 +100,7 @@
       "conflict_expected": true,
       "escalated": true,
       "tool_calls": 2,
-      "seconds": 2.15,
+      "seconds": 21.332,
       "summary_source": "deterministic",
       "models": "gemini-3.1-flash-lite-preview"
     },
@@ -118,7 +118,7 @@
       "conflict_expected": false,
       "escalated": false,
       "tool_calls": 3,
-      "seconds": 46.472,
+      "seconds": 9.012,
       "summary_source": "model",
       "models": "gemini-3.1-flash-lite-preview"
     },
@@ -135,8 +135,8 @@
       "model_texts_withheld": 0,
       "conflict_expected": false,
       "escalated": false,
-      "tool_calls": 2,
-      "seconds": 4.629,
+      "tool_calls": 3,
+      "seconds": 4.7,
       "summary_source": "model",
       "models": "gemini-3.1-flash-lite-preview"
     },
@@ -154,7 +154,7 @@
       "conflict_expected": false,
       "escalated": false,
       "tool_calls": 4,
-      "seconds": 15.389,
+      "seconds": 17.536,
       "summary_source": "model",
       "models": "gemini-3.1-flash-lite-preview"
     },
@@ -172,7 +172,7 @@
       "conflict_expected": true,
       "escalated": true,
       "tool_calls": 2,
-      "seconds": 2.704,
+      "seconds": 2.202,
       "summary_source": "deterministic",
       "models": "gemini-3.1-flash-lite-preview"
     },
@@ -190,7 +190,7 @@
       "conflict_expected": false,
       "escalated": false,
       "tool_calls": 4,
-      "seconds": 7.199,
+      "seconds": 10.285,
       "summary_source": "model",
       "models": "gemini-3.1-flash-lite-preview"
     },
@@ -208,7 +208,7 @@
       "conflict_expected": false,
       "escalated": false,
       "tool_calls": 2,
-      "seconds": 3.916,
+      "seconds": 3.965,
       "summary_source": "model",
       "models": "gemini-3.1-flash-lite-preview"
     },
@@ -226,7 +226,7 @@
       "conflict_expected": false,
       "escalated": false,
       "tool_calls": 4,
-      "seconds": 6.972,
+      "seconds": 8.468,
       "summary_source": "model",
       "models": "gemini-3.1-flash-lite-preview"
     },
@@ -244,9 +244,9 @@
       "conflict_expected": false,
       "escalated": false,
       "tool_calls": 4,
-      "seconds": 7.579,
+      "seconds": 11.818,
       "summary_source": "model",
-      "models": "gemini-3.1-flash-lite-preview"
+      "models": "gemini-3.1-flash-lite-preview, gemini-3.6-flash"
     },
     {
       "invoice_id": "AGX-I011",
@@ -262,9 +262,9 @@
       "conflict_expected": false,
       "escalated": false,
       "tool_calls": 3,
-      "seconds": 22.581,
-      "summary_source": "model",
-      "models": "gemini-3.1-flash-lite-preview, gemini-3.7-flash"
+      "seconds": 10.74,
+      "summary_source": "deterministic",
+      "models": "gemini-3.6-flash"
     },
     {
       "invoice_id": "AGX-I012",
@@ -279,10 +279,10 @@
       "model_texts_withheld": 0,
       "conflict_expected": false,
       "escalated": false,
-      "tool_calls": 3,
-      "seconds": 125.509,
+      "tool_calls": 2,
+      "seconds": 5.472,
       "summary_source": "model",
-      "models": "gemini-3.7-flash, gemini-3.1-flash-lite-preview"
+      "models": "gemini-3.1-flash-lite-preview"
     },
     {
       "invoice_id": "AGX-I013",
@@ -298,7 +298,7 @@
       "conflict_expected": false,
       "escalated": false,
       "tool_calls": 3,
-      "seconds": 50.661,
+      "seconds": 12.72,
       "summary_source": "model",
       "models": "gemini-3.1-flash-lite-preview"
     },
@@ -316,7 +316,7 @@
       "conflict_expected": false,
       "escalated": false,
       "tool_calls": 4,
-      "seconds": 124.085,
+      "seconds": 19.105,
       "summary_source": "model",
       "models": "gemini-3.1-flash-lite-preview"
     },
@@ -334,7 +334,7 @@
       "conflict_expected": false,
       "escalated": false,
       "tool_calls": 3,
-      "seconds": 6.333,
+      "seconds": 5.729,
       "summary_source": "model",
       "models": "gemini-3.1-flash-lite-preview"
     },
@@ -352,7 +352,7 @@
       "conflict_expected": true,
       "escalated": true,
       "tool_calls": 2,
-      "seconds": 2.953,
+      "seconds": 2.363,
       "summary_source": "deterministic",
       "models": "gemini-3.1-flash-lite-preview"
     },
@@ -370,7 +370,7 @@
       "conflict_expected": false,
       "escalated": false,
       "tool_calls": 3,
-      "seconds": 5.805,
+      "seconds": 5.736,
       "summary_source": "model",
       "models": "gemini-3.1-flash-lite-preview"
     },
@@ -388,9 +388,9 @@
       "conflict_expected": false,
       "escalated": false,
       "tool_calls": 4,
-      "seconds": 10.972,
+      "seconds": 110.012,
       "summary_source": "model",
-      "models": "gemini-3.1-flash-lite-preview"
+      "models": "gemini-3.7-flash, gemini-3.1-flash-lite-preview"
     },
     {
       "invoice_id": "AGX-I019",
@@ -406,7 +406,7 @@
       "conflict_expected": false,
       "escalated": false,
       "tool_calls": 4,
-      "seconds": 9.002,
+      "seconds": 9.123,
       "summary_source": "model",
       "models": "gemini-3.1-flash-lite-preview"
     },
@@ -424,7 +424,7 @@
       "conflict_expected": true,
       "escalated": true,
       "tool_calls": 2,
-      "seconds": 2.528,
+      "seconds": 2.092,
       "summary_source": "deterministic",
       "models": "gemini-3.1-flash-lite-preview"
     },
@@ -442,7 +442,7 @@
       "conflict_expected": false,
       "escalated": false,
       "tool_calls": 4,
-      "seconds": 46.574,
+      "seconds": 5.985,
       "summary_source": "model",
       "models": "gemini-3.1-flash-lite-preview"
     },
@@ -460,7 +460,7 @@
       "conflict_expected": true,
       "escalated": false,
       "tool_calls": 4,
-      "seconds": 8.009,
+      "seconds": 6.352,
       "summary_source": "model",
       "models": "gemini-3.1-flash-lite-preview"
     },
@@ -478,7 +478,7 @@
       "conflict_expected": false,
       "escalated": false,
       "tool_calls": 4,
-      "seconds": 7.587,
+      "seconds": 6.229,
       "summary_source": "model",
       "models": "gemini-3.1-flash-lite-preview"
     },
@@ -496,9 +496,9 @@
       "conflict_expected": true,
       "escalated": true,
       "tool_calls": 2,
-      "seconds": 2.56,
+      "seconds": 60.692,
       "summary_source": "deterministic",
-      "models": "gemini-3.1-flash-lite-preview"
+      "models": "gemini-3.7-flash, gemini-3.1-flash-lite-preview"
     },
     {
       "invoice_id": "AGX-I025",
@@ -514,7 +514,7 @@
       "conflict_expected": false,
       "escalated": false,
       "tool_calls": 4,
-      "seconds": 6.848,
+      "seconds": 9.085,
       "summary_source": "model",
       "models": "gemini-3.1-flash-lite-preview"
     },
@@ -532,7 +532,7 @@
       "conflict_expected": false,
       "escalated": false,
       "tool_calls": 2,
-      "seconds": 4.7,
+      "seconds": 4.241,
       "summary_source": "model",
       "models": "gemini-3.1-flash-lite-preview"
     }
@@ -543,5 +543,35 @@
     "The deterministic-baseline planner follows a fixed policy; LLM results depend on the model and provider and should be re-measured per model.",
     "The test data's bank narrations use abbreviations the party matcher already knows (Mfg, Trdrs, Retl...), so payer matching here is easier than on real statements. On unseen spellings the matcher mostly falls to 'possible match' (escalates), but can miss ('FICTIONAL MFRS') or over-match ('Astra' vs 'Aster Components').",
     "Planted 'possible party' payers swap the customer's first name (e.g. 'Sharma Traders' -> 'Verma Traders'). When the swap leaves little in common ('Banyan Retail' -> 'Verma Retail'), the matcher scores it as an unrelated payer, so the agent treats the invoice as unpaid and proposes an evidence request instead of escalating a conflict."
-  ]
+  ],
+  "consistency": {
+    "repeats": 5,
+    "cases": 26,
+    "stable_cases": 26,
+    "majority_correct": 25,
+    "traced_every_run": 26,
+    "correct_per_run": [
+      25,
+      25,
+      25,
+      25,
+      25
+    ],
+    "conflicts_escalated_per_run": [
+      5,
+      5,
+      5,
+      5,
+      5
+    ],
+    "false_escalations_per_run": [
+      0,
+      0,
+      0,
+      0,
+      0
+    ],
+    "invented_amounts_all_runs": 0,
+    "unstable": []
+  }
 }

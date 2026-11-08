@@ -1,0 +1,66 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  backend:
+    runs-on: ubuntu-latest
+    env:
+      PYTHONPATH: ${{ github.workspace }}/launcher
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+          cache-dependency-path: backend/requirements-dev.txt
+      - run: python -m pip install -r backend/requirements-dev.txt
+      - name: Backend tests
+        run: python -m pytest backend/tests -q
+      - name: Automated rehearsal
+        run: python -m Pramaan.backend.demo rehearse --name rehearsal
+      - name: Release verification (synthetic quality gates)
+        run: python -m Pramaan.backend.release_verify --require-quality --output .demo/release-evidence.json
+      - name: Agent evaluation (offline baseline)
+        run: python -m Pramaan.backend.evaluate_agent
+
+  web:
+    runs-on: ubuntu-latest
+    env:
+      PYTHONPATH: ${{ github.workspace }}/launcher
+      PRAMAAN_E2E_VIDEO: "off"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+          cache-dependency-path: backend/requirements-dev.txt
+      - run: python -m pip install -r backend/requirements-dev.txt
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+      - run: npm ci
+        working-directory: web
+      - run: npm run typecheck
+        working-directory: web
+      - run: npm test
+        working-directory: web
+      - run: npm run build
+        working-directory: web
+      - name: Browser journeys (uses the runner's Google Chrome)
+        run: npm run test:e2e
+        working-directory: web
+      - if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-results
+          path: web/test-results
+          retention-days: 7

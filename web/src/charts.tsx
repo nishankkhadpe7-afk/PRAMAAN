@@ -1,3 +1,4 @@
+import {Term} from './glossary'
 import {ReactNode,useEffect,useRef,useState} from 'react'
 import {AlertOctagon,AlertTriangle,CheckCircle2,FileQuestion,Radio,SearchCheck} from 'lucide-react'
 import {Row} from './components'
@@ -129,17 +130,17 @@ export function FindingInsights({findings,invoices,filters,setFilter}:{findings:
   const top=tests.slice(0,7)
   return <div className="insights">
     <div className="insight-kpis">
-      <div className="kpi"><span>Automated observations</span><strong>{findings.length}</strong><small>Signals for review, not conclusions</small></div>
-      <div className="kpi"><span>Inconsistencies</span><strong className="t-critical">{tiers.get('critical')||0}</strong><small>Records disagree with each other</small></div>
-      <div className="kpi"><span>Evidence gaps</span><strong className="t-serious">{tiers.get('serious')||0}</strong><small>Missing or unverifiable support</small></div>
-      <div className="kpi kpi-ring"><Ring value={reviewed} total={findings.length} label="Human review progress"/><div><span>Human review</span><strong>{reviewed}<em>/{findings.length}</em></strong><small>{confirmed} confirmed exception{confirmed===1?'':'s'}</small></div></div>
+      <div className="kpi"><span><Term k="observation">Automated observations</Term></span><strong>{findings.length}</strong><small>Signals for review, not conclusions</small></div>
+      <div className="kpi"><span><Term k="inconsistent">Inconsistencies</Term></span><strong className="t-critical">{tiers.get('critical')||0}</strong><small>Records disagree with each other</small></div>
+      <div className="kpi"><span><Term k="evidence_gap">Evidence gaps</Term></span><strong className="t-serious">{tiers.get('serious')||0}</strong><small>Missing or unverifiable support</small></div>
+      <div className="kpi kpi-ring"><Ring value={reviewed} total={findings.length} label="Human review progress"/><div><span><Term k="human_review">Human review</Term></span><strong>{reviewed}<em>/{findings.length}</em></strong><small>{confirmed} confirmed exception{confirmed===1?'':'s'}</small></div></div>
     </div>
     <div className="insight-grid">
-      <section className="viz-card"><header><h3>Signal mix</h3><p>By kind of automated signal · click to filter</p></header><Donut caption="Findings by signal type" active={filters.tier} onSelect={k=>setFilter('tier',k)} center={<><strong>{findings.length}</strong><small>signals</small></>} slices={TIERS.map(t=>({key:t.key,label:t.label,value:tiers.get(t.key)||0,color:TIER_COLOR[t.key],icon:<t.Icon size={13}/>}))}/></section>
+      <section className="viz-card"><header><h3>Signal mix</h3><p><Term k="signal">By kind of automated signal</Term> · click to filter</p></header><Donut caption="Findings by signal type" active={filters.tier} onSelect={k=>setFilter('tier',k)} center={<><strong>{findings.length}</strong><small>signals</small></>} slices={TIERS.map(t=>({key:t.key,label:t.label,value:tiers.get(t.key)||0,color:TIER_COLOR[t.key],icon:<t.Icon size={13}/>}))}/></section>
       <section className="viz-card"><header><h3>Where they come from</h3><p>Top audit tests by observation count</p></header><HBars active={filters.test} onSelect={k=>setFilter('test',k)} rows={top.map(([k,v])=>({key:k,label:testLabel(k),sub:k,value:v}))}/>{tests.length>top.length&&<small className="viz-foot">+{tests.length-top.length} more tests with {tests.slice(top.length).reduce((s,[,v])=>s+v,0)} observations</small>}</section>
     </div>
     <div className="insight-grid">
-      <section className="viz-card"><header><h3>Assertions affected</h3><p>Which financial-statement assertion each signal tests</p></header><StackBar active={filters.assertion} onSelect={k=>setFilter('assertion',k)} parts={assertions.map(([k,v])=>({key:k,label:k.replace(/^./,c=>c.toUpperCase()),value:v,color:assertionColor(k)}))}/></section>
+      <section className="viz-card"><header><h3>Assertions affected</h3><p><Term k="assertion">What each signal checks</Term>: did the sale happen, is anything missing, is it in the right year, is the amount right</p></header><StackBar active={filters.assertion} onSelect={k=>setFilter('assertion',k)} parts={assertions.map(([k,v])=>({key:k,label:k.replace(/^./,c=>c.toUpperCase()),value:v,color:assertionColor(k)}))}/></section>
       <section className="viz-card"><header><h3>When it happened</h3><p>Invoice-linked observations by invoice month</p></header>{months.length?<Columns points={months.map(([m,v])=>({label:monthLabel(m),value:v}))}/>:<p className="viz-empty">No invoice-dated observations in this snapshot.</p>}</section>
     </div>
   </div>
