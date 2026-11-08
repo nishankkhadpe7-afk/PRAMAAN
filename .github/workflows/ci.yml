@@ -13,8 +13,8 @@ jobs:
     env:
       PYTHONPATH: ${{ github.workspace }}/launcher
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - uses: actions/checkout@v6
+      - uses: actions/setup-python@v6
         with:
           python-version: "3.11"
           cache: pip
@@ -35,14 +35,14 @@ jobs:
       PYTHONPATH: ${{ github.workspace }}/launcher
       PRAMAAN_E2E_VIDEO: "off"
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - uses: actions/checkout@v6
+      - uses: actions/setup-python@v6
         with:
           python-version: "3.11"
           cache: pip
           cache-dependency-path: backend/requirements-dev.txt
       - run: python -m pip install -r backend/requirements-dev.txt
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v6
         with:
           node-version: "22"
           cache: npm
@@ -59,7 +59,7 @@ jobs:
         run: npm run test:e2e
         working-directory: web
       - if: failure()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: playwright-results
           path: web/test-results
