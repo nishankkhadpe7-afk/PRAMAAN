@@ -1,4 +1,4 @@
-import {useEffect,useId,useRef,useState,type ReactNode} from 'react'
+import {useEffect,useId,useLayoutEffect,useRef,useState,type ReactNode} from 'react'
 import {Link} from 'react-router-dom'
 import {ArrowRight,CircleHelp,Sparkles,X} from 'lucide-react'
 
@@ -51,13 +51,18 @@ export function Term({k,children,bare}:{k:GlossaryKey;children?:ReactNode;bare?:
   const entry=GLOSSARY[k],id=useId(),ref=useRef<HTMLSpanElement>(null)
   const [pinned,setPinned]=useState(false),[hover,setHover]=useState(false)
   const open=pinned||hover
+  const tipRef=useRef<HTMLSpanElement>(null),[shift,setShift]=useState(0)
+  // Keep the explanation inside the window: near the right edge it slides left instead of being cut off.
+  useLayoutEffect(()=>{if(!open){setShift(0);return}const tip=tipRef.current;if(!tip)return
+    const rect=tip.getBoundingClientRect(),margin=12,right=rect.right-shift,left=rect.left-shift
+    setShift(right>window.innerWidth-margin?Math.max(window.innerWidth-margin-right,margin-left):left<margin?margin-left:0)},[open])
   useEffect(()=>{if(!pinned)return
     const outside=(e:MouseEvent)=>{if(!ref.current?.contains(e.target as Node))setPinned(false)}
     document.addEventListener('mousedown',outside);return()=>document.removeEventListener('mousedown',outside)},[pinned])
   return <span className="term" ref={ref} onMouseLeave={()=>setHover(false)}>{bare?null:children??entry.term}<button type="button" className="term-help" aria-label={`What does “${entry.term}” mean?`} aria-expanded={open} aria-controls={open?id:undefined}
     onMouseEnter={()=>setHover(true)} onClick={e=>{e.preventDefault();e.stopPropagation();setPinned(p=>!p)}}
     onKeyDown={e=>{if(e.key==='Escape'&&open){e.stopPropagation();e.nativeEvent.stopImmediatePropagation();setPinned(false);setHover(false)}}}><CircleHelp size={13} aria-hidden="true"/></button>
-    {open&&<span id={id} role="note" className="term-tip"><strong>{entry.term}</strong>{entry.meaning}</span>}</span>
+    {open&&<span id={id} ref={tipRef} role="note" className="term-tip" style={shift?{transform:`translateX(${shift}px)`}:undefined}><strong>{entry.term}</strong>{entry.meaning}</span>}</span>
 }
 
 // Activity-trail event codes in plain words; unknown codes fall back to a readable sentence.

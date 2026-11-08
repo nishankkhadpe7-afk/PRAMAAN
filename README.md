@@ -80,6 +80,7 @@ Screenshots of every screen at six widths (360–1920 px), before and after the 
 
 ## Contents
 
+- [Getting started (non-technical, with screenshots)](docs/GETTING_STARTED.md)
 - [What is built](#what-is-built)
 - [System architecture](#system-architecture)
 - [End-to-end workflow](#end-to-end-workflow)
@@ -92,6 +93,8 @@ Screenshots of every screen at six widths (360–1920 px), before and after the 
 - [Outputs and user interface](#outputs-and-user-interface)
 - [Installation configuration and tests](#installation-configuration-and-tests)
 - [Measured results and limitations](#measured-results-and-limitations)
+- [Repository map](#repository-map)
+- [Security, contributing and changes](#security-contributing-and-changes)
 - [License](#license)
 
 ## What is built
@@ -329,6 +332,7 @@ Safeguards in code:
 - **The agent can't wander.** It is scoped to the invoice under investigation.
 - **Every step is recorded.** Each tool call is written to the hash-chained audit log, and each report is stored with its hash.
 - **Only a human confirms.** There is no confirm tool for agents; the confirm and reject routes are human-only and blocked on the MCP channel.
+- **Provider hiccups don't break a run.** Rate limits, HTTP 5xx and dropped connections are retried, then the next fallback model (`LLM_FALLBACK_MODELS`) is tried.
 
 **Try it locally**
 1. Generate a synthetic bank statement for your demo instance: `python -m Pramaan.backend.fixtures_agent --data .demo/runtime --out .demo/runtime/agent_fixtures`.
@@ -337,7 +341,18 @@ Safeguards in code:
 
 Or seed a ready-made instance with planted cases: `python -m Pramaan.backend.evaluate_agent --seed-instance .demo/agentx`, then start the API with `PRAMAAN_DATA=.demo/agentx`.
 
-**Measured results** (`python -m Pramaan.backend.evaluate_agent --write-docs`; details in [docs/AGENT_EVAL.md](docs/AGENT_EVAL.md)): on 26 synthetic sale lifecycles with 26 planted cases, the deterministic baseline planner traced 26/26 to source, invented 0 amounts, reached the correct outcome in 25/26, escalated 5/6 planted conflicts with 0 false escalations. LLM-planner numbers depend on the model; measure them with `--planner llm --write-docs`. Add `--repeats 5` to rerun every case five times on freshly rebuilt instances and report how many cases reach the same outcome on every run, the majority-vote accuracy, and per-run results. No auditor time saving is claimed: no manual baseline has been timed.
+**Measured results** (`python -m Pramaan.backend.evaluate_agent --write-docs`; details in [docs/AGENT_EVAL.md](docs/AGENT_EVAL.md) and [docs/AGENT_EVAL-LLM.md](docs/AGENT_EVAL-LLM.md)) on 26 synthetic sale lifecycles with 26 planted cases:
+
+| Metric | No-AI baseline planner | Gemini planner (`gemini-3.1-flash-lite-preview` + fallbacks) |
+|---|---|---|
+| Traced to a source record | 26/26 | 26/26 |
+| Invented amounts | 0 | 0 |
+| Correct outcome | 25/26 | 25/26 |
+| Planted conflicts escalated | 5/6 | 5/6 |
+| False escalations | 0 | 0 |
+| Same outcome on 5 independent runs | 26/26 | 26/26 (2 of 130 investigations ended “unexplained” without drafting the evidence request; same outcome class) |
+
+The AI planner matching the fixed baseline is the point: safety comes from the design (tools compute, server rules decide outcomes, humans confirm), not from trusting the model. Re-measure per model with `--planner llm --repeats 5 --write-docs`. Synthetic data only; no auditor time saving is claimed because no manual baseline has been timed.
 
 ## Outputs and user interface
 
@@ -355,6 +370,16 @@ Review outcomes are EXCEPTION_CONFIRMED, EXPLAINED, or DATA_ERROR; a final decis
 | Client         | Business records; registers and disclosures; evidence inbox.                                          |
 | Auditor        | Run summary; samples/evidence requests; findings/provenance; workpapers; integrity/post-test changes. |
 | Human reviewer | Auditor views plus final-decision control when that credential carries human-review capability, including bulk review of selected findings (keyboard: `j`/`k` move, `x` select). |
+
+**Help for first-time users.** The interface explains itself without hiding the audit detail:
+
+- **Plain-language hints:** audit terms (observation, assertion, test of details, population, certainty item, snapshot, seed, potential misstatement and others) carry a small **?** that explains the word on hover, keyboard focus + Enter, or tap. One shared glossary ([web/src/glossary.tsx](web/src/glossary.tsx)) supplies every definition.
+- **Help** in the top bar: next steps for the signed-in role and the full glossary.
+- **Getting started** card on each overview: 3–4 linked steps. It can be dismissed and restored from Help.
+- **Next-step empty states:** empty tables say what to do (for example "No register uploaded yet. Upload your original sales register CSV above").
+- **Readable labels:** activity events and coverage statuses are shown as sentences rather than codes; sample tabs read Sales sample / Year-end cut-off / Credit notes.
+
+All of it is keyboard-accessible and checked with axe (0 violations on the core screens, including with a hint and the Help panel open) and at 360–1920 px without horizontal overflow.
 
 See [docs/INTEGRATION_REVIEW.md](docs/INTEGRATION_REVIEW.md), [docs/design.md](docs/design.md), and [docs/website.md](docs/website.md) for tested integration and UI contracts.
 
@@ -398,7 +423,7 @@ $env:PRAMAAN_DATA = Join-Path $PWD.Path '.demo/runtime'
 | PRAMAAN_E2E_CHANNEL         | chrome                | Playwright browser channel; set to empty to use Playwright's bundled Chromium.                                  |
 | PRAMAAN_E2E_VIDEO           | on                    | Set to `off` where Playwright's ffmpeg is not installed.                                                         |
 
-**Tests.** CI (`.github/workflows/ci.yml`) runs all of these on every push and pull request:
+**Tests.** CI (`.github/workflows/ci.yml`) runs all of these on every push and pull request; a separate `Secret scan` workflow checks the full history for leaked credentials. Current suite: 142 backend tests, 30 UI unit tests, 8 browser journeys.
 
 ```powershell
 $env:PYTHONPATH = Join-Path $PWD.Path 'launcher'
@@ -472,6 +497,12 @@ Read [docs/PROGRESS.md](docs/PROGRESS.md), [docs/PHASES.md](docs/PHASES.md), [do
 | [docs/README-SYN.md](docs/README-SYN.md)    | Generator/checker specification, not a claim that every specified feature is implemented.    |
 | [docs/DEMO.md](docs/DEMO.md)                | Accurate live walkthrough.                                                                   |
 | [SECURITY.md](SECURITY.md) · [CONTRIBUTING.md](CONTRIBUTING.md) · [CHANGELOG.md](CHANGELOG.md) | Vulnerability reporting and protections; how to contribute; change history. |
+
+## Security, contributing and changes
+
+- [SECURITY.md](SECURITY.md): how to report a vulnerability privately, what is protected, and known limits.
+- [CONTRIBUTING.md](CONTRIBUTING.md): ground rules (no mock implementations, no weakened safeguards, reversible data changes), setup, checks and commit style.
+- [CHANGELOG.md](CHANGELOG.md): notable changes by date.
 
 ## License
 
