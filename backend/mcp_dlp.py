@@ -49,6 +49,19 @@ SKIP_KEYS = frozenset({
 })
 _HEX = re.compile(r"\A[0-9a-f]{32,}\Z")
 
+# PRAMAAN's own identifiers end in a hex fragment (REG-ee6b3cf26582, F3-c7133b50c34c29, P3-...).
+# Now and then that fragment is all digits (about 1 in 280 for 12 hex characters), which looked like
+# a bank account number and withheld the whole result. A digit run that directly follows one of
+# these prefixes is an identifier, not an account, so it is left alone.
+_ID_PREFIX = re.compile(r"(?<![0-9A-Za-z])(?:REG|RP|BANK|ACT|INV-AG|P3|F3|ER|ER-AG|P5)-\Z")
+
+# Digit-only categories that an identifier's hex fragment can resemble.
+_ID_CATEGORIES = frozenset({"bank_account", "phone"})
+
+
+def _is_identifier(text: str, start: int) -> bool:
+    return bool(_ID_PREFIX.search(text, max(0, start - 8), start))
+
 
 def default_policy() -> dict[str, Any]:
     """Live policy: redact every category, hard-deny financial account numbers."""
@@ -70,13 +83,21 @@ def _scan(text: str, policy: dict[str, Any], counts: dict[str, int], hit_deny: s
     masked = text
     for category in sorted(policy["redact"]):
         pattern = PATTERNS[category]
-        found = pattern.findall(masked)
-        if not found:
+        mask = policy["mask"].format(category=category.upper())
+        hits = 0
+
+        def replace(match: re.Match[str], source: str = masked) -> str:
+            nonlocal hits
+            if category in _ID_CATEGORIES and _is_identifier(source, match.start()):
+                return match.group(0)
+            hits += 1
+            return mask
+        masked = pattern.sub(replace, masked)
+        if not hits:
             continue
-        counts[category] = counts.get(category, 0) + len(found)
+        counts[category] = counts.get(category, 0) + hits
         if category in policy.get("deny", set()):
             hit_deny.add(category)
-        masked = pattern.sub(policy["mask"].format(category=category.upper()), masked)
     return masked
 
 

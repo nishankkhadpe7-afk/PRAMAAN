@@ -21,6 +21,8 @@ Notable changes to PRAMAAN, newest first. Dates are when the change landed on `m
 - AI coding-tool folders (`.claude/`, `.cursor/`, `.gemini/`, `.specstory/`) are now git-ignored.
 
 ### Fixed
+- The privacy filter no longer mistakes PRAMAAN's own IDs for bank account numbers. About 1 in 280 register IDs (like `REG-123456789012`) has an all-digit tail, and that withheld the assistant's run summary and agent tool results. It was also the cause of an occasional CI failure.
+- CI uses the Node 24 versions of the GitHub actions (checkout, setup-python, setup-node, upload-artifact v6), which removes the deprecation warnings.
 - The investigation agent survives a dropped connection or timeout from the model provider: it retries, then moves to the next fallback model, instead of crashing the run.
 
 ## 2026-11-08

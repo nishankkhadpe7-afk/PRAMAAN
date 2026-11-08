@@ -36,6 +36,20 @@ class EgressDlpTests(unittest.TestCase):
         self.assertIn("bank_account", ctx.exception.categories)
         self.assertTrue(ctx.exception.report["denied"])
 
+    def test_all_digit_identifier_fragments_are_not_account_numbers(self):
+        # Random/hashed id fragments are sometimes all digits; they must not trigger the hard deny.
+        text = ("Run P3-123456789012345678, register REG-123456789012, finding T00-v2-REG-987654321098-1-FIELD_DIFF, "
+                "F3-12345678901234, request ER-AG-1234567890123456, statement BANK-555555555555, package P5-12345678901")
+        filtered, report = mcp_dlp.apply_egress_policy({"digest": text}, "assistant_context")
+        self.assertEqual(filtered["digest"], text)
+        self.assertFalse(report["denied"])
+        self.assertEqual(report["total_redactions"], 0)
+
+    def test_real_account_numbers_are_still_denied_next_to_ids(self):
+        for text in ("Paid from A/c 123456789012 for REG-ab12cd34ef56", "XREG-123456789012", "acct-123456789012", "123456789012"):
+            with self.subTest(text=text), self.assertRaises(mcp_dlp.DeniedByPolicy):
+                mcp_dlp.apply_egress_policy({"note": text}, "get_findings")
+
     def test_clean_payload_passes_through_unchanged(self):
         data = {"run_id": "P3-x", "findings": [{"finding_id": "F3-1", "state": "REVIEW"}]}
         filtered, report = mcp_dlp.apply_egress_policy(data, "get_findings")
