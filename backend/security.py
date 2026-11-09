@@ -32,13 +32,15 @@ class RestrictedConnection(sqlite3.Connection):
         self.denied_operations = []
         for action in denied:
             security_event(caller, action, "denied", "db")
+# Reachable without a credential: liveness, and signing in (which has its own lockout and rate limit).
+PUBLIC_ACTIONS = {"health", "auth_login", "auth_methods"}
 CLIENT = {"import_sale", "update_business_record", "create_customer", "create_sale",
           "reverse_journal", "upload_register", "upload_related_parties",
-          "submit_requested_evidence", "list_evidence_requests", "whoami", "replace_evidence"}
+          "submit_requested_evidence", "list_evidence_requests", "whoami", "replace_evidence", "auth_logout"}
 AUDITOR = {"get_sale", "create_snapshot", "run_audit", "detect_changes", "reproduce", "record_post_test_changes",
            "verify_log", "export_workpaper", "reconcile_register", "get_journal",
            "create_audit_run", "reproduce_audit_run", "rerun_audit",
-           "list_evidence_requests", "post_test_changes", "audit_result", "whoami"}
+           "list_evidence_requests", "post_test_changes", "audit_result", "whoami", "auth_logout"}
 AUDITOR |= {"create_export_package", "get_export_package", "export_p5_workpaper", "export_memo",
             "export_defensibility_pack", "get_review_queue", "record_review_decision", "propose_review_decision", "get_p5_lifecycle"}
 CLIENT |= {"web_business", "web_registers", "web_inbox"}
@@ -336,7 +338,7 @@ class SecurityMiddleware:
             self.ready_path = p1.DB_PATH
         route = resolve_route(p1.app, scope)
         action = route.name if route else "unknown_operation"
-        if action == "health":
+        if action in PUBLIC_ACTIONS:
             return await self.app(scope, receive, send)
         headers = dict(scope.get("headers", []))
         caller = await to_thread.run_sync(authenticate, headers.get(b"authorization", b"").decode("latin1"))

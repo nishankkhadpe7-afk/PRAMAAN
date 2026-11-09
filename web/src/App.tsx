@@ -14,7 +14,19 @@ export function Login(){
   const {signIn,expired}=useSession();
   const [token,setToken]=useState('');
   const [showToken,setShowToken]=useState(false);
+  const [mode,setMode]=useState<'account'|'credential'>('credential');
+  const [user,setUser]=useState(''),[password,setPassword]=useState(''),[code,setCode]=useState('');
   const navigate=useNavigate();
+  // Offer account sign-in first only when the server says accounts exist; otherwise keep the launcher credential.
+  useEffect(()=>{fetch('/api/auth/methods',{cache:'no-store',credentials:'omit'}).then(r=>r.ok?r.json():null).then(m=>{if(m?.accounts)setMode('account')}).catch(()=>{})},[]);
+  const enter=(caller:{role:string})=>navigate(caller.role==='auditor'?'/auditor':'/client',{replace:true});
+  async function accountSignIn(){
+    const res=await fetch('/api/auth/login',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({username:user.trim(),password,code:code.trim()}),cache:'no-store',credentials:'omit'});
+    const body=await res.json().catch(()=>({}));
+    setPassword('');setCode('');
+    if(!res.ok)throw new Error(typeof body.detail==='string'?body.detail:'Sign-in failed. Try again.');
+    enter(await signIn(body.token));
+  }
 
   return <div className="login">
     <div className="login-brand"><Brand/><Link className="login-back" to="/"><span className="back-arrow" aria-hidden="true"><ArrowLeft size={14}/></span><span>Back to home</span></Link></div>
@@ -35,9 +47,20 @@ export function Login(){
       <section className="login-card">
         <span className="login-lock" aria-hidden="true"><ShieldCheck size={18}/></span>
         <h2>Sign in to Pramaan</h2>
-        <p>Paste the access credential issued for your role by the local launcher.</p>
+        <p>{mode==='account'?'Use your username, password and the 6-digit code from your authenticator app.':'Paste the access credential issued for your role by the local launcher.'}</p>
         {expired&&<div role="alert" className="notice notice-error">Your session ended. Use a valid credential to continue.</div>}
-        <Mutation>{(run,busy)=><form onSubmit={e=>{e.preventDefault();void run(async()=>{const caller=await signIn(token.trim());setToken('');navigate(caller.role==='auditor'?'/auditor':'/client',{replace:true})})}}>
+        <div className="login-modes" role="group" aria-label="Sign-in method">
+          <button type="button" aria-pressed={mode==='account'} onClick={()=>setMode('account')}>Account</button>
+          <button type="button" aria-pressed={mode==='credential'} onClick={()=>setMode('credential')}>Credential</button>
+        </div>
+        {mode==='account'?<Mutation>{(run,busy)=><form onSubmit={e=>{e.preventDefault();void run(accountSignIn)}}>
+          <div className="field"><label htmlFor="account-user"><span>Username</span></label><div className="input-wrapper"><input id="account-user" name="username" autoComplete="username" autoCapitalize="none" spellCheck={false} value={user} onChange={e=>setUser(e.target.value)} required maxLength={40}/></div></div>
+          <div className="field"><label htmlFor="account-password"><span>Password</span></label><div className="input-wrapper"><input id="account-password" type={showToken?'text':'password'} name="password" autoComplete="current-password" value={password} onChange={e=>setPassword(e.target.value)} required maxLength={200}/>
+            <button type="button" className="toggle-pw" aria-label={showToken?'Hide password':'Show password'} onClick={()=>setShowToken(v=>!v)}>{showToken?<EyeOff size={16}/>:<Eye size={16}/>}</button></div></div>
+          <div className="field"><label htmlFor="account-code"><span>Authenticator code</span></label><div className="input-wrapper"><input id="account-code" name="one-time-code" inputMode="numeric" autoComplete="one-time-code" pattern="[0-9]{6}" maxLength={6} placeholder="6 digits" value={code} onChange={e=>setCode(e.target.value.replace(/\D/g,''))} required/></div></div>
+          <button className="primary wide" disabled={busy}>{busy?'Checking…':'Sign in'}<ArrowRight size={16}/></button>
+        </form>}</Mutation>:
+        <Mutation>{(run,busy)=><form onSubmit={e=>{e.preventDefault();void run(async()=>{const caller=await signIn(token.trim());setToken('');enter(caller)})}}>
           <div className="field">
             <label htmlFor="credential-input"><span>Access credential</span></label>
             <div className="input-wrapper">
@@ -51,7 +74,7 @@ export function Login(){
             {busy?'Validating identity…':'Enter workspace'}
             <ArrowRight size={16}/>
           </button>
-        </form>}</Mutation>
+        </form>}</Mutation>}
         <div className="credential-help" role="note">
           <ShieldCheck size={17}/>
           <div>

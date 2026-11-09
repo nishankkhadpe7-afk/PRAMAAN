@@ -9,7 +9,35 @@ REM ---------------------------------------------------------------------------
 
 if /I "%~1"=="api" goto :RUN_API
 if /I "%~1"=="web" goto :RUN_WEB
+if /I "%~1"=="accounts" goto :RUN_TOOL
+if /I "%~1"=="backup" goto :RUN_TOOL
+if /I "%~1"=="vault" goto :RUN_TOOL
 goto :MAIN
+
+REM Admin tools, run against the same data folder as the app:
+REM   START_PRAMAAN.bat accounts add nishank --role auditor
+REM   START_PRAMAAN.bat accounts list ^| unlock NAME ^| reset-mfa NAME ^| set-password NAME ^| disable NAME
+REM   START_PRAMAAN.bat backup create --out D:\pramaan-backups --keep 14
+REM   START_PRAMAAN.bat vault new-key C:\pramaan-keys\vault.key
+:RUN_TOOL
+cd /d "%~dp0"
+set "PROJECT_ROOT=%CD%"
+set "PYTHONPATH=%PROJECT_ROOT%\launcher"
+if not defined PRAMAAN_DATA set "PRAMAAN_DATA=%PROJECT_ROOT%\.demo\runtime"
+set "TOOL_PY=%PROJECT_ROOT%\.venv-p4\Scripts\python.exe"
+if not exist "%TOOL_PY%" set "TOOL_PY=python"
+set "TOOL=%~1"
+if /I "%TOOL%"=="vault" set "TOOL=vault_tools"
+shift
+set "REST="
+:COLLECT_ARGS
+if "%~1"=="" goto :TOOL_GO
+set "REST=%REST% %1"
+shift
+goto :COLLECT_ARGS
+:TOOL_GO
+"%TOOL_PY%" -m Pramaan.backend.%TOOL%%REST%
+exit /b %errorlevel%
 
 :RUN_API
 cd /d "%~dp0"

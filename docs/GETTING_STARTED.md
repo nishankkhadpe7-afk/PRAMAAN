@@ -31,6 +31,14 @@ Paste one key from the Notepad file into **Access credential** and press **Enter
 
 ![Sign-in page](assets/getting-started/1-sign-in.png)
 
+**Signing in with an account instead (password + authenticator code).** Create the account once, in PowerShell from the project folder:
+
+```powershell
+.\START_PRAMAAN.bat accounts add username --role auditor
+```
+
+Replace `username` with the login name you want (use `--role client_employee` for a client login). You choose the password when asked (12+ characters). The command prints a key: add it to Google or Microsoft Authenticator with "Enter a setup key", and the phone shows the 6-digit code. Reload the sign-in page; it opens on **Account**. Five wrong tries lock the account for 15 minutes (`.\START_PRAMAAN.bat accounts unlock username`). Encryption and backups: see the README section "Running it for real".
+
 Each workspace opens with a short **Getting started** card. You can hide it and bring it back any time from **Help & guide** in the account menu (your avatar, top right). Words marked with a small **?** explain themselves when you hover over or tap them, and **Help** also has the full list of audit words in plain language.
 
 ## 4. The client side

@@ -126,8 +126,7 @@ def change_report(db, run_id):
         vault_mismatches = []
         for record in covered:
             sha = record["sha256"]
-            path = p1.VAULT / sha
-            if not path.is_file() or p1.digest(path.read_bytes()) != sha:
+            if not p1.blob_intact(sha):
                 vault_mismatches.append(sha)
         if vault_mismatches:
             current_hash = p1.digest(p1.canonical([current, sorted(vault_mismatches)]))

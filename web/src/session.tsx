@@ -11,7 +11,7 @@ function stored(){try{return window.sessionStorage.getItem(KEY)||''}catch{return
 function remember(token:string){try{token?window.sessionStorage.setItem(KEY,token):window.sessionStorage.removeItem(KEY)}catch{/* storage unavailable: session stays in memory */}}
 export function SessionProvider({children}:{children:ReactNode}){
  const [token,setToken]=useState(''); const [identity,setIdentity]=useState<Identity|null>(null);const [expired,setExpired]=useState(false);const [restoring,setRestoring]=useState(()=>!!stored())
- const signOut=()=>{remember('');setToken('');setIdentity(null)}
+ const signOut=()=>{if(token)void fetch('/api/auth/logout',{method:'POST',headers:{Authorization:'Bearer '+token},cache:'no-store',credentials:'omit'}).catch(()=>{});remember('');setToken('');setIdentity(null)}
  const api=useMemo(()=>token?makeApi(token,()=>{signOut();setExpired(true)}):null,[token])
  async function signIn(value:string){let verified:Identity;try{verified=await makeApi(value).json<Identity>('/p4/identity')}catch(error){if(error instanceof ApiError&&error.status===401)throw new Error('This credential was not accepted. It may be mistyped, expired or revoked; generate a new one with the launcher and paste it again.');throw error}setUploadLimit(verified.max_upload_bytes);remember(value);setExpired(false);setToken(value);setIdentity(verified);return verified}
  useEffect(()=>{const saved=stored();if(!saved){setRestoring(false);return}let active=true

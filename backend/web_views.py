@@ -472,7 +472,7 @@ def web_run_integrity(run_id: str, upload_id: str | None = None):
         files = [(r["upload_id"], r["sha256"]) for r in snapshot.get("register_uploads", [])]
         files += [(e["evidence_id"], e["sha256"]) for e in snapshot["p2_evidence"] + snapshot["p3_evidence"]]
         files += [(f["file_name"], f["sha256"]) for f in (snapshot.get("dataset_manifest") or {}).get("files", [])]
-        bad = [name for name, sha in files if not (p1.VAULT / sha).is_file() or p1.digest((p1.VAULT / sha).read_bytes()) != sha]
+        bad = [name for name, sha in files if not p1.blob_intact(sha)]
         check("sources", "Original source files are intact", not bad,
               f"Re-hashed {len(files)} preserved files in the vault; " + ("all match their recorded SHA-256." if not bad else f"{len(bad)} changed or missing: {', '.join(bad[:5])}."))
         packages = list(db.execute("SELECT package_id,report_json,content_hash FROM p5_packages WHERE run_id=?", (run_id,)))
@@ -574,10 +574,10 @@ def web_evidence_content(evidence_id: str):
             row = db.execute("SELECT * FROM p2_evidence WHERE evidence_id=?", (evidence_id,)).fetchone()
         if not row:
             raise HTTPException(404, "evidence unavailable")
-        path = p1.VAULT / row["sha256"]
-        if not path.is_file() or p1.digest(path.read_bytes()) != row["sha256"]:
+        raw = p1.read_blob(row["sha256"])
+        if raw is None or p1.digest(raw) != row["sha256"]:
             raise HTTPException(409, "evidence integrity failure")
-        return Response(path.read_bytes(), media_type="application/octet-stream", headers={"Content-Disposition": f'attachment; filename="{evidence_filename(dict(row), evidence_id)}"', "X-Content-Type-Options": "nosniff"})
+        return Response(raw, media_type="application/octet-stream", headers={"Content-Disposition": f'attachment; filename="{evidence_filename(dict(row), evidence_id)}"', "X-Content-Type-Options": "nosniff"})
     finally:
         db.close()
 

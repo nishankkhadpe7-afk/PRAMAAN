@@ -59,3 +59,8 @@
 .login .login-back:hover .back-arrow{transform:translateX(-3px);background:var(--l-gold);color:#15120b}
 .login .login-back:focus-visible{outline:2px solid var(--l-gold);outline-offset:3px}
 @media (prefers-reduced-motion:reduce){.login .back-arrow{transition:none}}
+
+.login-modes{display:grid;grid-template-columns:1fr 1fr;gap:4px;padding:4px;margin:4px 0 14px;border-radius:12px;background:var(--surface-2,rgba(0,0,0,.05))}
+.login-modes button{border:0;background:transparent;padding:8px 10px;border-radius:9px;font:inherit;font-weight:600;color:var(--muted,#667);cursor:pointer}
+.login-modes button[aria-pressed="true"]{background:var(--surface,#fff);color:var(--ink,#111);box-shadow:0 1px 3px rgba(0,0,0,.12)}
+.login-modes button:focus-visible{outline:2px solid var(--accent,#3b6);outline-offset:2px}

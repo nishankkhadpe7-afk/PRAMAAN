@@ -445,7 +445,7 @@ $env:PRAMAAN_DATA = Join-Path $PWD.Path '.demo/runtime'
 | PRAMAAN_E2E_CHANNEL         | chrome                | Playwright browser channel; set to empty to use Playwright's bundled Chromium.                                  |
 | PRAMAAN_E2E_VIDEO           | on                    | Set to `off` where Playwright's ffmpeg is not installed.                                                         |
 
-**Tests.** CI (`.github/workflows/ci.yml`) runs all of these on every push and pull request; a separate `Secret scan` workflow checks the full history for leaked credentials. Current suite: 233 backend tests (9 of them need Tesseract and skip without it), 39 UI unit tests (and validated on two real Kaggle datasets: see docs/IMPORT_AUDIT.md), 8 browser journeys.
+**Tests.** CI (`.github/workflows/ci.yml`) runs all of these on every push and pull request; a separate `Secret scan` workflow checks the full history for leaked credentials. Current suite: 253 backend tests (9 of them need Tesseract and skip without it), 39 UI unit tests (and validated on two real Kaggle datasets: see docs/IMPORT_AUDIT.md), 8 browser journeys.
 
 ```powershell
 $env:PYTHONPATH = Join-Path $PWD.Path 'launcher'
@@ -519,6 +519,34 @@ Read [docs/PROGRESS.md](docs/PROGRESS.md), [docs/PHASES.md](docs/PHASES.md), [do
 | [docs/README-SYN.md](docs/README-SYN.md)    | Generator/checker specification, not a claim that every specified feature is implemented.    |
 | [docs/DEMO.md](docs/DEMO.md)                | Accurate live walkthrough.                                                                   |
 | [SECURITY.md](SECURITY.md) · [CONTRIBUTING.md](CONTRIBUTING.md) · [CHANGELOG.md](CHANGELOG.md) | Vulnerability reporting and protections; how to contribute; change history. |
+
+## Running it for real: accounts, encryption, backups
+
+On Windows (PowerShell; drop the `.\` in Command Prompt), `START_PRAMAAN.bat` runs these admin tools against the app's own data folder (`.demo\runtime` unless `PRAMAAN_DATA` is set):
+
+```powershell
+# 1. Vault key, stored OUTSIDE the data folder (back it up separately)
+.\START_PRAMAAN.bat vault new-key C:\pramaan-keys\vault.key
+$env:PRAMAAN_VAULT_KEY_FILE = "C:\pramaan-keys\vault.key"
+.\START_PRAMAAN.bat vault encrypt
+
+# 2. Named accounts with an authenticator app (password asked interactively)
+.\START_PRAMAAN.bat accounts add username --role auditor
+#    replace 'username' with the name you want; use --role client_employee for a client login, add --human for final sign-off rights
+.\START_PRAMAAN.bat accounts list
+#    also: unlock NAME, reset-mfa NAME, set-password NAME, disable NAME, enable NAME
+
+# 3. Encrypted backup, verify, restore (passphrase asked interactively, 12+ characters)
+.\START_PRAMAAN.bat backup create --out D:\pramaan-backups --keep 14
+.\START_PRAMAAN.bat backup verify D:\pramaan-backups\pramaan-backup-<time>.pramaan
+.\START_PRAMAAN.bat backup restore <file> --to .\restored-data
+```
+
+Encrypted evidence needs the key when the app runs too, so make the setting permanent with `setx PRAMAAN_VAULT_KEY_FILE C:\pramaan-keys\vault.key` (then open a new window). Without it the app reports "Evidence vault locked" rather than serving files.
+
+On macOS/Linux use `PYTHONPATH=launcher PRAMAAN_DATA=.demo/runtime python -m Pramaan.backend.<accounts|backup|vault_tools> ...`.
+
+Once an account exists, the sign-in page opens on **Account**; launcher credentials still work under **Credential**. The SQLite databases are not encrypted by PRAMAAN: keep the data folder on an encrypted disk (BitLocker / FileVault).
 
 ## Security, contributing and changes
 

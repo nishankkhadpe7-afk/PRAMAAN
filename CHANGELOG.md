@@ -5,6 +5,8 @@ Notable changes to PRAMAAN, newest first. Dates are when the change landed on `m
 ## Unreleased
 
 ### Added
+- **GSTR-1 import**: the return JSON downloaded from the GST portal can be uploaded as a sales register and reconciled against the books (invoices, exports, credit/debit notes; B2CS totals summarised). File import only, no portal login; tested on synthetic returns.
+- **Account sign-in with MFA** (password + authenticator code, lockout, rate limit, revoke on sign-out) alongside launcher credentials; **encryption at rest** for the evidence vault (AES-256-GCM, key kept outside the data folder, safe convert tool); **encrypted, verified backups** with restore and rotation. See SECURITY.md.
 - Tested on Kirana Invoice Training Data (50 synthetic Indian invoices) and Tally's official sample Excel: smoother OCR of small scans (dates read 29 to 47 of 50, totals 24 to 42, wrong totals 2 to 0), Subtotal and single-GST lines for the arithmetic check, apostrophe-for-slash fix in invoice numbers, and Tally's multi-row voucher template in the Excel reader. New optional dependency: Pillow.
 - Tested against a public MIT-licensed Tally practice company: invoice-view vouchers no longer report a false imbalance, the no-voucher-number rejection explains itself, and bank CSVs with an opening-balance line import instead of failing.
 - Register check: **Taxable value vs books**, **non-standard GST rate goes to review**, and **books credit notes missing from a register** that lists credit notes. UI: integrity cards, fact labels, assistant trail and file picker restyled; unused frontend code removed. Walkthrough PDF and deck screenshots re-captured with the current UI.

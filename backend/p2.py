@@ -158,7 +158,8 @@ class RegisterIn(BaseModel):
     # "csv": UTF-8 CSV register. "tally_xml": a TallyPrime / Tally.ERP 9 XML export (Day Book or sales
     # vouchers); its sales vouchers become register rows and the XML itself is the preserved source.
     # "tally_xlsx": Tally's Sales Register exported to Excel; read by tally_register.py.
-    source_format: Literal["csv", "tally_xml", "tally_xlsx"] = "csv"
+    # "gstr1_json": the GSTR-1 JSON downloaded from the GST portal (or the offline tool); read by gstr1.py.
+    source_format: Literal["csv", "tally_xml", "tally_xlsx", "gstr1_json"] = "csv"
 
 
 class RelatedPartiesIn(BaseModel):
@@ -348,22 +349,25 @@ def upload_register(payload: RegisterIn) -> dict[str, Any]:
         source = decode_base64(payload.source_base64, label="register source")
     except UploadSafetyError as exc:
         raise HTTPException(422, "invalid or oversized register source") from exc
-    if payload.source_format in ("tally_xml", "tally_xlsx"):
+    if payload.source_format in ("tally_xml", "tally_xlsx", "gstr1_json"):
         from .document_import import DocumentReadError, parse_tally_sales
         from .tally_register import parse_tally_register
+        from .gstr1 import parse_gstr1
+        label = "GSTR-1 import" if payload.source_format == "gstr1_json" else "Tally import"
         try:
-            read = parse_tally_sales(source) if payload.source_format == "tally_xml" else parse_tally_register(source)
+            read = {"tally_xml": parse_tally_sales, "tally_xlsx": parse_tally_register, "gstr1_json": parse_gstr1}[payload.source_format](source)
         except DocumentReadError as exc:
-            raise HTTPException(422, f"Tally import: {exc}") from exc
+            raise HTTPException(422, f"{label}: {exc}") from exc
         rows = read["rows"]
         report = {"source_format": payload.source_format, "parser": read["parser"], "vouchers_seen": read.get("vouchers_seen", len(read["rows"]) + len(read["rejected"])),
                   "skipped_vouchers": len(read["skipped"]), "skipped": read["skipped"][:50],
                   "rejected_vouchers": len(read["rejected"]), "rejected": read["rejected"][:50],
                   "warning_count": len(read["warnings"]), "warnings": read["warnings"][:50],
                   # register row number -> the Tally voucher it came from (kept in the event log)
-                  "row_sources": read["sources"][:2000], **({"sheets": read["sheets"]} if "sheets" in read else {})}
+                  "row_sources": read["sources"][:2000], **({"sheets": read["sheets"]} if "sheets" in read else {}),
+                  **({"return_summary": read["summary"]} if "summary" in read else {})}
         if not rows:
-            raise HTTPException(422, f"Tally import: no usable sales vouchers among {report['vouchers_seen']} vouchers")
+            raise HTTPException(422, f"{label}: no usable sales vouchers among {report['vouchers_seen']} vouchers")
     else:
         try:
             text = source.decode("utf-8-sig")
@@ -521,6 +525,10 @@ def reconcile_register(upload_id: str, date_order: Literal["detect", "DMY", "MDY
             differences = []
             parse_reviews = []
             for register_field, invoice_field in compared.items():
+                if register_field == "Customer" and raw.get("Return") == "GSTR-1":
+                    # A GSTR-1 return names the buyer only by GSTIN (compared below), never by name.
+                    not_applicable += 1
+                    continue
                 register_value = raw.get(register_field)
                 system_value = money_text(invoice[invoice_field]) if invoice_field == "gross_cents" else invoice[invoice_field]
                 comparison = t00.compare(register_field, register_value, system_value, order_used)

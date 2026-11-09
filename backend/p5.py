@@ -57,9 +57,9 @@ def capture_registers(db, inline_sources=False):
     vault (H7); ``inline_sources`` rebuilds the legacy shape for comparing with older snapshots."""
     registers = []
     for row in db.execute("SELECT * FROM p2_register_uploads ORDER BY upload_id"):
-        path = p1.VAULT / row["sha256"]
-        raw = path.read_bytes() if path.is_file() else b""
-        status = "VALID" if path.is_file() and p1.digest(raw) == row["sha256"] else "CHANGED_OR_MISSING"
+        stored = p1.read_blob(row["sha256"])
+        raw = stored if stored is not None else b""
+        status = "VALID" if stored is not None and p1.digest(raw) == row["sha256"] else "CHANGED_OR_MISSING"
         try:
             cells = list(csv.reader(io.StringIO(raw.decode("utf-8-sig"), newline="")))
         except (UnicodeError, csv.Error):
@@ -85,8 +85,7 @@ def register_bytes(register):
     if "source_base64" in register:
         raw = base64.b64decode(register["source_base64"])
     else:
-        path = p1.VAULT / register["sha256"]
-        raw = path.read_bytes() if path.is_file() else b""
+        raw = p1.read_blob(register["sha256"]) or b""
     if p1.digest(raw) != register["sha256"]:
         raise HTTPException(409, "snapshot source integrity failure")
     return raw
@@ -355,15 +354,14 @@ def create_export_package(run_id: str, payload: PackageIn):
         register_bytes(register)
         index = evidence_index(snapshot, register)
         for sha in sorted({item["sha256"] for item in index.values() if item.get("sha256")}):
-            path = p1.VAULT / sha
-            if not path.is_file() or p1.digest(path.read_bytes()) != sha:
+            if not p1.blob_intact(sha):
                 raise HTTPException(409, "source evidence integrity failure")
         findings = enrich(audit_findings(snapshot, result, register), run, snapshot, result, index)
         checks = [{"object_ref": r["invoice_id"], **capacity_screen(r)} for r in snapshot.get("source_data", {}).get("movement_routes.csv", [])]
         public_key = os.environ.get("PRAMAAN_DEMO_IRP_PUBLIC_KEY", "")
         invoices = {i["invoice_id"]: i for i in snapshot["invoices"]}
         for evidence in snapshot["p3_evidence"]:
-            raw = (p1.VAULT / evidence["sha256"]).read_bytes()
+            raw = p1.read_blob(evidence["sha256"]) or b""
             if p1.digest(raw) != evidence["sha256"]:
                 raise HTTPException(409, "snapshot evidence bytes changed")
             if evidence["content_type"] == "application/vnd.pramaan.demo-irp+json" and evidence["object_id"] in invoices:

@@ -10,7 +10,7 @@ from pathlib import Path
 from typing import Any
 from xml.etree.ElementTree import Element, SubElement, tostring
 
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Request
 from fastapi.responses import Response
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
@@ -211,6 +211,53 @@ def run_rules(state: dict[str, Any], run_id: str, snapshot_hash: str, seed: str,
     return {"run_id": run_id, "sale_id": state["sale_id"], "snapshot_hash": snapshot_hash, "ruleset_version": ruleset_version, "ruleset_hash": ruleset_hash, "sampling_seed": seed, "canonicalization_version": CANONICALIZATION, "findings": findings}
 
 
+class LoginIn(BaseModel):
+    username: str = Field(max_length=40)
+    password: str = Field(max_length=200)
+    code: str = Field(max_length=10)
+
+
+_LOGIN_ATTEMPTS: dict[str, list[float]] = {}
+LOGIN_ATTEMPTS_PER_MINUTE = 10
+
+
+@app.post("/auth/login")
+def auth_login(payload: LoginIn, request: Request) -> dict[str, Any]:
+    """Username + password + authenticator code -> a role credential (the same kind the launcher issues)."""
+    from . import accounts
+    import time as _time
+    address = request.client.host if request.client else "unknown"
+    recent = [t for t in _LOGIN_ATTEMPTS.get(address, []) if t > _time.time() - 60]
+    if len(recent) >= LOGIN_ATTEMPTS_PER_MINUTE:
+        raise HTTPException(429, "Too many sign-in attempts. Wait a minute and try again.")
+    _LOGIN_ATTEMPTS[address] = recent + [_time.time()]
+    try:
+        return accounts.login(payload.username, payload.password, payload.code)
+    except accounts.LoginRefused as exc:
+        raise HTTPException(401, str(exc)) from None
+
+
+@app.get("/auth/methods")
+def auth_methods() -> dict[str, bool]:
+    """Public: whether account sign-in is set up, so the sign-in page can offer it first."""
+    from . import accounts
+    return {"accounts": accounts.accounts_exist(), "credential": True}
+
+
+@app.post("/auth/logout")
+def auth_logout(request: Request) -> dict[str, bool]:
+    """Ends an account session now instead of waiting for it to expire.
+
+    Launcher credentials are provisioned and may be shared between tabs, so they stay valid
+    until they expire or an administrator revokes them; the browser just forgets them."""
+    from . import accounts, security
+    caller = security.identity.get() or {}
+    revoked = accounts.is_account(caller.get("subject", ""))
+    if revoked:
+        security.revoke(request.headers.get("authorization", "")[7:])
+    return {"signed_out": True, "revoked": revoked}
+
+
 @app.get("/health")
 def health() -> dict[str, str]:
     return {"status": "ok", "phase": "P1-P5", "p6_status": "technical gate only; independent rehearsal evidence pending", "mode": "local-demo"}
@@ -263,15 +310,33 @@ def import_sale(payload: SaleIn) -> dict[str, Any]:
         db.close()
 
 
+def read_blob(sha: str) -> bytes | None:
+    """Original bytes of a vault file (decrypted if it is encrypted at rest), or None if it is missing.
+    Raises vault_crypto.VaultKeyError when the file is encrypted and the key is missing or wrong."""
+    from . import vault_crypto
+    path = VAULT / sha
+    if not path.is_file():
+        return None
+    return vault_crypto.unseal(sha, path.read_bytes(), vault_crypto.configured_key(ROOT))
+
+
+def blob_intact(sha: str) -> bool:
+    """True when the vault file exists and its original bytes still hash to its name."""
+    raw = read_blob(sha)
+    return raw is not None and digest(raw) == sha
+
+
 def store_blob(raw: bytes) -> str:
-    """Write content-addressed bytes to the vault atomically; returns the SHA-256."""
+    """Write content-addressed bytes to the vault atomically (encrypted when a vault key is configured); returns the SHA-256."""
+    from . import vault_crypto
     sha = digest(raw)
     target = VAULT / sha
-    if target.is_file() and digest(target.read_bytes()) == sha:
+    if blob_intact(sha):
         return sha
     VAULT.mkdir(parents=True, exist_ok=True)
+    key = vault_crypto.configured_key(ROOT)
     temp = target.with_name(sha + ".tmp-" + os.urandom(4).hex())
-    temp.write_bytes(raw)
+    temp.write_bytes(vault_crypto.seal(sha, raw, key) if key else raw)
     os.replace(temp, target)
     return sha
 
@@ -470,6 +535,15 @@ from .p6_agent import router as p6_router
 app.include_router(p6_router)
 from .web_views import router as web_router
 app.include_router(web_router)
+from .vault_crypto import VaultKeyError as _VaultKeyError
+
+
+@app.exception_handler(_VaultKeyError)
+async def _vault_key_missing(request, exc):  # evidence is encrypted at rest and the key is missing or wrong
+    from fastapi.responses import JSONResponse
+    return JSONResponse({"detail": f"Evidence vault locked: {exc}"}, status_code=503)
+
+
 app.add_middleware(SecurityMiddleware)
 from .body_limit import BodySizeLimitMiddleware
 # Size is enforced before authentication, parsing or logging (S4). Only the response-only gzip layer below wraps it.

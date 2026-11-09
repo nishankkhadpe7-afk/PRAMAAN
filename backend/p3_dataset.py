@@ -296,11 +296,13 @@ def import_dataset(directory: Path, db: sqlite3.Connection, vault: Path) -> dict
         return {"dataset_id": dataset_id, "already_imported": True, "file_count": len(raw), "row_count": sum(map(len, records.values())), "synthetic": True}
     for content in raw.values():
         sha = hashlib.sha256(content).hexdigest()
+        from . import vault_crypto
         path = vault / sha
         path.parent.mkdir(parents=True, exist_ok=True)
+        key = vault_crypto.configured_key(vault.parent)
         if not path.exists():
-            path.write_bytes(content)
-        elif hashlib.sha256(path.read_bytes()).hexdigest() != sha:
+            path.write_bytes(vault_crypto.seal(sha, content, key) if key else content)
+        elif hashlib.sha256(vault_crypto.unseal(sha, path.read_bytes(), key)).hexdigest() != sha:
             raise ValueError(f"content-addressed vault collision for {sha}")
     files: list[tuple[str, bytes, int]] = [(name, raw[name], len(records.get(name, []))) for name in raw]
     try:
