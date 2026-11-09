@@ -1,0 +1,61 @@
+/* Sign-in page: a traced-sale trail on the left, a quiet card on the right. */
+.login{--l-line:#262a31;--l-ink:#eceef0;--l-sub:#8f959d;--l-gold:#d4b06a}
+.login .login-layout{align-items:center;gap:clamp(32px,6vw,96px)}
+
+/* left */
+.login-kicker{margin:0 0 14px;font-size:14px;color:var(--l-gold);font-weight:500}
+.login-intro h1{font-size:clamp(40px,5vw,64px);line-height:1.02;letter-spacing:-.02em;margin:0 0 18px;font-weight:700}
+.login-accent{color:var(--l-gold);background:none;-webkit-text-fill-color:currentColor}
+.login-lede{max-width:520px;color:#b4b9c0;font-size:16.5px;line-height:1.6;margin:0 0 32px}
+
+.trail{margin:0;max-width:540px;padding:18px 20px 8px;border:1px solid var(--l-line);border-radius:14px;background:#101215}
+.trail figcaption{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:12px;font-size:13px;font-weight:600;color:var(--l-ink)}
+.trail figcaption small{font:500 11px var(--mono);color:var(--l-sub);border:1px solid var(--l-line);border-radius:999px;padding:1px 8px}
+.trail ol{list-style:none;margin:0;padding:0;position:relative}
+.trail ol::before{content:"";position:absolute;left:6px;top:10px;bottom:22px;width:1px;background:linear-gradient(var(--l-line),var(--l-gold));
+  transform-origin:top;animation:trail-draw 1.4s .2s cubic-bezier(.3,.7,.2,1) both}
+.trail li{position:relative;display:grid;grid-template-columns:14px 1fr auto;gap:14px;align-items:center;padding:9px 0;
+  animation:trail-in .45s calc(.25s + var(--i) * .17s) ease-out both}
+.trail li div{display:flex;flex-direction:column;min-width:0}
+.trail li strong{font-size:14px;font-weight:600;color:var(--l-ink)}
+.trail li small{font-size:12.5px;color:var(--l-sub)}
+.trail code{font:500 11.5px var(--mono);color:#7d848d;background:#16191d;border:1px solid var(--l-line);border-radius:6px;padding:2px 7px}
+.trail-node{width:13px;height:13px;border-radius:50%;background:#101215;border:2px solid #3a404a;display:grid;place-items:center;z-index:1}
+.trail-end .trail-node{width:22px;height:22px;margin-left:-4px;border-color:var(--l-gold);color:var(--l-gold);background:#1a1710}
+.trail-end strong{color:var(--l-gold)!important}
+.trail-seal{font:600 11px var(--mono);letter-spacing:.08em;text-transform:uppercase;color:var(--l-gold);border:1.5px solid var(--l-gold);border-radius:6px;padding:2px 8px;transform:rotate(-4deg);
+  animation:trail-stamp .35s 1.45s cubic-bezier(.3,1.6,.5,1) both}
+@keyframes trail-draw{from{transform:scaleY(0)}}
+@keyframes trail-in{from{opacity:0;transform:translateX(-6px)}}
+@keyframes trail-stamp{from{opacity:0;transform:rotate(-4deg) scale(1.6)}}
+
+/* right */
+.login .login-card{position:relative;padding:36px 34px 30px;border:1px solid var(--l-line)!important;border-radius:16px!important;background:#101215!important;background-image:none!important;box-shadow:0 20px 60px rgba(0,0,0,.35)!important}
+.login .login-card::before,.login .login-card::after{display:none!important}
+.login-lock{display:inline-grid;place-items:center;width:38px;height:38px;border-radius:11px;margin-bottom:16px;color:var(--l-gold);background:#1a1710;border:1px solid rgba(212,176,106,.3)}
+.login .login-card h2{font-size:26px;font-weight:650;letter-spacing:-.01em;margin:0 0 6px}
+.login .login-card>p{color:var(--l-sub);font-size:14px;margin:0 0 22px}
+.login .login-card .primary{background:var(--l-gold);background-image:none;color:#15120b;border-radius:10px;box-shadow:none}
+.login .login-card .primary:hover{background:#e2c286;transform:none}
+.login .credential-help{background:transparent;border:1px dashed var(--l-line);border-radius:10px}
+.login .credential-help strong{font-size:13.5px}
+.login .credential-help p,.login .login-note p{font-size:12.5px;color:var(--l-sub)}
+
+.role-guide{margin:18px 0 0;display:grid;gap:2px;border-top:1px solid var(--l-line);padding-top:14px}
+.role-guide>div{display:grid;grid-template-columns:132px 1fr;gap:10px;padding:6px 0;align-items:baseline}
+.role-guide dt{display:flex;align-items:center;gap:8px;font-size:13px;font-weight:600;color:var(--l-ink)}
+.role-guide dd{margin:0;font-size:12.5px;color:var(--l-sub);line-height:1.45}
+.role-guide .dot{width:8px;height:8px;border-radius:50%;flex:none}
+.role-guide .dot.client{background:#6d9cf0}.role-guide .dot.limited{background:var(--warning)}.role-guide .dot.on{background:var(--success)}
+
+@media (max-width:900px){.trail{max-width:none}.role-guide>div{grid-template-columns:1fr;gap:2px}}
+@media (prefers-reduced-motion:reduce){.trail ol::before,.trail li,.trail-seal{animation:none}}
+
+/* back link: a small pill; the arrow sits in its own circle and nudges left on hover */
+.login .login-back{display:inline-flex;align-items:center;gap:10px;padding:5px 14px 5px 5px;border:1px solid var(--l-line);border-radius:999px;
+  background:rgba(16,18,21,.8);backdrop-filter:blur(10px);color:var(--l-sub);font-size:13.5px;text-decoration:none;transition:color .15s,border-color .15s,background .15s}
+.login .back-arrow{display:grid;place-items:center;width:26px;height:26px;border-radius:50%;background:#1a1d22;color:var(--l-ink);transition:transform .2s cubic-bezier(.3,.7,.2,1),background .15s,color .15s}
+.login .login-back:hover{color:var(--l-ink);border-color:#3a3f47;background:#14171b}
+.login .login-back:hover .back-arrow{transform:translateX(-3px);background:var(--l-gold);color:#15120b}
+.login .login-back:focus-visible{outline:2px solid var(--l-gold);outline-offset:3px}
+@media (prefers-reduced-motion:reduce){.login .back-arrow{transition:none}}

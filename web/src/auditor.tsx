@@ -190,7 +190,28 @@ function ReviewProgress({context,onReview,scope}:{context:Row;onReview?:()=>void
  const critical=findings.filter(f=>!f.human_decision&&tierOf(f.state)==='critical').length
  // Primary block of the summary: the one number a reviewer acts on, with the next step.
  const docs=inbox.data?.outstanding_documents
- return <section className="review-progress decision-hero" aria-label="Review progress"><div className="decision-hero-main"><div><p className="eyebrow">Needs your decision{scope?` · latest run: ${scope}`:''}</p><p className="decision-hero-count"><strong>{open}</strong> <span>of {findings.length} findings open</span></p><p className="decision-hero-detail">{critical} inconsistent · {proposed} proposal{proposed===1?'':'s'} awaiting a decision{docs!==undefined?` · ${docs} client document${docs===1?'':'s'} outstanding`:''}</p></div>{onReview&&critical>0&&<button type="button" className="primary" onClick={onReview}>Review {critical} inconsistent first <ArrowRight size={16}/></button>}</div><ProgressBar value={decided} max={findings.length} label="Findings with a human decision"/></section>}
+ const total=findings.length||1,pct=Math.round(decided/total*100),other=Math.max(open-critical-proposed,0)
+ const parts:[string,number,string][]=[['decided',decided,'Decided by a human'],['proposed',proposed,'Proposal waiting'],['critical',Math.max(critical-0,0),'Inconsistent, open'],['open',other,'Other open']]
+ const R=34,C=2*Math.PI*R
+ return <section className="review-progress decision-hero dh" aria-label="Review progress">
+  <div className="dh-top">
+   <div className="dh-ring" role="img" aria-label={`${pct}% of findings have a human decision`}><svg viewBox="0 0 80 80"><circle cx="40" cy="40" r={R} className="dh-ring-track"/><circle cx="40" cy="40" r={R} className="dh-ring-value" strokeDasharray={`${C*decided/total} ${C}`}/></svg><span><b>{pct}%</b><small>decided</small></span></div>
+   <div className="dh-copy">
+    <p className="dh-kicker">Needs your decision{scope?<span> · {scope}</span>:null}</p>
+    <p className="decision-hero-count"><strong>{open}</strong> <span>of {findings.length} findings still open</span></p>
+    <ul className="dh-chips" aria-label="Open work">
+     <li className="crit"><b>{critical}</b> inconsistent</li>
+     <li className="prop"><b>{proposed}</b> proposal{proposed===1?'':'s'} awaiting a decision</li>
+     {docs!==undefined&&<li className="docs"><b>{docs}</b> client document{docs===1?'':'s'} outstanding</li>}
+    </ul>
+   </div>
+   {onReview&&critical>0&&<button type="button" className="primary dh-cta" onClick={onReview}>Review {critical} inconsistent first <ArrowRight size={16}/></button>}
+  </div>
+  <div className="dh-bar" role="progressbar" aria-label="Findings with a human decision" aria-valuemin={0} aria-valuemax={findings.length} aria-valuenow={decided} aria-valuetext={`${decided} of ${findings.length}`}>
+   {parts.filter(([,n])=>n>0).map(([k,n,t])=><i key={k} className={'seg '+k} style={{flexGrow:n}} title={`${t}: ${n}`}/>)}
+  </div>
+  <div className="dh-legend">{parts.map(([k,n,t])=><span key={k}><i className={'seg '+k}/>{t} <b>{n}</b></span>)}</div>
+ </section>}
 function FindingsView({context,runId,search,setSearch,onChanged}:{context:Row;runId:string;search:string;setSearch:(value:string)=>void;onChanged?:()=>void}){
  const navigate=useNavigate();const [query,setQuery]=useSearchParams();const [limit,setLimit]=useState(25);const [selected,setSelected]=useState<Set<string>>(()=>new Set());const [bulkOpen,setBulkOpen]=useState(false)
  const filter=query.get('filter')||'all',tier=query.get('tier')||'',test=query.get('test')||'',assertion=query.get('assertion')||'',status=query.get('status')||''

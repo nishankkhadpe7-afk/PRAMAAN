@@ -16,4 +16,6 @@ import '@fontsource/jetbrains-mono/latin-600.css'
 import './styles.css'
 import './theme.css'
 import './system.css'
+import './shell.css'
+import './login.css'
 ReactDOM.createRoot(document.getElementById('root')!).render(<React.StrictMode><BrowserRouter><SessionProvider><App/></SessionProvider></BrowserRouter></React.StrictMode>)

@@ -18,7 +18,7 @@ export function Landing({to}:{to:string}){
   const bits=useMemo(()=>Array.from({length:44},(_,i)=>{const r=(n:number)=>{const v=Math.sin(i*12.9898+n*78.233)*43758.5453;return v-Math.floor(v)};return{left:r(1)*100,delay:-r(2)*18,dur:14+r(3)*14,size:5+r(4)*9,rot:r(5)*360}}),[])
   return <div className="landing" ref={reveal}>
     <div className="landing-bits" aria-hidden="true">{bits.map((b,i)=><i key={i} style={{left:b.left+'%',width:b.size,height:b.size*.55,animationDelay:b.delay+'s',animationDuration:b.dur+'s',['--r' as string]:b.rot+'deg'}}/>)}</div>
-    <header className="landing-nav"><Link to="/" className="landing-brand"><span className="brand-mark"><i/><i/><i/></span>Pramaan</Link><Link className="pill-cta ghost" to={to}>Open the workspace</Link></header>
+    <header className="landing-nav"><Link to="/" className="landing-brand"><img className="brand-logo" src="/pramaan-logo.png" alt="Pramaan" width={121} height={24}/></Link><Link className="pill-cta ghost" to={to}>Open the workspace</Link></header>
     <section className="hero">
       <div className="hero-copy">
         <p className="hero-eyebrow">Verifiable financial audit infrastructure</p>

@@ -1,6 +1,6 @@
 import {Suspense,lazy,useEffect,useState} from 'react'
 import {Link,NavLink,Navigate,Outlet,Route,Routes,useLocation,useNavigate} from 'react-router-dom'
-import {ArrowRight,ArrowUpRight,BookOpen,Building2,CircleHelp,ClipboardCheck,Eye,EyeOff,FileSearch,Files,LayoutDashboard,LogOut,Menu,MessageSquare,ShieldCheck,Workflow,X} from 'lucide-react'
+import {ArrowLeft,ArrowRight,ArrowUpRight,BookOpen,Building2,CircleHelp,ClipboardCheck,Eye,EyeOff,FileSearch,Files,LayoutDashboard,LogOut,Menu,MessageSquare,ShieldCheck,Workflow,X} from 'lucide-react'
 import {useSession} from './session'
 import {Drawer,Header,Mutation} from './components'
 import {HelpContent} from './glossary'
@@ -17,20 +17,23 @@ export function Login(){
   const navigate=useNavigate();
 
   return <div className="login">
-    <div className="login-brand"><Brand/><Link className="login-back" to="/">← Back to home</Link></div>
+    <div className="login-brand"><Brand/><Link className="login-back" to="/"><span className="back-arrow" aria-hidden="true"><ArrowLeft size={14}/></span><span>Back to home</span></Link></div>
     <div className="login-layout">
       <section className="login-intro">
-        <div className="eyebrow">FORENSIC ASSURANCE PLATFORM</div>
-        <h1>Every sale.<br/>A traceable story.</h1>
-        <p>Trace every recorded sale from the client's original register to a frozen, reproducible workpaper. The system flags what does not reconcile; a qualified reviewer decides what it means.</p>
-        <div className="login-principles">
-          <div><Workflow/><span>One Unified Lifecycle<small>Order, dispatch, invoice and journal linked for each sale.</small></span></div>
-          <div><FileSearch/><span>Evidence with Full Provenance<small>Every file is fingerprinted (SHA-256) when it arrives, so later changes are detectable.</small></span></div>
-          <div><ShieldCheck/><span>Cryptographic Chain of Custody<small>An append-only trail where each entry is linked to the one before it.</small></span></div>
-        </div>
+        <p className="login-kicker">Revenue audit, end to end</p>
+        <h1>Every sale.<br/><span className="login-accent">A traceable story.</span></h1>
+        <p className="login-lede">From the client's original register to a frozen, reproducible workpaper. The system flags what doesn't reconcile; a qualified reviewer decides what it means.</p>
+        <figure className="trail" aria-label="Example: how one sale is traced">
+          <figcaption><span>One sale, traced</span><small>example</small></figcaption>
+          <ol>
+            {([['Register row 14','Client upload, fingerprinted','9f2c'],['Sales order SO-1042','Who ordered, what, when','41ab'],['Dispatch DN-0877','Goods actually left','c07e'],['Invoice MH/25-26/0042','₹1,18,000.00 incl. GST','5d19'],['Journal JV-311','Revenue booked in the ledger','e8a4']] as const).map(([what,why,hash],i)=>
+              <li key={what} style={{['--i' as string]:i}}><i className="trail-node"/><div><strong>{what}</strong><small>{why}</small></div><code title="Each step's fingerprint is chained to the one before it">{hash}…</code></li>)}
+            <li className="trail-end" style={{['--i' as string]:5}}><i className="trail-node"><ShieldCheck size={12}/></i><div><strong>Frozen workpaper</strong><small>Re-run any time; the result must match</small></div><span className="trail-seal">sealed</span></li>
+          </ol>
+        </figure>
       </section>
       <section className="login-card">
-        <div className="eyebrow">SECURE WORKSPACE AUTHENTICATION</div>
+        <span className="login-lock" aria-hidden="true"><ShieldCheck size={18}/></span>
         <h2>Sign in to Pramaan</h2>
         <p>Paste the access credential issued for your role by the local launcher.</p>
         {expired&&<div role="alert" className="notice notice-error">Your session ended. Use a valid credential to continue.</div>}
@@ -60,11 +63,11 @@ export function Login(){
           <ShieldCheck size={16}/>
           <p>Your credential is kept only for this browser tab. It is cleared when you sign out, when it expires, or when the tab closes.</p>
         </div>
-        <div className="scope">
-          <span>Client Enterprise</span>
-          <span>Lead Forensic Auditor</span>
-          <span>Human Review Authority</span>
-        </div>
+        <dl className="role-guide">
+          <div><dt><i className="dot client"/>Client</dt><dd>Records sales, uploads registers, answers document requests.</dd></div>
+          <div><dt><i className="dot limited"/>Auditor</dt><dd>Runs the checks and proposes conclusions.</dd></div>
+          <div><dt><i className="dot on"/>Human reviewer</dt><dd>Records the final decision on each finding.</dd></div>
+        </dl>
       </section>
     </div>
     <footer>
@@ -74,8 +77,18 @@ export function Login(){
   </div>
 }
 // One logo everywhere (landing, login, workspace sidebar).
-function Brand(){return <Link to="/" className="landing-brand"><span className="brand-mark"><i/><i/><i/></span>Pramaan</Link>}
+function Brand(){return <Link to="/" className="landing-brand"><img className="brand-logo" src="/pramaan-logo.png" alt="Pramaan" width={121} height={24}/></Link>}
 export function Guard({role}:{role:'client_employee'|'auditor'}){const {identity,restoring}=useSession();return restoring?<div className="skeleton-loader" role="status" aria-label="Restoring session"/>:!identity?<Navigate to="/login" replace/>:identity.role!==role?<Navigate to="/unauthorized" replace/>:<Outlet/>}
+// "demo-human-reviewer" -> "Human Reviewer"; "launcher-client" -> "Client". Technical prefixes are dropped.
+export function displayName(subject:string){const words=subject.replace(/^(demo|launcher|local|test)[-_.]/i,'').split(/[-_.\s@]+/).filter(Boolean);return (words.length?words:[subject]).map(w=>w[0].toUpperCase()+w.slice(1)).join(' ')}
+function initialsOf(name:string){const w=name.split(' ');return (w.length>1?w[0][0]+w[1][0]:name.slice(0,2)).toUpperCase()}
+function hueOf(s:string){let h=0;for(const c of s)h=(h*31+c.charCodeAt(0))%360;return h}
+function UserChip({subject,role}:{subject:string;role:'human'|'auditor'|'client'}){
+  const name=displayName(subject);const status={human:['Auditor','Human review on','on'],auditor:['Auditor','Proposals only','limited'],client:['Client','Records & evidence','client']}[role]
+  return <div className="user-chip" title={`Signed in as ${subject}`}>
+    <span className="user-mark" style={{['--hue' as string]:hueOf(subject)}} aria-hidden="true">{initialsOf(name)}<i className={'user-dot '+status[2]}/></span>
+    <span className="user-text"><strong>{name}</strong><small>{name===status[0]?status[1]:`${status[0]} · ${status[1]}`}</small></span>
+  </div>}
 function Shell(){
   const {identity,signOut}=useSession();
   const [open,setOpen]=useState(false);
@@ -89,31 +102,26 @@ function Shell(){
     :[[root,'Overview',LayoutDashboard],[root+'/business','Business records',Building2],[root+'/registers','Registers & disclosures',Files],[root+'/evidence-requests','Evidence inbox',FileSearch]];
   useEffect(()=>setOpen(false),[pathname]);
   const section=pathname.includes('/assistant')?'MCP assistant':pathname.includes('/runs/')?'Audit engagement':auditor?'Revenue audit':'Business operations';
-  return <div className="app-shell">
+  return <div className="app-shell top-nav-shell">
     <a className="skip-link" href="#main">Skip to content</a>
-    <aside id="workspace-navigation" className={'sidebar '+(open?'open':'')} aria-label="Workspace navigation">
-      <Brand/>
-      <div className="workspace-label">
-        <span className="workspace-icon">{auditor?<FileSearch size={16}/>:<Building2 size={16}/>}</span>
-        <div>{auditor?'Auditor workspace':'Client workspace'}<small>Local demonstration</small></div>
-        <button type="button" className="icon-button mobile" aria-label="Close navigation" onClick={()=>setOpen(false)}><X size={18}/></button>
+    <header className="floating-bar">
+      <div className="bar-side bar-left"><Brand/><span className="bar-role">{auditor?'Auditor':'Client'}</span></div>
+      <nav id="workspace-navigation" className={'pill-nav '+(open?'open':'')} aria-label="Workspace navigation">
+        {links.map(([to,title,Icon])=><NavLink end key={String(to)} to={String(to)} className={({isActive})=>'nav-item '+(isActive?'active':'')}><Icon size={15} aria-hidden="true"/><span>{String(title)}</span></NavLink>)}
+      </nav>
+      <div className="bar-side bar-right">
+        <button type="button" className="icon-button nav-toggle" aria-label={open?'Close navigation':'Open navigation'} aria-controls="workspace-navigation" aria-expanded={open} onClick={()=>setOpen(o=>!o)}>{open?<X size={18}/>:<Menu size={18}/>}</button>
+        <button type="button" className="help-button" onClick={()=>setHelp(true)}><CircleHelp size={15} aria-hidden="true"/><span>Help</span></button>
+        <UserChip subject={identity!.subject} role={auditor?(identity!.human?'human':'auditor'):'client'}/>
+        <button type="button" className="icon-button" aria-label="Sign out" onClick={signOut}><LogOut size={16}/></button>
       </div>
-      <div className="nav-caption">WORKSPACE</div>
-      <nav>{links.map(([to,title,Icon])=><NavLink end key={String(to)} to={String(to)} className={({isActive})=>'nav-item '+(isActive?'active':'')}><Icon size={17}/>{String(title)}</NavLink>)}</nav>
-      <div className="sidebar-bottom">
-        <div className="scope-card"><ShieldCheck size={18}/><strong>Evidence, not certainty.</strong><p>Unverified sources stay unverified. Final conclusions require human review.</p></div>
-        <div className="profile"><span className="avatar">{identity!.subject.slice(0,2).toUpperCase()}</span><div><strong>{identity!.subject}</strong><small>{identity!.human?'Human review enabled':auditor?'Auditor · proposals only':'Client employee'}</small></div><button type="button" className="icon-button" aria-label="Sign out" onClick={signOut}><LogOut size={16}/></button></div>
-      </div>
-    </aside>
+    </header>
     {open&&<button type="button" className="nav-scrim" aria-label="Close navigation" onClick={()=>setOpen(false)}/>}
     <div className="workspace">
-      <div className="topbar">
-        <div className="topbar-context"><button type="button" className="icon-button mobile" aria-label="Open navigation" aria-controls="workspace-navigation" aria-expanded={open} onClick={()=>setOpen(true)}><Menu size={19}/></button><span>Workspace</span><span className="slash">/</span><strong>{section}</strong></div>
-        <div className="topbar-actions"><button type="button" className="help-button" onClick={()=>setHelp(true)}><CircleHelp size={16} aria-hidden="true"/>Help</button><div className="topbar-user" title={identity!.subject}><span className="avatar topbar-avatar">{identity!.subject.slice(0,2).toUpperCase()}</span><span className="topbar-user-name">{identity!.subject}</span></div></div>
-      </div>
+      <div className="context-line" aria-label="Location"><span>{auditor?'Auditor workspace':'Client workspace'}</span><span className="slash">/</span><strong>{section}</strong></div>
       {help&&<Drawer title="Help" onClose={()=>setHelp(false)}><HelpContent role={auditor?'auditor':'client'} onShowGuide={()=>{setHelp(false);navigate(root)}}/></Drawer>}
       <main id="main" tabIndex={-1} key={identity!.subject+pathname}><Suspense fallback={<div className="skeleton-loader" role="status" aria-label="Loading"><div className="skeleton-row" style={{width:'70%'}}/><div className="skeleton-row" style={{width:'50%'}}/></div>}><Outlet/></Suspense></main>
-      <footer className="workspace-footer"><span className="workspace-footer-message"><BookOpen size={14}/>Traceable records. Qualified human judgment.</span><span>Prototype · one company per instance</span></footer>
+      <footer className="workspace-footer"><span className="workspace-footer-message"><ShieldCheck size={14} aria-hidden="true"/>Evidence, not certainty. Unverified sources stay unverified; final conclusions need human review.</span><span>Local prototype · one company per instance</span></footer>
     </div>
   </div>
 }
