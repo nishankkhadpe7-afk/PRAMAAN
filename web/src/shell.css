@@ -238,3 +238,86 @@
 .top-nav-shell .doc-chip.have svg{color:var(--success)}
 .top-nav-shell .empty{padding:40px 20px;border:1px dashed var(--line-strong);border-radius:var(--radius);color:var(--subtle);text-align:center}
 @media (max-width:760px){.top-nav-shell tbody td{padding:12px}.top-nav-shell thead th{padding:9px 12px}}
+
+/* ---- user mark v2: the status becomes a ring around the monogram (no loose dot to collide at small sizes) ---- */
+.user-mark{--ring:#6d9cf0;width:32px;height:32px;border-radius:50%;font:650 11px/1 var(--sans);letter-spacing:.04em;
+  color:hsl(var(--hue) 60% 88%);background:radial-gradient(120% 120% at 30% 20%,hsl(var(--hue) 35% 30%),hsl(var(--hue) 30% 17%));
+  box-shadow:0 0 0 2px var(--surface),0 0 0 3.5px var(--ring),inset 0 1px 0 hsl(var(--hue) 40% 40% / .5)}
+.user-mark:has(.user-dot.on){--ring:var(--success)}
+.user-mark:has(.user-dot.limited){--ring:var(--warning)}
+.user-mark .user-dot{display:none}
+.user-chip{gap:12px;padding:4px 14px 4px 6px}
+.user-chip:hover .user-mark{box-shadow:0 0 0 2px var(--surface),0 0 0 3.5px var(--ring),0 0 14px -2px var(--ring)}
+@media (max-width:1100px){
+  .user-chip{padding:4px;border-color:var(--line-strong);background:var(--surface)}
+  .user-mark{width:28px;height:28px;font-size:10px}
+}
+@media (max-width:860px){.bar-right .help-button{width:34px;padding:0;justify-content:center}.bar-right .help-button svg{width:16px;height:16px;flex:none}}
+@media (max-width:420px){.bar-right{gap:6px}}
+
+/* ---- account menu ---- */
+.user-menu-wrap{position:relative}
+button.user-chip{font:inherit;color:inherit;cursor:pointer;text-align:left;transition:border-color .15s,background .15s}
+button.user-chip:hover,button.user-chip.open{border-color:var(--subtle);background:var(--surface-2)}
+button.user-chip:focus-visible{outline:2px solid var(--focus);outline-offset:2px}
+.user-caret{color:var(--subtle);transition:transform .2s;flex:none}
+.user-chip.open .user-caret{transform:rotate(180deg)}
+.user-menu{position:absolute;right:0;top:calc(100% + 8px);z-index:60;width:290px;padding:8px;border:1px solid var(--line-strong);border-radius:14px;
+  background:rgba(21,24,28,.97);backdrop-filter:blur(14px);box-shadow:0 20px 50px rgba(0,0,0,.5);animation:menu-in .16s ease-out}
+@keyframes menu-in{from{opacity:0;transform:translateY(-4px)}}
+.user-menu-label{margin:6px 10px 8px;font-size:12px;color:var(--subtle)}
+.user-menu-current{display:flex;align-items:center;gap:12px;padding:10px 12px;border-radius:10px;background:var(--surface-3)}
+.user-menu-current>span:not(.user-mark){display:flex;flex-direction:column;min-width:0;flex:1;line-height:1.3}
+.user-menu-current strong{font-size:14px;color:var(--ink)}
+.user-menu-current small{font-size:12px;color:var(--subtle)}
+.user-menu-current code{font:11px var(--mono);color:var(--tertiary);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.user-menu-check{color:var(--primary);flex:none}
+.user-menu-note{margin:8px 12px 4px;font-size:12px;color:var(--subtle);line-height:1.45}
+.user-menu-sep{height:1px;margin:8px 4px;background:var(--line)}
+.user-menu>button{display:flex;align-items:center;gap:10px;width:100%;padding:9px 12px;border:0;border-radius:8px;background:none;color:var(--muted);font:inherit;font-size:13.5px;cursor:pointer;text-align:left}
+.user-menu>button:hover,.user-menu>button:focus-visible{background:var(--surface-3);color:var(--ink);outline:none}
+.user-menu>button svg{color:var(--subtle)}
+@media (max-width:1100px){.user-caret{display:none}}
+@media (max-width:420px){.user-menu{position:fixed;left:12px;right:12px;top:60px;width:auto}}
+@media (prefers-reduced-motion:reduce){.user-menu{animation:none}}
+.user-menu>button{justify-content:flex-start!important;text-align:left!important;min-height:38px}
+
+/* ---- colour-only orbs (no letters) and the role switcher ---- */
+.user-mark{font-size:0!important;color:transparent!important;
+  background:radial-gradient(circle at 28% 24%,hsl(var(--hue) 85% 74%) 0,transparent 52%),radial-gradient(circle at 78% 78%,hsl(var(--hue2) 75% 52%) 0,transparent 62%),linear-gradient(140deg,hsl(var(--hue) 55% 38%),hsl(var(--hue2) 50% 22%))!important}
+.user-mark.big{width:44px;height:44px}
+.user-menu{width:320px;padding:10px}
+.user-menu-head{display:flex;align-items:center;gap:14px;padding:8px 8px 12px}
+.user-menu-head>span:last-child{display:flex;flex-direction:column;min-width:0;line-height:1.3}
+.user-menu-head strong{font-size:15px;color:var(--ink)}
+.user-menu-head small{font-size:12.5px;color:var(--subtle)}
+.user-menu-head code{font:11px var(--mono);color:var(--tertiary);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.user-menu-label{margin:4px 8px 6px;font-size:11.5px;color:var(--tertiary)}
+.user-menu-roles{display:flex;flex-direction:column;gap:2px}
+.user-menu .role-row{display:flex!important;align-items:center;gap:12px;width:100%;padding:9px 10px;border:0;border-radius:10px;background:none;color:var(--muted);font:inherit;text-align:left!important;justify-content:flex-start!important;cursor:pointer}
+.role-row>span:not(.role-switch){display:flex;flex-direction:column;flex:1;min-width:0;line-height:1.3}
+.role-row strong{font-size:13.5px;font-weight:600;color:var(--muted)}
+.role-row small{font-size:11.5px;color:var(--tertiary)}
+.role-row.current{background:var(--surface-3);cursor:default}
+.role-row.current strong{color:var(--ink)}
+.user-menu button.role-row:hover,.user-menu button.role-row:focus-visible{background:var(--surface-2);outline:none}
+.role-dot{width:10px;height:10px;border-radius:50%;flex:none;box-shadow:0 0 0 3px rgba(255,255,255,.04)}
+.role-dot.client{background:#6d9cf0}.role-dot.auditor{background:var(--warning)}.role-dot.human{background:var(--success)}
+.role-switch{font-size:11.5px;color:var(--subtle);padding:2px 8px;border:1px solid var(--line-strong);border-radius:999px;opacity:0;transition:opacity .15s}
+.role-row:hover .role-switch,.role-row:focus-visible .role-switch{opacity:1}
+.user-menu>.user-menu-item{display:flex!important;align-items:center;gap:10px;width:100%;padding:9px 10px;border:0;border-radius:8px;background:none;color:var(--muted);font:inherit;font-size:13.5px;justify-content:flex-start!important}
+.user-menu-foot{display:flex;align-items:center;gap:6px;margin:6px 10px 2px;font-size:11.5px;color:var(--tertiary)}
+
+/* menu v3: just the account, help and sign-out, with more room */
+.user-menu{width:300px;padding:14px}
+.user-menu-head{padding:6px 6px 16px;gap:16px}
+.user-menu-sep{margin:4px 2px 10px}
+.user-menu>.user-menu-item{padding:11px 12px;gap:12px;font-size:14px;border-radius:10px}
+.user-menu>.user-menu-item:hover,.user-menu>.user-menu-item:focus-visible{background:var(--surface-3);color:var(--ink);outline:none}
+.user-menu>.user-menu-item.exit:hover,.user-menu>.user-menu-item.exit:focus-visible{background:rgba(244,63,94,.1);color:#f77890}
+.user-menu>.user-menu-item.exit:hover svg{color:#f77890}
+.user-menu-foot{margin:10px 12px 2px}
+/* chip: room for the status ring and a calmer rhythm */
+button.user-chip{padding:7px 16px 7px 9px;gap:13px}
+button.user-chip .user-caret{margin-left:4px}
+@media (max-width:1100px){button.user-chip{padding:6px}}

@@ -1,6 +1,6 @@
-import {Suspense,lazy,useEffect,useState} from 'react'
+import {Suspense,lazy,useEffect,useState,useRef} from 'react'
 import {Link,NavLink,Navigate,Outlet,Route,Routes,useLocation,useNavigate} from 'react-router-dom'
-import {ArrowLeft,ArrowRight,ArrowUpRight,BookOpen,Building2,CircleHelp,ClipboardCheck,Eye,EyeOff,FileSearch,Files,LayoutDashboard,LogOut,Menu,MessageSquare,ShieldCheck,Workflow,X} from 'lucide-react'
+import {ArrowLeft,ArrowRight,Check,ChevronDown,ArrowUpRight,BookOpen,Building2,CircleHelp,ClipboardCheck,Eye,EyeOff,FileSearch,Files,LayoutDashboard,LogOut,Menu,MessageSquare,ShieldCheck,Workflow,X} from 'lucide-react'
 import {useSession} from './session'
 import {Drawer,Header,Mutation} from './components'
 import {HelpContent} from './glossary'
@@ -83,11 +83,24 @@ export function Guard({role}:{role:'client_employee'|'auditor'}){const {identity
 export function displayName(subject:string){const words=subject.replace(/^(demo|launcher|local|test)[-_.]/i,'').split(/[-_.\s@]+/).filter(Boolean);return (words.length?words:[subject]).map(w=>w[0].toUpperCase()+w.slice(1)).join(' ')}
 function initialsOf(name:string){const w=name.split(' ');return (w.length>1?w[0][0]+w[1][0]:name.slice(0,2)).toUpperCase()}
 function hueOf(s:string){let h=0;for(const c of s)h=(h*31+c.charCodeAt(0))%360;return h}
-function UserChip({subject,role}:{subject:string;role:'human'|'auditor'|'client'}){
+function UserChip({subject,role,onHelp,onSignOut}:{subject:string;role:'human'|'auditor'|'client';onHelp:()=>void;onSignOut:()=>void}){
   const name=displayName(subject);const status={human:['Auditor','Human review on','on'],auditor:['Auditor','Proposals only','limited'],client:['Client','Records & evidence','client']}[role]
-  return <div className="user-chip" title={`Signed in as ${subject}`}>
-    <span className="user-mark" style={{['--hue' as string]:hueOf(subject)}} aria-hidden="true">{initialsOf(name)}<i className={'user-dot '+status[2]}/></span>
-    <span className="user-text"><strong>{name}</strong><small>{name===status[0]?status[1]:`${status[0]} · ${status[1]}`}</small></span>
+  const line=name===status[0]?status[1]:`${status[0]} · ${status[1]}`
+  const [open,setOpen]=useState(false);const ref=useRef<HTMLDivElement>(null)
+  useEffect(()=>{if(!open)return;const away=(e:MouseEvent)=>{if(!ref.current?.contains(e.target as Node))setOpen(false)};const esc=(e:KeyboardEvent)=>{if(e.key==='Escape')setOpen(false)};document.addEventListener('mousedown',away);document.addEventListener('keydown',esc);return()=>{document.removeEventListener('mousedown',away);document.removeEventListener('keydown',esc)}},[open])
+  const h=hueOf(subject)
+  const orb=(big=false)=><span className={'user-mark'+(big?' big':'')} style={{['--hue' as string]:h,['--hue2' as string]:(h+70)%360}} aria-hidden="true"><i className={'user-dot '+status[2]}/></span>
+  return <div className="user-menu-wrap" ref={ref}>
+    <button type="button" className={'user-chip'+(open?' open':'')} title={`Signed in as ${subject}`} aria-haspopup="menu" aria-expanded={open} aria-label={`Account: ${name}`} onClick={()=>setOpen(o=>!o)}>
+      {orb()}<span className="user-text"><strong>{name}</strong><small>{line}</small></span><ChevronDown size={14} className="user-caret" aria-hidden="true"/>
+    </button>
+    {open&&<div className="user-menu" role="menu" aria-label="Account">
+      <div className="user-menu-head">{orb(true)}<span><strong>{name}</strong><small>{line}</small><code>{subject}</code></span></div>
+      <div className="user-menu-sep"/>
+      <button type="button" role="menuitem" className="user-menu-item" onClick={()=>{setOpen(false);onHelp()}}><CircleHelp size={16} aria-hidden="true"/>Help &amp; guide</button>
+      <button type="button" role="menuitem" className="user-menu-item exit" aria-label="Sign out" onClick={()=>{setOpen(false);onSignOut()}}><LogOut size={16} aria-hidden="true"/>Sign out</button>
+      <p className="user-menu-foot"><ShieldCheck size={13} aria-hidden="true"/>Credential kept for this tab only</p>
+    </div>}
   </div>}
 function Shell(){
   const {identity,signOut}=useSession();
@@ -111,9 +124,7 @@ function Shell(){
       </nav>
       <div className="bar-side bar-right">
         <button type="button" className="icon-button nav-toggle" aria-label={open?'Close navigation':'Open navigation'} aria-controls="workspace-navigation" aria-expanded={open} onClick={()=>setOpen(o=>!o)}>{open?<X size={18}/>:<Menu size={18}/>}</button>
-        <button type="button" className="help-button" onClick={()=>setHelp(true)}><CircleHelp size={15} aria-hidden="true"/><span>Help</span></button>
-        <UserChip subject={identity!.subject} role={auditor?(identity!.human?'human':'auditor'):'client'}/>
-        <button type="button" className="icon-button" aria-label="Sign out" onClick={signOut}><LogOut size={16}/></button>
+        <UserChip subject={identity!.subject} role={auditor?(identity!.human?'human':'auditor'):'client'} onHelp={()=>setHelp(true)} onSignOut={signOut}/>
       </div>
     </header>
     {open&&<button type="button" className="nav-scrim" aria-label="Close navigation" onClick={()=>setOpen(false)}/>}

@@ -6,7 +6,7 @@ let credentials,state
 test.beforeAll(async()=>{credentials=JSON.parse(await fs.readFile(path.join(demo,'session-credentials.json'),'utf8'));state=JSON.parse(await fs.readFile(path.join(demo,'demo-state.json'),'utf8'))})
 async function login(page,role){await page.goto('/login');await page.getByLabel('Access credential').fill(credentials[role]);await page.getByRole('button',{name:'Enter workspace'}).click();await expect(page.getByRole('heading',{name:role==='client'?'Your business. A clear record.':'From records to defensible review.'})).toBeVisible()}
 async function navigate(page,path){await page.evaluate(path=>{window.history.pushState(null,'',path);window.dispatchEvent(new PopStateEvent('popstate'))},path)}
-async function logout(page){await page.getByLabel('Sign out').click();await expect(page.getByRole('heading',{name:'Sign in to Pramaan'})).toBeVisible()}
+async function logout(page){await page.getByRole('button',{name:/^Account:/}).click();await page.getByLabel('Sign out').click();await expect(page.getByRole('heading',{name:'Sign in to Pramaan'})).toBeVisible()}
 test('complete browser workflow with server authorization and immutable downloads',async({page,request},testInfo)=>{
  const errors=[];page.on('pageerror',e=>errors.push(e.message))
  await page.goto('/login');await page.screenshot({path:testInfo.outputPath('01-login.png'),fullPage:true})
