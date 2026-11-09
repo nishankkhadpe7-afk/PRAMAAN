@@ -112,6 +112,10 @@ Screenshots of every screen at six widths (360–1920 px), before and after the 
 
 ## System architecture
 
+<p align="center"><img src="docs/assets/diagrams/system-overview.png" alt="system overview diagram" width="820"></p>
+
+<details><summary>Diagram source (Mermaid)</summary>
+
 ```mermaid
 flowchart LR
     C[Client employee] --> UI[React / Vite UI<br/>port 5173]
@@ -127,6 +131,8 @@ flowchart LR
     Audit --> DB
     Audit --> Vault
 ```
+
+</details>
 
 | Component             | Location                                                                                       | Responsibility                                                                                                       |
 | --------------------- | ---------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------- |
@@ -147,6 +153,10 @@ flowchart LR
 
 ## End-to-end workflow
 
+<p align="center"><img src="docs/assets/diagrams/audit-workflow.png" alt="audit workflow diagram" width="820"></p>
+
+<details><summary>Diagram source (Mermaid)</summary>
+
 ```mermaid
 sequenceDiagram
     actor C as Client
@@ -164,6 +174,8 @@ sequenceDiagram
     H->>S: Append final review and create package
     S-->>H: XLSX, PDF, ZIP
 ```
+
+</details>
 
 | Step              | Persisted result                                                               | Boundary                                                                          |
 | ----------------- | ------------------------------------------------------------------------------ | --------------------------------------------------------------------------------- |
@@ -214,6 +226,10 @@ Sampling uses a persisted hash-ranked seed and records selection reasons, popula
 
 ## Evidence integrity and cryptography
 
+<p align="center"><img src="docs/assets/diagrams/evidence-integrity.png" alt="evidence integrity diagram" width="820"></p>
+
+<details><summary>Diagram source (Mermaid)</summary>
+
 ```mermaid
 flowchart TB
     U[Register/evidence bytes] --> H[SHA-256 content hash]
@@ -226,6 +242,8 @@ flowchart TB
     L --> I[Integrity verification]
     V --> I
 ```
+
+</details>
 
 | Mechanism                | Provides                                                                 | Does not provide                                                                       |
 | ------------------------ | ------------------------------------------------------------------------ | -------------------------------------------------------------------------------------- |
@@ -248,6 +266,10 @@ Credentials resolve server-side to identity, role, expiry, and revocation status
 | Human-review capability | Separate trusted credential that appends a final review decision. It is capability separation, not human-presence attestation.                        |
 | MCP caller              | Role-compatible discovery plus reauthentication and authorization on each action.                                                                     |
 
+<p align="center"><img src="docs/assets/diagrams/security-boundary.png" alt="security boundary diagram" width="520"></p>
+
+<details><summary>Diagram source (Mermaid)</summary>
+
 ```mermaid
 flowchart TB
     R[Web or MCP request] --> C[Validate hashed credential<br/>expiry and revocation]
@@ -257,6 +279,8 @@ flowchart TB
     B --> O[Operation]
     O --> T[Local audit event]
 ```
+
+</details>
 
 - The server never accepts a role from a form or MCP payload.
 - UI visibility is not the authorization boundary: forbidden direct auditor writes return 403 and are logged.
@@ -273,6 +297,10 @@ SQLite authorizers are an application boundary, not database grants. PostgreSQL 
 
 Pramaan uses the official MCP Python SDK over stdio or local Streamable HTTP. The adapter does not open SQLite or load a separate dataset; it calls the authenticated FastAPI API.
 
+<p align="center"><img src="docs/assets/diagrams/mcp-flow.png" alt="mcp flow diagram" width="820"></p>
+
+<details><summary>Diagram source (Mermaid)</summary>
+
 ```mermaid
 flowchart LR
     A[Agent/MCP client] --> T[stdio or HTTP /mcp]
@@ -284,6 +312,8 @@ flowchart LR
     D --> A
     D -. filtering event .-> E[Audit trail]
 ```
+
+</details>
 
 | Tool group              | Tools                                                                                                                                                                   |
 | ----------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
