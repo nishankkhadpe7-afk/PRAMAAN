@@ -256,7 +256,7 @@ def tables(report, content_hash):
                                    Cell(Decimal(f["impact_inr"]), S_MONEY) if f["impact_inr"] is not None else "Unquantified", review.get("impact_group") or "—",
                                    f["proposed_adjustment"], f["exception_status"], ", ".join(f["evidence_ids"]), samples, standard, f["unresolved_questions"],
                                    f["ruleset_version"], f["ruleset_hash"], f["snapshot_hash"], f["run_id"]])
-    if report["reconciliation_rule"]["version"] == "p2-t00-v2":
+    if report["reconciliation_rule"]["version"] in ("p2-t00-v2", "p2-t00-v3", "p2-t00-v4"):
         sheets["Findings"][0].append("Register comparison (original, normalized, difference)")
         for cells, finding in zip(sheets["Findings"][1:], findings):
             cells.append("; ".join(f"{d.get('field')}: register {d.get('register_value')!r} vs system {d.get('system_value')!r}" for d in finding.get("field_differences", [])) or "—")

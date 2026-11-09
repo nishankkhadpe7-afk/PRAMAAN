@@ -51,6 +51,9 @@ def init_p6(db: sqlite3.Connection) -> None:
       CREATE TRIGGER IF NOT EXISTS p6_statements_no_delete BEFORE DELETE ON p6_bank_statements BEGIN SELECT RAISE(ABORT,'bank statements are append-only'); END;
       CREATE TRIGGER IF NOT EXISTS p6_rows_no_update BEFORE UPDATE ON p6_bank_rows BEGIN SELECT RAISE(ABORT,'bank rows are append-only'); END;
       CREATE TRIGGER IF NOT EXISTS p6_rows_no_delete BEFORE DELETE ON p6_bank_rows BEGIN SELECT RAISE(ABORT,'bank rows are append-only'); END;
+      CREATE TABLE IF NOT EXISTS p6_bank_row_sources(statement_id TEXT NOT NULL, row_no INTEGER NOT NULL, page INTEGER, line INTEGER, extraction TEXT NOT NULL, direction_source TEXT NOT NULL, value_date TEXT, PRIMARY KEY(statement_id,row_no), FOREIGN KEY(statement_id,row_no) REFERENCES p6_bank_rows(statement_id,row_no));
+      CREATE TRIGGER IF NOT EXISTS p6_row_sources_no_update BEFORE UPDATE ON p6_bank_row_sources BEGIN SELECT RAISE(ABORT,'bank row sources are append-only'); END;
+      CREATE TRIGGER IF NOT EXISTS p6_row_sources_no_delete BEFORE DELETE ON p6_bank_row_sources BEGIN SELECT RAISE(ABORT,'bank row sources are append-only'); END;
       CREATE TRIGGER IF NOT EXISTS p6_investigations_no_update BEFORE UPDATE ON p6_investigations BEGIN SELECT RAISE(ABORT,'investigations are append-only'); END;
       CREATE TRIGGER IF NOT EXISTS p6_investigations_no_delete BEFORE DELETE ON p6_investigations BEGIN SELECT RAISE(ABORT,'investigations are append-only'); END;
       CREATE TRIGGER IF NOT EXISTS p6_actions_no_delete BEFORE DELETE ON p6_actions BEGIN SELECT RAISE(ABORT,'agent actions are retained'); END;
@@ -103,35 +106,131 @@ class BankStatementIn(BaseModel):
     source_base64: str = Field(min_length=1)
 
 
-def parse_bank_csv(source: bytes) -> list[dict[str, Any]]:
+_CSV_ALIASES = {"dr/cr": "direction", "cr/dr": "direction", "d/c": "direction", "type": "direction", "txn type": "direction",
+                "transaction type": "direction", "txn date": "date", "transaction date": "date", "ref": "reference", "ref no": "reference",
+                "cheque/ref no": "reference", "utr": "reference", "description": "narration", "particulars": "narration", "remarks": "narration",
+                "closing balance": "balance", "running balance": "balance"}
+_CSV_DIRECTIONS = {"credit": "credit", "cr": "credit", "c": "credit", "deposit": "credit", "debit": "debit", "dr": "debit", "d": "debit", "withdrawal": "debit"}
+
+
+_SPLIT_DEBIT = {"withdrawal", "withdrawals", "withdrawal amt", "withdrawal amount", "debit", "debit amount", "dr amount", "paid out"}
+_SPLIT_CREDIT = {"deposit", "deposits", "deposit amt", "deposit amount", "credit", "credit amount", "cr amount", "paid in"}
+_EXCEL_MANGLED = re.compile(r"^[0-9](?:\.[0-9]+)?E\+[0-9]+$", re.IGNORECASE)
+
+
+def parse_bank_csv(source: bytes, report: dict[str, Any] | None = None) -> list[dict[str, Any]]:
+    """CSV statements. Two layouts, recognised from the header:
+      - amount + direction: the documented columns (date, amount, direction, narration, reference), with common
+        bank header names (Dr/Cr, Particulars, Txn Date...) mapped onto them;
+      - split: separate Withdrawal/Debit and Deposit/Credit columns, as most net-banking exports use.
+    A repeated Date column is the value date. Reference numbers that Excel turned into scientific notation
+    (3.00E+11) are unusable, so they are dropped and counted in `report`, never used to match transactions.
+    Direction always comes from a column; it is never inferred."""
+    from .document_import import parse_date, parse_signed_cents
     try:
-        rows = list(csv.DictReader(io.StringIO(source.decode("utf-8-sig"), newline="")))
+        table = list(csv.reader(io.StringIO(source.decode("utf-8-sig"), newline="")))
     except (UnicodeDecodeError, csv.Error) as exc:
         raise ValueError("bank statement must be UTF-8 CSV with a header") from exc
-    if not rows:
+    if not table:
         raise ValueError("bank statement contains no rows")
-    header = {k.strip().lower() for k in rows[0].keys() if k}
-    missing = [c for c in BANK_COLUMNS[:5] if c not in header]
+
+    def canonical(name: str) -> str:
+        key = " ".join(name.strip().lower().split())
+        return _CSV_ALIASES.get(key, key)
+
+    names: list[str] = []
+    for raw_name in table[0]:
+        name = canonical(raw_name)
+        if name in _SPLIT_DEBIT:
+            name = "withdrawal"
+        elif name in _SPLIT_CREDIT:
+            name = "deposit"
+        elif name == "category" and "narration" not in [canonical(h) for h in table[0]]:
+            name = "narration"
+        elif name in ("refno", "ref no.", "reference no", "reference number"):
+            name = "reference"
+        if name == "date" and "date" in names:
+            name = "value_date"
+        names.append(name if name not in names else f"{name}#{len(names)}")
+    split = "withdrawal" in names and "deposit" in names and "amount" not in names
+    needed = ["date", "narration"] + (["withdrawal", "deposit"] if split else ["amount", "direction"])
+    missing = [c for c in needed if c not in names]
     if missing:
-        raise ValueError("bank statement is missing columns: " + ", ".join(missing))
-    parsed = []
-    for number, raw in enumerate(rows, 1):
-        row = {k.strip().lower(): (v or "").strip() for k, v in raw.items() if k}
-        try:
-            date.fromisoformat(row["date"])
-        except ValueError as exc:
-            raise ValueError(f"row {number}: date must be YYYY-MM-DD") from exc
-        direction = row["direction"].lower()
-        if direction not in {"credit", "debit"}:
-            raise ValueError(f"row {number}: direction must be credit or debit")
-        amount = _cents(row["amount"], f"row {number} amount")
+        raise ValueError("bank statement is missing columns: " + ", ".join(missing) +
+                         " (use date, amount, direction, narration, reference; or Withdrawal and Deposit columns)")
+    parsed, mangled = [], 0
+    for line_no, cells in enumerate(table[1:], 2):
+        if not any(c.strip() for c in cells):
+            continue  # blank spacer rows that spreadsheet exports often contain
+        row = {name: (cells[i] if i < len(cells) else "").strip() for i, name in enumerate(names)}
+        number = len(parsed) + 1
+        when = parse_date(row["date"])
+        if not when:
+            raise ValueError(f"line {line_no}: date {row['date']!r} is not a valid date (day first, e.g. 13/01/2023, or YYYY-MM-DD)")
+        if split:
+            out_cents = _cents(row["withdrawal"] or "0", f"line {line_no} withdrawal")
+            in_cents = _cents(row["deposit"] or "0", f"line {line_no} deposit")
+            if (out_cents > 0) == (in_cents > 0):
+                raise ValueError(f"line {line_no}: needs an amount in exactly one of Withdrawal or Deposit")
+            direction, amount = ("debit", out_cents) if out_cents > 0 else ("credit", in_cents)
+        else:
+            direction = _CSV_DIRECTIONS.get(row["direction"].lower().rstrip("."))
+            if direction is None:
+                raise ValueError(f"line {line_no}: direction must be credit/debit or Cr/Dr")
+            amount = _cents(row["amount"], f"line {line_no} amount")
         if amount <= 0:
-            raise ValueError(f"row {number}: amount must be positive")
-        balance = _cents(row["balance"], f"row {number} balance") if row.get("balance") else None
-        parsed.append({"row_no": number, "txn_date": row["date"], "amount_cents": amount, "direction": direction,
-                       "narration": row["narration"][:300], "reference": row["reference"][:120],
-                       "counterparty": row.get("counterparty", "")[:200], "balance_cents": balance})
+            raise ValueError(f"line {line_no}: amount must be positive")
+        balance = None
+        if row.get("balance"):
+            balance = parse_signed_cents(row["balance"])
+            if balance is None:
+                raise ValueError(f"line {line_no}: balance is not a number")
+        reference = row.get("reference", "")
+        if _EXCEL_MANGLED.match(reference):
+            mangled += 1
+            reference = ""
+        value_date = parse_date(row["value_date"]) if row.get("value_date") else None
+        parsed.append({"row_no": number, "txn_date": when, "amount_cents": amount, "direction": direction,
+                       "narration": row["narration"][:300], "reference": reference[:120],
+                       "counterparty": row.get("counterparty", "")[:200], "balance_cents": balance,
+                       "line": line_no, "extraction": "csv", "direction_source": "column",
+                       **({"value_date": value_date} if value_date and value_date != when else {})})
+    if not parsed:
+        raise ValueError("bank statement contains no rows")
+    if report is not None:
+        report["layout"] = "split" if split else "amount"
+        if mangled:
+            report["references_damaged_by_excel"] = mangled
     return parsed
+
+
+def _continuity(db: sqlite3.Connection, rows: list[dict[str, Any]], opening: int | None) -> dict[str, Any]:
+    """Does this statement start where the previously imported statement ended? A gap means
+    transactions are missing between the two (or one balance is wrong); it is reported, not fixed."""
+    from .document_import import _rupees
+    if not rows:
+        return {"status": "not_available"}
+    ordered = sorted(rows, key=lambda r: (r["txn_date"], r["row_no"]))
+    newest_first = len(rows) > 1 and rows[0]["txn_date"] > rows[-1]["txn_date"]
+    first = rows[-1] if newest_first else rows[0]
+    if opening is None:
+        if first.get("balance_cents") is None:
+            return {"status": "not_available", "reason": "no opening balance or first-row balance"}
+        signed = first["amount_cents"] if first["direction"] == "credit" else -first["amount_cents"]
+        opening = first["balance_cents"] - signed
+    previous = db.execute("SELECT r.statement_id, r.txn_date, r.balance_cents FROM p6_bank_rows r WHERE r.balance_cents IS NOT NULL AND r.txn_date <= ? "
+                          "ORDER BY r.txn_date DESC, r.statement_id DESC, r.row_no DESC LIMIT 1", (ordered[0]["txn_date"],)).fetchone()
+    if not previous:
+        return {"status": "first_statement", "opening_balance": _rupees(opening)}
+    # The latest dated row of an earlier statement may be listed first (newest-first statements).
+    candidates = [dict(r) for r in db.execute("SELECT row_no, balance_cents FROM p6_bank_rows WHERE statement_id=? AND txn_date=? AND balance_cents IS NOT NULL ORDER BY row_no",
+                                               (previous["statement_id"], previous["txn_date"]))]
+    closing_options = {c["balance_cents"] for c in candidates}
+    report = {"previous_statement": previous["statement_id"], "previous_date": previous["txn_date"], "opening_balance": _rupees(opening)}
+    if opening in closing_options:
+        return {"status": "continuous", **report, "previous_closing": _rupees(opening)}
+    closing = candidates[-1]["balance_cents"] if candidates else previous["balance_cents"]
+    return {"status": "gap", **report, "previous_closing": _rupees(closing), "unexplained_difference": _rupees(opening - closing)}
 
 
 @router.post("/bank-statements")
@@ -146,11 +245,13 @@ def upload_bank_statement(payload: BankStatementIn) -> dict[str, Any]:
             rows = read["rows"]
             opening = read.get("opening_balance_cents")
             report = {"source_format": "pdf", "parser": read["parser"], "unread_lines": len(read["unread_lines"]), "unread": read["unread_lines"][:50],
-                      "wrapped_lines_joined": sum(r.get("wrapped_lines", 0) for r in rows)}
+                      "wrapped_lines_joined": sum(r.get("wrapped_lines", 0) for r in rows), "layout": read.get("layout"), "extraction": read.get("extraction"),
+                      **({"ocr": read["ocr"], "needs_human_review": True} if read.get("ocr") else {}),
+                      "direction_from_balance": sum(1 for r in rows if r.get("direction_source") == "balance")}
         else:
-            rows = parse_bank_csv(source)
-            opening = None
             report = {"source_format": "csv"}
+            rows = parse_bank_csv(source, report)
+            opening = None
     except UploadSafetyError as exc:
         raise HTTPException(422, "invalid or oversized bank statement") from exc
     except ValueError as exc:
@@ -161,10 +262,14 @@ def upload_bank_statement(payload: BankStatementIn) -> dict[str, Any]:
     sha = p1.digest(source)
     db = p3.db_open()
     try:
+        # Check-then-insert runs inside one write transaction, so two uploads of the same file at the
+        # same moment cannot both pass the duplicate check.
+        db.execute("BEGIN IMMEDIATE")
         existing = db.execute("SELECT statement_id FROM p6_bank_statements WHERE sha256=?", (sha,)).fetchone()
         if existing:
             # Importing the same file twice would make every credit count twice.
             raise HTTPException(409, f"this exact statement file was already imported as {existing['statement_id']}")
+        report["continuity"] = _continuity(db, rows, opening)
         overlap = _overlapping_rows(db, rows)
         report["overlapping_rows"] = len(overlap)
         if overlap:
@@ -177,7 +282,10 @@ def upload_bank_statement(payload: BankStatementIn) -> dict[str, Any]:
             db.execute("INSERT INTO p6_bank_rows VALUES(?,?,?,?,?,?,?,?,?,?)",
                        (statement_id, row["row_no"], row["txn_date"], row["amount_cents"], row["direction"], row["narration"],
                         row["reference"], row["counterparty"], row["balance_cents"], p1.digest(row_json)))
-        p1.log_event(db, _subject(), "bank_statement_imported", statement_id, {"sha256": sha, "row_count": len(rows), "period": payload.period, **{k: v for k, v in report.items() if k != "unread"}})
+            # Where each stored row came from in the original file (page/line), and how its direction was decided.
+            db.execute("INSERT INTO p6_bank_row_sources VALUES(?,?,?,?,?,?,?)", (statement_id, row["row_no"], row.get("page"), row.get("line"),
+                                                                                row.get("extraction", "csv"), row.get("direction_source", "column"), row.get("value_date")))
+        p1.log_import(db, _subject(), "bank_statement_imported", statement_id, {"sha256": sha, "row_count": len(rows), "period": payload.period, **{k: v for k, v in report.items() if k != "unread"}})
         db.commit()
         return {"statement_id": statement_id, "sha256": sha, "row_count": len(rows), "independently_verified": False, **report}
     finally:

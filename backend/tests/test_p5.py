@@ -247,3 +247,31 @@ class P5AcceptanceTests(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+class EnrichLookupTests(unittest.TestCase):
+    """enrich() uses lookup tables (it used to scan every evidence row and invoice per finding,
+    which made the run page take 8.5 s at 3,000 sales). The tables must give the same answers."""
+
+    def test_lookup_matching_equals_scanning(self):
+        from Pramaan.backend import p5
+        invoices = [{"invoice_id": f"I{n}", "bill_no": f"B{n % 7}", "customer_id": f"C{n % 5}"} for n in range(60)]
+        notes = [{"credit_note_id": f"CN{n}", "invoice_id": f"I{n * 3}"} for n in range(10)]
+        snapshot = {"invoices": invoices, "credit_notes": notes}
+        index = {f"SNAP:invoices:{i['invoice_id']}": {"file_name": "invoices", "record": i} for i in invoices}
+        index.update({f"SNAP:credit_notes:{n['credit_note_id']}": {"file_name": "credit_notes", "record": n} for n in notes})
+        index.update({f"REG:U:{r}": {"file_name": "Sales Register", "normalized_row_no": r, "record": {}} for r in range(1, 6)})
+        index["EV-1"] = {"file_name": "uploaded_evidence", "object_id": "I4", "record": {}}
+        result = {"sample_items": [{"sheet": "s", "object_ref": f"I{n}", "selection_reason": "r"} for n in range(0, 60, 9)] + [{"sheet": "s", "object_ref": "CN2", "selection_reason": "r"}]}
+        look = p5._lookups(snapshot, result, index)
+        findings = [{"test_id": "T03", "object_ref": "I4", "reason": "x"}, {"test_id": "T08", "object_ref": "C2", "customer_id": "C2", "reason": "x"},
+                    {"test_id": "T04", "object_ref": "CN2", "bill_no": "B3", "reason": "x"}, {"test_id": "T00", "object_ref": "row", "row_no": 3, "reason": "x"},
+                    {"test_id": "T00", "object_ref": "all", "reason": "x"}]
+        for finding in findings:
+            self.assertEqual(p5.related_invoices(finding, snapshot, look), p5.related_invoices(finding, snapshot), finding)
+        run = {"run_id": "R", "snapshot_hash": "h", "ruleset_version": "v"}
+        enriched = {f["object_ref"]: f for f in p5.enrich(findings, run, snapshot, {**result, "ruleset_hash": "rh"}, index)}
+        self.assertIn("EV-1", enriched["I4"]["evidence_ids"])                      # evidence linked by object id
+        self.assertEqual(enriched["row"]["evidence_ids"], ["REG:U:3"])            # T00 cites its own register row
+        self.assertEqual(len(enriched["all"]["evidence_ids"]), 5)                 # T00 without a row cites the register
+        self.assertEqual([s["object_ref"] for s in enriched["CN2"]["samples"]], ["I45", "CN2"])  # bill B3 links I45; sample order kept
+

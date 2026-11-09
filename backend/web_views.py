@@ -1,6 +1,8 @@
 """Thin, authorized read models for the integrated web demo. No new audit rules."""
 import json
 import logging
+import threading
+from collections import OrderedDict
 from datetime import date, datetime, timezone
 from decimal import Decimal
 
@@ -237,12 +239,13 @@ def web_inbox():
         requests = []
         # What was read from uploaded invoice PDFs, shown back to the client (no audit comparison here).
         reads = {r["evidence_id"]: json.loads(r["read_json"]) for r in db.execute("SELECT evidence_id,read_json FROM p3_document_reads")}
+        versions = p3.evidence_versions(db)  # corrected files and the ones they replaced
         for row in db.execute("SELECT * FROM p3_evidence_requests ORDER BY rowid DESC"):
             item = dict(row)
             item["audit_name"] = names.get(item["run_id"], "Revenue audit")
             for field in ("required_docs", "uploaded_docs"):
                 item[field] = json.loads(item[field])
-            item["evidence"] = [{**dict(r), **({"document_read": reads[r["evidence_id"]]} if r["evidence_id"] in reads else {})} for r in db.execute("SELECT * FROM p3_evidence WHERE object_id=? AND object_type=? ORDER BY evidence_id", (item["sample_ref"], item["object_type"]))]
+            item["evidence"] = [{**dict(r), **versions.get(r["evidence_id"], {"version": 1}), **({"document_read": reads[r["evidence_id"]]} if r["evidence_id"] in reads else {})} for r in db.execute("SELECT * FROM p3_evidence WHERE object_id=? AND object_type=? ORDER BY evidence_id", (item["sample_ref"], item["object_type"]))]
             requests.append(item)
         # B6: the same sale is often sampled by several runs; one upload satisfies every one of
         # them, so the client's work list is grouped by (object, document) rather than per run.
@@ -373,34 +376,73 @@ async def web_run_assistant(run_id: str, payload: AssistantQuestion):
             "run_id": run_id, "audit_name": details["audit_name"]}
 
 
+def _cited_evidence(index, findings, sale_id=None):
+    """Only the evidence the page can show: entries cited by a finding, plus one sale's own entries when the
+    sale page asks for them. Sending the whole index made the response 30 MB for a year of real retail data
+    (46,000 entries, most cited by nothing). Exports and integrity checks still use the full index."""
+    keep = {ref for finding in findings for ref in finding.get("evidence_ids", [])}
+    if sale_id:
+        keep |= {ref for ref, item in index.items() if item.get("object_id") == sale_id or ref == "SNAP:invoices:" + sale_id}
+    return {ref: index[ref] for ref in keep if ref in index}
+
+
+_FROZEN: "OrderedDict[tuple, dict]" = OrderedDict()
+_FROZEN_LOCK = threading.Lock()
+_FROZEN_SIZE = 4
+
+
+def _frozen_context(db, run_id: str, wanted_upload: str | None) -> dict:
+    """Everything in the run page derived only from the frozen snapshot and one register upload: findings,
+    plain-English explanations, evidence, exposure. A saved run never changes, so this is built once per
+    (database, run, upload) and reused; review decisions and proposals are added per request."""
+    # The engine fingerprint is part of the key: a changed engine must rebuild, which re-runs the
+    # reproduction check inside stored_run instead of serving results made by the old engine.
+    key = (str(p1.DB_PATH), run_id, wanted_upload, p3.ENGINE_FINGERPRINT)
+    with _FROZEN_LOCK:
+        if key in _FROZEN:
+            _FROZEN.move_to_end(key)
+            return _FROZEN[key]
+    run, snapshot, result, rules = p5.stored_run(db, run_id)
+    registers = snapshot.get("register_uploads", [])
+    register = p3.selected_register(snapshot, wanted_upload) or {"rows": [], "reconciliations": []}
+    index = p5.evidence_index(snapshot, register)
+    findings = p5.enrich(p5.audit_findings(snapshot, result, register), run, snapshot, result, index)
+    ctx = explain.Context(snapshot, result, register)
+    for finding in findings:
+        finding["observation"] = explain.explain_finding(finding, ctx)  # explanations do not depend on reviews
+    comparisons = p5.selected_reconciliations(register)
+    frozen = {"index": index, "findings": findings, "fields": {
+        "snapshot_hash": run["snapshot_hash"], "result": result, "ruleset": rules,
+        # Explanations sit beside the frozen result so the stored result is returned unchanged.
+        "sample_explanations": {f"{item['sheet']}:{item['object_ref']}": explain.explain_sample(item, ctx) for item in result["sample_items"]},
+        "exposure": explain.exposure(findings, ctx),
+        "reconciliation_rule": comparisons[-1].get("rule", p5.T00_RULE) if comparisons else None,
+        "invoices": snapshot["invoices"], "credit_notes": snapshot["credit_notes"],
+        "registers": [{k: r[k] for k in ("upload_id", "sha256", "period", "row_count", "source_integrity")} for r in registers],
+        "selected_upload_id": register.get("upload_id"), "dataset_manifest": snapshot.get("dataset_manifest")}}
+    with _FROZEN_LOCK:
+        _FROZEN[key] = frozen
+        while len(_FROZEN) > _FROZEN_SIZE:
+            _FROZEN.popitem(last=False)
+    return frozen
+
+
 @router.get("/runs/{run_id}/context")
-def web_run_context(run_id: str, upload_id: str | None = None):
+def web_run_context(run_id: str, upload_id: str | None = None, sale_id: str | None = None):
     db = p3.db_open()
     try:
-        run, snapshot, result, rules = p5.stored_run(db, run_id)
-        registers = snapshot.get("register_uploads", [])
-        details = p3.run_details(db, run_id, run["period_start"], run["period_end"])
-        register = p3.selected_register(snapshot, upload_id or details["selected_upload_id"]) or {"rows": [], "reconciliations": []}
-        index = p5.evidence_index(snapshot, register)
-        findings = p5.enrich(p5.audit_findings(snapshot, result, register), run, snapshot, result, index)
+        period = db.execute("SELECT period_start, period_end FROM p3_audit_runs WHERE run_id=?", (run_id,)).fetchone()
+        if not period:
+            raise HTTPException(404, "audit run not found")
+        details = p3.run_details(db, run_id, period["period_start"], period["period_end"])
+        frozen = _frozen_context(db, run_id, upload_id or details["selected_upload_id"])
         reviews = p5.latest_reviews(db, run_id)
-        for finding in findings:
-            finding["human_decision"] = reviews.get(finding["finding_id"])
+        findings = [{**finding, "human_decision": reviews.get(finding["finding_id"])} for finding in frozen["findings"]]
         proposals = [json.loads(r[0]) for r in db.execute("SELECT proposal_json FROM p5_proposals WHERE run_id=? ORDER BY seq", (run_id,))]
-        comparisons = p5.selected_reconciliations(register)
-        ctx = explain.Context(snapshot, result, register)
-        for finding in findings:
-            finding["observation"] = explain.explain_finding(finding, ctx)
-        # Explanations sit beside the frozen result so the stored result is returned unchanged.
-        sample_explanations = {f"{item['sheet']}:{item['object_ref']}": explain.explain_sample(item, ctx) for item in result["sample_items"]}
-        exposure = explain.exposure(findings, ctx)
-        return {"run_id": run_id, "audit_name": details["audit_name"], "snapshot_hash": run["snapshot_hash"], "result": result, "ruleset": rules,
-                "sample_explanations": sample_explanations, "exposure": exposure,
-                "reconciliation_rule": comparisons[-1].get("rule", p5.T00_RULE) if comparisons else None,
-                "findings": findings, "evidence_index": index, "proposals": proposals,
-                "invoices": snapshot["invoices"], "credit_notes": snapshot["credit_notes"],
-                "registers": [{k: r[k] for k in ("upload_id", "sha256", "period", "row_count", "source_integrity")} for r in registers],
-                "selected_upload_id": register.get("upload_id"), "dataset_manifest": snapshot.get("dataset_manifest")}
+        payload = {"run_id": run_id, "audit_name": details["audit_name"], **frozen["fields"], "findings": findings,
+                   "evidence_index": _cited_evidence(frozen["index"], findings, sale_id), "proposals": proposals}
+        # Pre-encoded: FastAPI's generic encoder took ~1 s on a year of real retail data; json.dumps takes 0.14 s.
+        return Response(json.dumps(payload, separators=(",", ":"), ensure_ascii=False).encode(), media_type="application/json")
     finally:
         db.close()
 
@@ -466,12 +508,12 @@ def run_data_checks(db, run_id, row, snapshot, result, upload_id):
         add("readable", "Every register row could be read", "warn", "No register selected.")
     else:
         t00 = Counter(f.get("category") for f in findings if f["test_id"] == "T00")
-        differences = t00.get("FIELD_DIFF", 0) + t00.get("REGISTER_ONLY", 0) + t00.get("SYSTEM_ONLY", 0)
+        differences = t00.get("FIELD_DIFF", 0) + t00.get("REGISTER_ONLY", 0) + t00.get("SYSTEM_ONLY", 0) + t00.get("DUPLICATE_ROW", 0)
         if not register.get("reconciliations"):
             add("reconcile", "Register reconciles to recorded sales", "warn", "This register was never reconciled before the snapshot; its differences are unknown.")
         else:
             add("reconcile", "Register reconciles to recorded sales", "fail" if differences else "pass",
-                f"{differences} difference(s): {t00.get('FIELD_DIFF', 0)} changed values, {t00.get('REGISTER_ONLY', 0)} register entries with no sale, {t00.get('SYSTEM_ONLY', 0)} sales missing from the register." if differences else f"All {len(register.get('rows', []))} register rows match the recorded sales.")
+                f"{differences} difference(s): {t00.get('FIELD_DIFF', 0)} changed values, {t00.get('REGISTER_ONLY', 0)} register entries with no sale, {t00.get('SYSTEM_ONLY', 0)} sales missing from the register" + (f", {t00['DUPLICATE_ROW']} repeated bill row(s)" if t00.get('DUPLICATE_ROW') else "") + "." if differences else f"All {len(register.get('rows', []))} register rows match the recorded sales.")
         parse = t00.get("PARSE_REVIEW", 0)
         add("readable", "Every register row could be read", "warn" if parse else "pass",
             f"{parse} row(s) have missing or unreadable values that could not be compared." if parse else f"All {len(register.get('rows', []))} rows were readable.")

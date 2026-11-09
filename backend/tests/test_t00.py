@@ -29,11 +29,35 @@ class T00NormalizationTests(unittest.TestCase):
         for field, value in [("Date", "13/4/2026"), ("Date", "2026-02-30"), ("Date", "04-13-2026"),
                              ("Date", "04/13/26"), ("Gross Amt", "48,40"), ("Gross Amt", "NaN"),
                              ("Gross Amt", "1e3"), ("Gross Amt", "100.001"), ("Gross Amt", "₹48400"),
-                             ("Customer", ""), ("GST No", None), ("Bill No", " ")]:
+                             ("Customer", ""), ("Bill No", " ")]:
             with self.subTest(field=field, value=value):
                 result = t00.compare(field, value, value)
                 self.assertEqual(result["comparison"], "PARSE_REVIEW")
                 self.assertIsNone(result["normalized_difference"])
+
+
+class T00DateOrderTests(unittest.TestCase):
+    def test_order_is_detected_from_the_file_and_never_guessed(self):
+        self.assertEqual(t00.detect_date_order(["13/04/2025", "5/4/2025", "2025-04-01", None])["order"], "DMY")
+        self.assertEqual(t00.detect_date_order(["4/13/2025", "5/4/2025"])["order"], "MDY")
+        self.assertEqual(t00.detect_date_order(["13/04/2025", "4/13/2025"])["order"], "CONFLICT")
+        self.assertIsNone(t00.detect_date_order(["5/4/2025", "1/2/2025"])["order"])
+        self.assertEqual(t00.normalize("Date", "12/04/2025", "DMY")["value"], "2025-04-12")
+        self.assertEqual(t00.normalize("Date", "12/04/2025", "MDY")["value"], "2025-12-04")
+        self.assertEqual(t00.normalize("Date", "13/04/2025", None)["value"], "2025-04-13")   # settles itself
+        self.assertEqual(t00.normalize("Date", "12/04/2025", None)["status"], "INVALID")     # cannot be settled
+        self.assertEqual(t00.normalize("Date", "13/04/2025", "MDY")["status"], "INVALID")    # contradicts the stated order
+        self.assertEqual(t00.compare("Date", "12/04/2025", "2025-04-12", "DMY")["comparison"], "EQUAL")
+
+
+class T00OptionalFieldTests(unittest.TestCase):
+    def test_gstin_blank_on_both_sides_is_not_applicable_but_one_side_still_needs_review(self):
+        # Found on real data (UCI Online Retail II): every matched row was flagged only because neither side had a GSTIN.
+        for left, right in [(None, None), ("", None), ("  ", "")]:
+            self.assertEqual(t00.compare("GST No", left, right)["comparison"], "NOT_APPLICABLE")
+        for left, right in [(None, "27AAPFU0939F1ZV"), ("27AAPFU0939F1ZV", "")]:
+            self.assertEqual(t00.compare("GST No", left, right)["comparison"], "PARSE_REVIEW")
+        self.assertEqual(t00.compare("Customer", None, None)["comparison"], "PARSE_REVIEW")  # required fields never become not-applicable
 
 
 class T00IntegrationTests(unittest.TestCase):
@@ -92,7 +116,7 @@ class T00IntegrationTests(unittest.TestCase):
         run_id = self.run_audit()
         context = self.api('GET', f"/ui/runs/{run_id}/context?upload_id={upload['upload_id']}").json()
         enriched = next(f for f in context['findings'] if f['test_id']=='T00')
-        self.assertEqual(enriched['ruleset_version'], 'p2-t00-v2')
+        self.assertEqual(enriched['ruleset_version'], 'p2-t00-v4')
         self.assertEqual(context['reconciliation_rule'], t00.RULE)
         self.assertTrue(set(enriched['evidence_ids']) <= context['evidence_index'].keys())
         self.assertEqual(enriched['field_differences'], finding['field_differences'])
@@ -106,6 +130,24 @@ class T00IntegrationTests(unittest.TestCase):
         self.assertEqual(set(differences), {'Date','Customer','GST No','Gross Amt'})
         self.assertEqual(differences['Date']['normalized_difference'], {'days':1})
         self.assertEqual(differences['Gross Amt']['normalized_difference']['cents'], 100)
+
+    def test_indian_day_first_register_is_detected_or_stated_never_guessed(self):
+        for row in self.rows:  # rewrite the register day-first, as Indian registers usually are
+            m, d, y = row['Date'].split('/')
+            row['Date'] = f'{d}/{m}/{y}'
+        result = self.api('POST', f"/p2/registers/{self.upload()['upload_id']}/reconcile").json()
+        self.assertEqual((result['date_order']['used'], result['date_order']['source']), ('DMY', 'detected'))
+        self.assertEqual([f for f in result['findings'] if 'Date' in {d['field'] for d in f['field_differences']}], [])
+        # Only ambiguous dates (both parts 12 or less): the order cannot be detected, so they go to review ...
+        self.rows = [r for r in self.rows if int(r['Date'].split('/')[0]) <= 12]
+        upload = self.upload()['upload_id']
+        result = self.api('POST', f"/p2/registers/{upload}/reconcile").json()
+        self.assertEqual(result['date_order']['source'], 'undetermined')
+        self.assertTrue(result['findings'] and all('date order' in f['reason'] for f in result['findings'] if f['category'] == 'PARSE_REVIEW'))
+        # ... until the auditor states it.
+        stated = self.api('POST', f"/p2/registers/{upload}/reconcile?date_order=DMY").json()
+        self.assertEqual((stated['date_order']['used'], stated['date_order']['source']), ('DMY', 'stated'))
+        self.assertFalse([f for f in stated['findings'] if 'Date' in {d['field'] for d in f['field_differences']}])
 
     def test_missing_and_invalid_fields_require_review_and_roles_stay_enforced(self):
         self.rows[0].update({'Date':'2026-02-30', 'Gross Amt':'48,40', 'Customer':'', 'GST No':''})
@@ -135,7 +177,7 @@ class T00IntegrationTests(unittest.TestCase):
         context = self.api('GET', f'/ui/runs/{new_run}/context?upload_id={uid}').json()
         findings = [f for f in context['findings'] if f['test_id']=='T00']
         self.assertEqual(len(findings), 1)
-        self.assertEqual(findings[0]['ruleset_version'], 'p2-t00-v2')
+        self.assertEqual(findings[0]['ruleset_version'], 'p2-t00-v4')
         self.assertNotEqual(findings[0]['finding_id'], legacy['finding_id'])
         self.assertIsNone(findings[0]['human_decision'])
         self.assertEqual(self.api('GET', f'/ui/runs/{old_run}/context?upload_id={uid}').json(), old_context)
@@ -144,5 +186,5 @@ class T00IntegrationTests(unittest.TestCase):
         self.assertEqual(next(f for f in queue if f['finding_id'] == legacy['finding_id'])['human_decision'], review)
         new_package = self.api('POST', f'/p5/runs/{new_run}/packages', body={'upload_id':uid}).json()['package_id']
         report = self.api('GET', f'/p5/packages/{new_package}').json()
-        self.assertEqual(report['reconciliation_rule']['version'], 'p2-t00-v2')
+        self.assertEqual(report['reconciliation_rule']['version'], 'p2-t00-v4')
         self.assertEqual(report['receipt']['reconciliation_rules'][0]['hash'], p1.digest(p1.canonical(t00.RULE)))

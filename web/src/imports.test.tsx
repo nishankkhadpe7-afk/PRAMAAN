@@ -28,4 +28,16 @@ describe('import reports',()=>{
     expect(screen.getByText(/two different values printed for invoice number/)).toBeInTheDocument()
     expect(screen.getByText(/tax does not add up/)).toBeInTheDocument()
   })
+  it('reports a gap between statements and an OCR-read statement',()=>{
+    wrap(<ImportResult result={{statement_id:'BANK-2',row_count:3,source_format:'pdf',unread_lines:1,repeated_rows:[],needs_human_review:true,ocr:{engine:'tesseract'},
+      continuity:{status:'gap',opening_balance:'130000.00',previous_closing:'125000.00',unexplained_difference:'5000.00',previous_statement:'BANK-1'}}}/>)
+    expect(screen.getByText(/5000.00 is unexplained/)).toBeInTheDocument()
+    expect(screen.getByText(/read by OCR on this computer/)).toBeInTheDocument()
+    expect(screen.queryByText(/tesseract/)).not.toBeInTheDocument()
+  })
+  it('says an invoice was read by OCR',()=>{
+    wrap(<DocumentRead read={{invoice_number:'A-1',invoice_date:'2025-04-12',total_cents:100,extraction:'ocr',uncertain:{gstins:['x']},warnings:[]}}/>)
+    expect(screen.getByText(/read by OCR; the auditor will check it/)).toBeInTheDocument()
+    expect(screen.getByText(/too unclear to read/)).toBeInTheDocument()
+  })
 })

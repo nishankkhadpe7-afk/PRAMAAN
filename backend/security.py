@@ -34,7 +34,7 @@ class RestrictedConnection(sqlite3.Connection):
             security_event(caller, action, "denied", "db")
 CLIENT = {"import_sale", "update_business_record", "create_customer", "create_sale",
           "reverse_journal", "upload_register", "upload_related_parties",
-          "submit_requested_evidence", "list_evidence_requests", "whoami"}
+          "submit_requested_evidence", "list_evidence_requests", "whoami", "replace_evidence"}
 AUDITOR = {"get_sale", "create_snapshot", "run_audit", "detect_changes", "reproduce", "record_post_test_changes",
            "verify_log", "export_workpaper", "reconcile_register", "get_journal",
            "create_audit_run", "reproduce_audit_run", "rerun_audit",
@@ -51,13 +51,14 @@ CLIENT |= {"upload_bank_statement", "list_bank_statements"}
 AUDITOR |= {"list_bank_statements", "match_bank_transactions", "match_party", "investigate_finding", "list_investigations",
             "get_investigation", "propose_agent_action", "list_agent_actions", "confirm_agent_action", "reject_agent_action"}
 TOOL_NAMES |= {"upload_bank_statement", "match_bank_transactions", "match_party", "investigate_finding", "propose_evidence_request", "list_agent_actions"}
-HUMAN_ONLY = {"record_review_decision", "confirm_agent_action", "reject_agent_action"}
+AUDITOR |= {"verify_document_field"}
+HUMAN_ONLY = {"record_review_decision", "confirm_agent_action", "reject_agent_action", "verify_document_field"}
 TOOL_NAMES |= {"create_export_package", "export_p5_workpaper", "export_memo", "propose_review_decision", "get_review_queue", "get_p5_lifecycle"}
 BUSINESS = {"sales", "parties", "evidence", "links", "p2_customers", "p2_sales_orders",
             "p2_dispatches", "p2_invoices", "p2_journals", "p2_journal_lines", "p2_receipts",
             "p2_credit_notes", "p2_evidence", "p2_register_uploads", "p2_register_rows",
             "p2_related_party_uploads", "p4_record_versions", "p2_journal_reversals",
-            "p6_bank_statements", "p6_bank_rows", "p3_document_reads"}
+            "p6_bank_statements", "p6_bank_rows", "p3_document_reads", "p3_evidence_versions", "p6_bank_row_sources", "import_reports"}
 AUDIT = {"runs", "p2_reconciliations", "p3_audit_runs", "p3_samples", "p3_draws",
          "p3_evidence_requests", "p4_changes"}
 AUDIT |= {"p5_packages", "p5_proposals", "p2_reconciliation_rules"}
@@ -239,6 +240,7 @@ def constrain(db, caller):
         if role == "auditor":
             allowed |= table in AUDIT
             allowed |= table == "p5_reviews" and bool(caller.get("human")) and action == sqlite3.SQLITE_INSERT
+            allowed |= table == "p3_field_verifications" and bool(caller.get("human")) and action == sqlite3.SQLITE_INSERT
             # P1 audit bookkeeping columns are separate from invoice/dispatch facts.
             allowed |= table == "sales" and action == sqlite3.SQLITE_UPDATE and column in {"snapshot_hash", "active_run"}
         elif role == "client_employee":

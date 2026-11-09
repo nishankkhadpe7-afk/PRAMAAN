@@ -51,6 +51,15 @@ def db_open() -> sqlite3.Connection:
       CREATE TABLE IF NOT EXISTS p3_document_reads(evidence_id TEXT PRIMARY KEY REFERENCES p3_evidence(evidence_id), parser TEXT NOT NULL, read_json TEXT NOT NULL, read_hash TEXT NOT NULL);
       CREATE TRIGGER IF NOT EXISTS p3_document_reads_no_update BEFORE UPDATE ON p3_document_reads BEGIN SELECT RAISE(ABORT,'document reads are immutable'); END;
       CREATE TRIGGER IF NOT EXISTS p3_document_reads_no_delete BEFORE DELETE ON p3_document_reads BEGIN SELECT RAISE(ABORT,'document reads are immutable'); END;
+      -- Document versions: a corrected file is a new evidence row; this table links it to the one it
+      -- replaces (each version can be replaced once, so the history is a single chain).
+      CREATE TABLE IF NOT EXISTS p3_evidence_versions(new_evidence_id TEXT PRIMARY KEY REFERENCES p3_evidence(evidence_id), replaces_evidence_id TEXT NOT NULL UNIQUE REFERENCES p3_evidence(evidence_id), reason TEXT NOT NULL, replaced_by TEXT NOT NULL, replaced_at TEXT NOT NULL);
+      CREATE TRIGGER IF NOT EXISTS p3_evidence_versions_no_update BEFORE UPDATE ON p3_evidence_versions BEGIN SELECT RAISE(ABORT,'document versions are append-only'); END;
+      CREATE TRIGGER IF NOT EXISTS p3_evidence_versions_no_delete BEFORE DELETE ON p3_evidence_versions BEGIN SELECT RAISE(ABORT,'document versions are append-only'); END;
+      -- A human reviewer's record of what a document field says (for OCR, ambiguous or unread fields).
+      CREATE TABLE IF NOT EXISTS p3_field_verifications(verification_id TEXT PRIMARY KEY, evidence_id TEXT NOT NULL REFERENCES p3_evidence(evidence_id), field TEXT NOT NULL, value_json TEXT NOT NULL, note TEXT NOT NULL, verified_by TEXT NOT NULL, verified_at TEXT NOT NULL);
+      CREATE TRIGGER IF NOT EXISTS p3_field_verifications_no_update BEFORE UPDATE ON p3_field_verifications BEGIN SELECT RAISE(ABORT,'field verifications are append-only'); END;
+      CREATE TRIGGER IF NOT EXISTS p3_field_verifications_no_delete BEFORE DELETE ON p3_field_verifications BEGIN SELECT RAISE(ABORT,'field verifications are append-only'); END;
     """)
     return db
 
@@ -278,12 +287,14 @@ def build_snapshot(db: sqlite3.Connection, inline_sources: bool = False) -> dict
         })
     credit_notes = [dict(row) for row in db.execute("SELECT n.*,i.bill_no,i.invoice_date,o.customer_id FROM p2_credit_notes n JOIN p2_invoices i USING(invoice_id) JOIN p2_sales_orders o USING(order_id) ORDER BY n.credit_date,n.credit_note_id")]
     p2_evidence = [dict(row) for row in db.execute("SELECT * FROM p2_evidence ORDER BY evidence_id")]
-    p3_evidence = [dict(row) for row in db.execute("SELECT * FROM p3_evidence ORDER BY evidence_id")]
+    # A replaced document stays in the vault and in older snapshots; new snapshots use the current version.
+    p3_evidence = [dict(row) for row in db.execute("SELECT * FROM p3_evidence WHERE evidence_id NOT IN (SELECT replaces_evidence_id FROM p3_evidence_versions) ORDER BY evidence_id")]
+    versions = [dict(row) for row in db.execute("SELECT * FROM p3_evidence_versions ORDER BY new_evidence_id")]
     related_upload = db.execute("SELECT upload_id,sha256,period,parsed_json FROM p2_related_party_uploads ORDER BY rowid DESC LIMIT 1").fetchone()
     related = None if related_upload is None else {"upload_id": related_upload["upload_id"], "sha256": related_upload["sha256"], "period": related_upload["period"], "records": json.loads(related_upload["parsed_json"])}
     from .p5 import capture_registers
     registers = capture_registers(db, inline_sources)
-    return {"invoices": invoices, "credit_notes": credit_notes, "p2_evidence": p2_evidence, "p3_evidence": p3_evidence, "related_party_upload": related, "dataset_id": dataset_id, "dataset_manifest": dataset_manifest, "source_data": source_rows, "synthetic_fixture": bool(dataset_id), **({"register_uploads": registers} if registers else {})}
+    return {"invoices": invoices, "credit_notes": credit_notes, "p2_evidence": p2_evidence, "p3_evidence": p3_evidence, **({"p3_evidence_versions": versions} if versions else {}), "related_party_upload": related, "dataset_id": dataset_id, "dataset_manifest": dataset_manifest, "source_data": source_rows, "synthetic_fixture": bool(dataset_id), **({"register_uploads": registers} if registers else {})}
 
 
 def make_finding(test_id: str, object_ref: str, state: str, reason: str, **fields: Any) -> dict[str, Any]:
@@ -830,15 +841,25 @@ def list_evidence_requests(run_id: str) -> dict[str, Any]:
             in_snapshot = {e["evidence_id"] for e in json.loads(db.execute("SELECT snapshot_json FROM p3_audit_runs WHERE run_id=?", (run_id,)).fetchone()["snapshot_json"])["p3_evidence"]}
         reads = {r["evidence_id"]: json.loads(r["read_json"]) for r in db.execute("SELECT evidence_id,read_json FROM p3_document_reads")}
         invoices: dict[str, Any] = {}
+        register_ctx = None
+        verifications = field_verifications(db) if in_snapshot is not None else {}
         if in_snapshot is not None:
-            # Auditors compare what the PDF says with the invoice in this frozen snapshot.
-            invoices = {i["invoice_id"]: i for i in json.loads(db.execute("SELECT snapshot_json FROM p3_audit_runs WHERE run_id=?", (run_id,)).fetchone()["snapshot_json"]).get("invoices", [])}
+            # Auditors compare what the PDF says with the invoice in this frozen snapshot, and with the
+            # sales-register rows for the same bill number (cross-document check).
+            snapshot = json.loads(db.execute("SELECT snapshot_json FROM p3_audit_runs WHERE run_id=?", (run_id,)).fetchone()["snapshot_json"])
+            invoices = {i["invoice_id"]: i for i in snapshot.get("invoices", [])}
+            label = db.execute("SELECT selected_upload_id FROM p3_audit_labels WHERE run_id=?", (run_id,)).fetchone()
+            try:
+                register_ctx = {"register": selected_register(snapshot, label["selected_upload_id"] if label else None) or {"rows": []}}
+            except HTTPException:
+                register_ctx = None
+        versions = evidence_versions(db)
         requests = []
         for row in db.execute("SELECT * FROM p3_evidence_requests WHERE run_id=? ORDER BY sheet,sample_ref", (run_id,)):
             item = dict(row)
             item["required_docs"] = json.loads(item["required_docs"])
             item["uploaded_docs"] = json.loads(item["uploaded_docs"])
-            item["evidence"] = [{**dict(r), **({"in_snapshot": r["evidence_id"] in in_snapshot} if in_snapshot is not None else {}), **_document_read_view(reads.get(r["evidence_id"]), invoices.get(item["sample_ref"]) if in_snapshot is not None else None, in_snapshot is not None)} for r in db.execute("SELECT evidence_id,document_type,sha256,content_type,controller,acquisition_channel,independently_verified FROM p3_evidence WHERE object_id=? AND object_type=? ORDER BY evidence_id", (item["sample_ref"], item["object_type"]))]
+            item["evidence"] = [{**dict(r), **versions.get(r["evidence_id"], {"version": 1}), **({"in_snapshot": r["evidence_id"] in in_snapshot} if in_snapshot is not None else {}), **_document_read_view(reads.get(r["evidence_id"]), invoices.get(item["sample_ref"]) if in_snapshot is not None else None, in_snapshot is not None, verifications.get(r["evidence_id"]), _register_rows(register_ctx, invoices.get(item["sample_ref"])))} for r in db.execute("SELECT evidence_id,document_type,sha256,content_type,controller,acquisition_channel,independently_verified FROM p3_evidence WHERE object_id=? AND object_type=? ORDER BY evidence_id", (item["sample_ref"], item["object_type"]))]
             requests.append(item)
         return {"run_id": run_id, "requests": requests}
     finally:
@@ -865,7 +886,7 @@ def read_document(db: sqlite3.Connection, evidence_id: str, document_type: str, 
         # worth an auditor's attention; it is recorded with the reading, nothing is blocked.
         sha = p1.digest(content)
         duplicates = []
-        for other in db.execute("SELECT e.evidence_id, e.object_id, e.sha256, r.read_json FROM p3_evidence e LEFT JOIN p3_document_reads r USING(evidence_id) WHERE e.evidence_id<>? AND e.document_type=?", (evidence_id, document_type)):
+        for other in db.execute("SELECT e.evidence_id, e.object_id, e.sha256, r.read_json FROM p3_evidence e LEFT JOIN p3_document_reads r USING(evidence_id) WHERE e.evidence_id<>? AND e.document_type=? AND e.evidence_id NOT IN (SELECT replaces_evidence_id FROM p3_evidence_versions)", (evidence_id, document_type)):
             other_number = json.loads(other["read_json"]).get("invoice_number") if other["read_json"] else None
             if other["sha256"] == sha:
                 duplicates.append({"evidence_id": other["evidence_id"], "object_id": other["object_id"], "reason": "identical file"})
@@ -878,14 +899,53 @@ def read_document(db: sqlite3.Connection, evidence_id: str, document_type: str, 
     return read
 
 
-def _document_read_view(read: dict[str, Any] | None, invoice: dict[str, Any] | None, compare: bool) -> dict[str, Any]:
+def _document_read_view(read: dict[str, Any] | None, invoice: dict[str, Any] | None, compare: bool,
+                        verifications: dict[str, Any] | None = None, register_rows: list[dict[str, Any]] | None = None) -> dict[str, Any]:
     if not read:
         return {}
-    from .document_import import compare_invoice
+    from .document_import import compare_invoice, field_quality
     view: dict[str, Any] = {"document_read": read}
-    if compare and "error" not in read:
-        view["document_comparison"] = compare_invoice(read, invoice)
+    if compare:
+        view["document_comparison"] = compare_invoice(read, invoice, verifications, register_rows) if "error" not in read else {
+            "status": "incomplete", "fields": [], "quality": field_quality(read, verifications)}
     return view
+
+
+def _register_rows(ctx: dict[str, Any] | None, invoice: dict[str, Any] | None) -> list[dict[str, Any]] | None:
+    if ctx is None or not invoice:
+        return None
+    from .p6_agent import _register_rows_for
+    return _register_rows_for(ctx, invoice["bill_no"])
+
+
+def evidence_versions(db: sqlite3.Connection) -> dict[str, dict[str, Any]]:
+    """Per evidence id: version number, what it replaces / is replaced by, and why."""
+    links = [dict(r) for r in db.execute("SELECT * FROM p3_evidence_versions ORDER BY rowid")]
+    replaces = {l["new_evidence_id"]: l for l in links}
+    replaced_by = {l["replaces_evidence_id"]: l["new_evidence_id"] for l in links}
+    out: dict[str, dict[str, Any]] = {}
+    for evidence_id in set(replaces) | set(replaced_by):
+        version, cursor = 1, evidence_id
+        while cursor in replaces:
+            version += 1
+            cursor = replaces[cursor]["replaces_evidence_id"]
+        info: dict[str, Any] = {"version": version, "current": evidence_id not in replaced_by}
+        if evidence_id in replaces:
+            link = replaces[evidence_id]
+            info["replaces"] = {"evidence_id": link["replaces_evidence_id"], "reason": link["reason"], "replaced_by": link["replaced_by"], "replaced_at": link["replaced_at"]}
+        if evidence_id in replaced_by:
+            info["superseded_by"] = replaced_by[evidence_id]
+        out[evidence_id] = info
+    return out
+
+
+def field_verifications(db: sqlite3.Connection) -> dict[str, dict[str, dict[str, Any]]]:
+    """Latest human verification per (evidence, field); earlier ones stay in the table and event log."""
+    out: dict[str, dict[str, dict[str, Any]]] = {}
+    for r in db.execute("SELECT * FROM p3_field_verifications ORDER BY rowid"):
+        out.setdefault(r["evidence_id"], {})[r["field"]] = {"value": json.loads(r["value_json"]), "note": r["note"], "verified_by": r["verified_by"],
+                                                           "verified_at": r["verified_at"], "verification_id": r["verification_id"]}
+    return out
 
 
 @router.post("/evidence-requests/{request_id}/evidence")
@@ -929,5 +989,91 @@ def submit_requested_evidence(request_id: str, payload: EvidenceUploadIn) -> dic
     except sqlite3.IntegrityError as exc:
         db.rollback()
         raise HTTPException(409, "evidence_id already exists or request reference invalid") from exc
+    finally:
+        db.close()
+
+
+class EvidenceReplaceIn(BaseModel):
+    new_evidence_id: str = Field(min_length=1, max_length=120)
+    content_base64: str = Field(min_length=1)
+    content_type: str = "application/octet-stream"
+    reason: str = Field(min_length=5, max_length=500)
+
+
+@router.post("/evidence/{evidence_id}/replace")
+def replace_evidence(evidence_id: str, payload: EvidenceReplaceIn) -> dict[str, Any]:
+    """Submit a corrected document. The original row, file and SHA-256 are kept unchanged; the new file
+    becomes a new evidence version linked to the one it replaces, with who, when and why. Frozen
+    snapshots and their results are untouched; the next audit run uses the current version."""
+    from datetime import timezone
+    from .security import identity
+    db = db_open()
+    try:
+        old = db.execute("SELECT * FROM p3_evidence WHERE evidence_id=?", (evidence_id,)).fetchone()
+        if not old:
+            raise HTTPException(404, "evidence not found")
+        newer = db.execute("SELECT new_evidence_id FROM p3_evidence_versions WHERE replaces_evidence_id=?", (evidence_id,)).fetchone()
+        if newer:
+            raise HTTPException(409, f"this document was already replaced by {newer['new_evidence_id']}; replace the latest version")
+        try:
+            content = decode_base64(payload.content_base64, label="evidence")
+            safe_content_type = content_type(payload.content_type)
+        except UploadSafetyError as exc:
+            raise HTTPException(422, "invalid or oversized evidence") from exc
+        sha = p1.digest(content)
+        if sha == old["sha256"]:
+            raise HTTPException(422, "the corrected file is identical to the current version")
+        caller = identity.get()
+        who = caller["subject"] if caller else "offline-admin"
+        when = datetime.now(timezone.utc).isoformat()
+        db.execute("INSERT INTO p3_evidence VALUES(?,?,?,?,?,?,?,?,?,?,?)", (payload.new_evidence_id, old["request_id"], old["object_type"], old["object_id"], old["document_type"],
+                                                                         sha, safe_content_type, old["controller"], old["acquisition_channel"], 0, None))
+        db.execute("INSERT INTO p3_evidence_versions VALUES(?,?,?,?,?)", (payload.new_evidence_id, evidence_id, payload.reason.strip(), who, when))
+        p1.store_blob(content)
+        document_read = read_document(db, payload.new_evidence_id, old["document_type"], content)
+        version = evidence_versions(db)[payload.new_evidence_id]["version"]
+        p1.log_import(db, who, "evidence_replaced", old["request_id"], {"replaces_evidence_id": evidence_id, "new_evidence_id": payload.new_evidence_id,
+                                                                       "previous_sha256": old["sha256"], "sha256": sha, "document_type": old["document_type"],
+                                                                       "object_id": old["object_id"], "version": version, "reason": payload.reason.strip(),
+                                                                       "independently_verified": False})
+        db.commit()
+        return {"evidence_id": payload.new_evidence_id, "replaces_evidence_id": evidence_id, "version": version, "sha256": sha, "previous_sha256": old["sha256"],
+                "replaced_by": who, "replaced_at": when, "independently_verified": False, **({"document_read": document_read} if document_read else {})}
+    except sqlite3.IntegrityError as exc:
+        db.rollback()
+        raise HTTPException(409, "the new evidence id already exists, or this document was replaced at the same moment") from exc
+    finally:
+        db.close()
+
+
+class FieldVerificationIn(BaseModel):
+    field: str = Field(min_length=1, max_length=40)
+    value: str = Field(min_length=1, max_length=200)
+    note: str = Field(min_length=3, max_length=500)
+
+
+@router.post("/evidence/{evidence_id}/field-verifications")
+def verify_document_field(evidence_id: str, payload: FieldVerificationIn) -> dict[str, Any]:
+    """A human reviewer records what a document field actually says (after looking at the file). Needed
+    for OCR-read, ambiguous or unread fields before they count. Append-only; the reading is unchanged."""
+    from datetime import timezone
+    from .document_import import parse_verified_value
+    from .security import identity
+    db = db_open()
+    try:
+        if not db.execute("SELECT 1 FROM p3_document_reads WHERE evidence_id=?", (evidence_id,)).fetchone():
+            raise HTTPException(404, "no document reading for this evidence")
+        try:
+            value = parse_verified_value(payload.field, payload.value)
+        except ValueError as exc:
+            raise HTTPException(422, str(exc)) from exc
+        caller = identity.get()
+        who = caller["subject"] if caller else "offline-admin"
+        verification_id = "FV-" + secrets.token_hex(8)
+        when = datetime.now(timezone.utc).isoformat()
+        db.execute("INSERT INTO p3_field_verifications VALUES(?,?,?,?,?,?,?)", (verification_id, evidence_id, payload.field, p1.canonical(value).decode(), payload.note.strip(), who, when))
+        p1.log_event(db, who, "document_field_verified", evidence_id, {"verification_id": verification_id, "field": payload.field, "value": value, "note": payload.note.strip()})
+        db.commit()
+        return {"verification_id": verification_id, "evidence_id": evidence_id, "field": payload.field, "value": value, "verified_by": who, "verified_at": when}
     finally:
         db.close()

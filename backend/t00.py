@@ -3,17 +3,44 @@ import re
 from datetime import date
 from decimal import Decimal, InvalidOperation, localcontext
 
-RULE = {"version": "p2-t00-v2", "implementation": "field-aware calendar/exact-cents comparison",
+RULE = {"version": "p2-t00-v4", "implementation": "field-aware calendar/exact-cents comparison",
         "fields": ["Bill No", "Date", "Customer", "Gross Amt", "GST No"],
-        "dates": "YYYY-MM-DD or explicit M/D/YYYY (US month/day, never infer locale); calendar validation",
+        "dates": "YYYY-MM-DD, or D/M/YYYY or M/D/YYYY with the order stated by the user or detected from the file (a first part above 12 means day-first, a second part above 12 means month-first); a slash date the order cannot settle, or one that contradicts it, needs review; calendar validation",
         "money": "signed decimal INR; optional validated western/Indian comma groups; exact cents, no rounding/exponents/symbols",
         "customer": "collapse whitespace only; case sensitive",
         "identifiers": "exact text, including whitespace/case/punctuation/leading zeros",
         "unavailable": "missing/invalid values produce PARSE_REVIEW, never equal",
+        "optional": "GST No blank on BOTH sides is NOT_APPLICABLE (B2C sales and non-GST registers carry no buyer GSTIN); blank or invalid on one side is PARSE_REVIEW",
+        "duplicates": "a bill number on more than one register row: the first row is compared, each repeat is DUPLICATE_ROW",
+        "credit_notes": "a register row whose Bill No is a credit note in the books is compared on Date and Gross Amt (books amount shown negative); credit notes absent from the register are not flagged",
+        "tax_split": "only when the register has CGST/SGST/IGST columns: their total must equal the books tax; CGST must equal SGST; CGST/SGST and IGST are not both charged; with company_state given, a buyer GSTIN in the same state must not carry IGST and one in another state must carry only IGST",
         "delta": "register minus system; cents/INR for money, calendar days for dates"}
 
 
-def normalize(field, value):
+OPTIONAL_FIELDS = {"GST No"}
+
+
+_SLASH_DATE = re.compile(r"([0-9]{1,2})/([0-9]{1,2})/([0-9]{4})")
+
+
+def detect_date_order(values) -> dict:
+    """Which slash-date order a register uses, from its own values. A first part above 12 can only be a day
+    (day-first, DMY); a second part above 12 can only be a day (month-first, MDY). Both kinds of evidence in
+    one file is a conflict; no evidence means the order is undetermined. Nothing is assumed from locale."""
+    dmy = mdy = 0
+    for value in values:
+        match = _SLASH_DATE.fullmatch(value.strip()) if isinstance(value, str) else None
+        if match:
+            first, second = int(match.group(1)), int(match.group(2))
+            dmy += first > 12
+            mdy += second > 12
+    order = "DMY" if dmy and not mdy else "MDY" if mdy and not dmy else "CONFLICT" if dmy and mdy else None
+    return {"order": order, "day_first_evidence": dmy, "month_first_evidence": mdy}
+
+
+def normalize(field, value, date_order="MDY"):
+    """date_order: "MDY" (default, the original rule for direct callers), "DMY", or None when the register's
+    order could not be determined; then only slash dates whose parts settle the order themselves are read."""
     if value is None or not isinstance(value, str) or not value.strip():
         return {"status": "MISSING", "value": None}
     text = value.strip()
@@ -21,8 +48,12 @@ def normalize(field, value):
         if field == "Date":
             if re.fullmatch(r"[0-9]{4}-[0-9]{2}-[0-9]{2}", text):
                 parsed = date.fromisoformat(text)
-            elif re.fullmatch(r"[0-9]{1,2}/[0-9]{1,2}/[0-9]{4}", text):
-                month, day, year = map(int, text.split("/"))
+            elif match := _SLASH_DATE.fullmatch(text):
+                first, second, year = map(int, match.groups())
+                order = date_order if date_order in ("DMY", "MDY") else ("DMY" if first > 12 else "MDY" if second > 12 else None)
+                if order is None:
+                    raise ValueError("date order cannot be settled")
+                day, month = (first, second) if order == "DMY" else (second, first)
                 parsed = date(year, month, day)
             else:
                 raise ValueError("unsupported date")
@@ -45,8 +76,12 @@ def normalize(field, value):
         return {"status": "INVALID", "value": None}
 
 
-def compare(field, register_value, system_value):
-    left, right = normalize(field, register_value), normalize(field, system_value)
+def compare(field, register_value, system_value, date_order="MDY"):
+    # Only the register side follows the register's date order; system dates are ISO.
+    left, right = normalize(field, register_value, date_order), normalize(field, system_value)
+    if field in OPTIONAL_FIELDS and left["status"] == right["status"] == "MISSING":
+        return {"field": field, "register_value": register_value, "system_value": system_value, "register_normalized": left,
+                "system_normalized": right, "comparison": "NOT_APPLICABLE", "normalized_difference": None}
     status = "PARSE_REVIEW" if left["status"] != "VALID" or right["status"] != "VALID" else ("EQUAL" if left["value"] == right["value"] else "DIFFERENT")
     delta = None
     if status == "DIFFERENT" and field == "Gross Amt":

@@ -4,6 +4,7 @@ from __future__ import annotations
 import csv
 import io
 import json
+import re
 import sqlite3
 import uuid
 from decimal import Decimal, InvalidOperation
@@ -156,7 +157,8 @@ class RegisterIn(BaseModel):
     source_base64: str
     # "csv": UTF-8 CSV register. "tally_xml": a TallyPrime / Tally.ERP 9 XML export (Day Book or sales
     # vouchers); its sales vouchers become register rows and the XML itself is the preserved source.
-    source_format: Literal["csv", "tally_xml"] = "csv"
+    # "tally_xlsx": Tally's Sales Register exported to Excel; read by tally_register.py.
+    source_format: Literal["csv", "tally_xml", "tally_xlsx"] = "csv"
 
 
 class RelatedPartiesIn(BaseModel):
@@ -346,19 +348,22 @@ def upload_register(payload: RegisterIn) -> dict[str, Any]:
         source = decode_base64(payload.source_base64, label="register source")
     except UploadSafetyError as exc:
         raise HTTPException(422, "invalid or oversized register source") from exc
-    if payload.source_format == "tally_xml":
+    if payload.source_format in ("tally_xml", "tally_xlsx"):
         from .document_import import DocumentReadError, parse_tally_sales
+        from .tally_register import parse_tally_register
         try:
-            read = parse_tally_sales(source)
+            read = parse_tally_sales(source) if payload.source_format == "tally_xml" else parse_tally_register(source)
         except DocumentReadError as exc:
             raise HTTPException(422, f"Tally import: {exc}") from exc
         rows = read["rows"]
-        report = {"source_format": "tally_xml", "parser": read["parser"], "vouchers_seen": read["vouchers_seen"],
+        report = {"source_format": payload.source_format, "parser": read["parser"], "vouchers_seen": read.get("vouchers_seen", len(read["rows"]) + len(read["rejected"])),
                   "skipped_vouchers": len(read["skipped"]), "skipped": read["skipped"][:50],
                   "rejected_vouchers": len(read["rejected"]), "rejected": read["rejected"][:50],
-                  "warning_count": len(read["warnings"]), "warnings": read["warnings"][:50]}
+                  "warning_count": len(read["warnings"]), "warnings": read["warnings"][:50],
+                  # register row number -> the Tally voucher it came from (kept in the event log)
+                  "row_sources": read["sources"][:2000], **({"sheets": read["sheets"]} if "sheets" in read else {})}
         if not rows:
-            raise HTTPException(422, f"Tally import: no usable sales vouchers among {read['vouchers_seen']} vouchers")
+            raise HTTPException(422, f"Tally import: no usable sales vouchers among {report['vouchers_seen']} vouchers")
     else:
         try:
             text = source.decode("utf-8-sig")
@@ -375,7 +380,8 @@ def upload_register(payload: RegisterIn) -> dict[str, Any]:
         for row_no, row in enumerate(rows, 1):
             row_json = p1.canonical(row).decode()
             db.execute("INSERT INTO p2_register_rows VALUES(?,?,?,?)", (upload_id, row_no, row_json, p1.digest(row_json.encode())))
-        p1.log_event(db, "auditor-demo", "register_imported", upload_id, {"sha256": sha, "row_count": len(rows), **{k: v for k, v in report.items() if k not in ("skipped", "rejected")}})
+        p1.log_import(db, "auditor-demo", "register_imported", upload_id, {"sha256": sha, "row_count": len(rows), **{k: v for k, v in report.items() if k not in ("skipped", "rejected")}})
+        report.pop("row_sources", None)
         db.commit()
         return {"upload_id": upload_id, "sha256": sha, "row_count": len(rows), **report}
     finally:
@@ -418,8 +424,35 @@ def money_text(cents_value: int) -> str:
     return f"{Decimal(cents_value) / Decimal(100):.2f}"
 
 
+def _tax_split(raw: dict, invoice, company_state: str | None) -> list[dict]:
+    """Checks the CGST/SGST/IGST columns if the register has them. Returns field differences (empty when fine)."""
+    heads = [h for h in ("CGST", "SGST", "IGST") if h in raw]
+    if not heads:
+        return []
+    parsed = {h: t00.normalize("Gross Amt", raw.get(h) or "0") for h in heads}
+    if any(v["status"] != "VALID" for v in parsed.values()):
+        return [{"field": "Tax split", "register_value": {h: raw.get(h) for h in heads}, "system_value": money_text(invoice["tax_cents"]), "comparison": "PARSE_REVIEW", "normalized_difference": None}]
+    c, s, i = (parsed[h]["value"] if h in parsed else 0 for h in ("CGST", "SGST", "IGST"))
+    problems = []
+    if c + s + i != invoice["tax_cents"]:
+        problems.append(f"tax total {money_text(c + s + i)} vs books {money_text(invoice['tax_cents'])}")
+    if c != s:
+        problems.append("CGST and SGST differ")
+    if (c or s) and i:
+        problems.append("both CGST/SGST and IGST charged")
+    buyer = (invoice["gstin"] or "")[:2]
+    if company_state and buyer:
+        if buyer == company_state and i:
+            problems.append("IGST charged on a sale inside the state")
+        if buyer != company_state and (c or s):
+            problems.append("CGST/SGST charged on a sale to another state")
+    return [{"field": "Tax split", "register_value": {h: raw.get(h) for h in heads}, "system_value": money_text(invoice["tax_cents"]), "comparison": "DIFFERENT", "normalized_difference": "; ".join(problems)}] if problems else []
+
+
 @router.post("/registers/{upload_id}/reconcile")
-def reconcile_register(upload_id: str) -> dict[str, Any]:
+def reconcile_register(upload_id: str, date_order: Literal["detect", "DMY", "MDY"] = "detect", company_state: str | None = None) -> dict[str, Any]:
+    """date_order: "DMY" (day first, usual for Indian registers) or "MDY" when the auditor knows it; "detect"
+    reads it from the register's own dates and sends ambiguous dates to review if the file cannot settle it."""
     db = db_open()
     try:
         upload = db.execute("SELECT * FROM p2_register_uploads WHERE upload_id=?", (upload_id,)).fetchone()
@@ -428,14 +461,32 @@ def reconcile_register(upload_id: str) -> dict[str, Any]:
         rows = db.execute("SELECT row_no,raw_json FROM p2_register_rows WHERE upload_id=? ORDER BY row_no", (upload_id,)).fetchall()
         invoices = db.execute("SELECT i.*,c.name customer_name,c.gstin FROM p2_invoices i JOIN p2_sales_orders o USING(order_id) JOIN p2_customers c USING(customer_id) ORDER BY i.bill_no").fetchall()
         by_bill = {row["bill_no"]: row for row in invoices}
+        credits = {r["credit_note_id"]: r for r in db.execute("SELECT credit_note_id,credit_date,amount_cents FROM p2_credit_notes")}
+        if company_state is not None and not re.fullmatch(r"[0-9]{2}", company_state):
+            raise HTTPException(422, "company_state must be a two-digit GST state code")
         found_bills = set()
         findings = []
+        not_applicable = 0  # matched rows where an optional field (GST No) is blank in both register and books
         rule_hash = p1.digest(p1.canonical(t00.RULE))
+        detected = t00.detect_date_order(json.loads(r["raw_json"]).get("Date") for r in rows)
+        order_used = date_order if date_order != "detect" else (detected["order"] if detected["order"] in ("DMY", "MDY") else None)
+        date_report = {"used": order_used, "source": "stated" if date_order != "detect" else "detected" if order_used else "undetermined", **detected}
         compared = {"Bill No": "bill_no", "Date": "invoice_date", "Customer": "customer_name", "Gross Amt": "gross_cents", "GST No": "gstin"}
+        seen_rows = {}
         for row in rows:
             raw = json.loads(row["raw_json"])
             bill = raw.get("Bill No", raw.get("bill_no", ""))
+            if bill and t00.normalize("Bill No", bill)["status"] == "VALID" and bill in seen_rows:
+                findings.append({"finding_id": f"T00-v2-{upload_id}-{row['row_no']}-DUPLICATE_ROW", "test_id": "T00", "category": "DUPLICATE_ROW", "row_no": row["row_no"], "bill_no": bill, "field_differences": [], "reason": f"Bill number already appears on register row {seen_rows[bill]}; a repeated bill can double-count a sale."})
+                continue
+            seen_rows.setdefault(bill, row["row_no"])
             invoice = by_bill.get(bill)
+            if invoice is None and bill in credits:
+                note = credits[bill]
+                diffs = [c for c in (t00.compare("Date", raw.get("Date"), note["credit_date"], order_used), t00.compare("Gross Amt", raw.get("Gross Amt"), money_text(-note["amount_cents"]), order_used)) if c["comparison"] in ("DIFFERENT", "PARSE_REVIEW")]
+                if diffs:
+                    findings.append({"finding_id": f"T00-v2-{upload_id}-{row['row_no']}-CREDIT_DIFF", "test_id": "T00", "category": "FIELD_DIFF", "row_no": row["row_no"], "bill_no": bill, "field_differences": diffs, "reason": "Register credit note differs from the credit note in the books: " + ", ".join(d["field"] for d in diffs) + "."})
+                continue
             if invoice is None:
                 missing_bill = t00.normalize("Bill No", bill)["status"] != "VALID"
                 category = "PARSE_REVIEW" if missing_bill else "REGISTER_ONLY"
@@ -447,26 +498,33 @@ def reconcile_register(upload_id: str) -> dict[str, Any]:
             for register_field, invoice_field in compared.items():
                 register_value = raw.get(register_field)
                 system_value = money_text(invoice[invoice_field]) if invoice_field == "gross_cents" else invoice[invoice_field]
-                comparison = t00.compare(register_field, register_value, system_value)
+                comparison = t00.compare(register_field, register_value, system_value, order_used)
                 if comparison["comparison"] == "DIFFERENT":
                     differences.append(comparison)
                 elif comparison["comparison"] == "PARSE_REVIEW":
                     parse_reviews.append(comparison)
+                elif comparison["comparison"] == "NOT_APPLICABLE":
+                    not_applicable += 1
+            differences += _tax_split(raw, invoice, company_state)
             if differences:
                 findings.append({"finding_id": f"T00-v2-{upload_id}-{row['row_no']}-FIELD_DIFF", "test_id": "T00", "category": "FIELD_DIFF", "row_no": row["row_no"], "bill_no": bill, "field_differences": differences, "reason": "Normalized register values differ from the matched system invoice: " + ", ".join(d["field"] for d in differences) + "."})
             if parse_reviews:
-                findings.append({"finding_id": f"T00-v2-{upload_id}-{row['row_no']}-PARSE_REVIEW", "test_id": "T00", "category": "PARSE_REVIEW", "row_no": row["row_no"], "bill_no": bill, "field_differences": parse_reviews, "reason": "Missing or invalid comparison inputs; review required, not a confirmed discrepancy."})
+                findings.append({"finding_id": f"T00-v2-{upload_id}-{row['row_no']}-PARSE_REVIEW", "test_id": "T00", "category": "PARSE_REVIEW", "row_no": row["row_no"], "bill_no": bill, "field_differences": parse_reviews, "reason": (
+                    "The register's date order (day-first or month-first) could not be determined, so this date was not read; "
+                    "reconcile again stating the order. Review required, not a confirmed discrepancy."
+                    if order_used is None and any(c["field"] == "Date" and t00._SLASH_DATE.fullmatch(str(c["register_value"] or "").strip()) for c in parse_reviews)
+                    else "Missing or invalid comparison inputs; review required, not a confirmed discrepancy.")})
         for invoice in invoices:
             if invoice["bill_no"] not in found_bills:
                 findings.append({"finding_id": f"T00-v2-{upload_id}-{invoice['invoice_id']}-SOR_ONLY", "test_id": "T00", "category": "SYSTEM_ONLY", "bill_no": invoice["bill_no"], "field_differences": [], "reason": "System invoice is absent from the uploaded register."})
         for finding in findings:
             finding.update({"ruleset_version": t00.RULE["version"], "ruleset_hash": rule_hash})
-        reconciliation_id = "T00-" + p1.digest(p1.canonical([upload_id, rule_hash, findings]))[:12]
+        reconciliation_id = "T00-" + p1.digest(p1.canonical([upload_id, rule_hash, order_used, findings]))[:12]
         db.execute("INSERT OR IGNORE INTO p2_reconciliations VALUES(?,?,?)", (reconciliation_id, upload_id, p1.canonical(findings).decode()))
         db.execute("INSERT OR IGNORE INTO p2_reconciliation_rules VALUES(?,?,?)", (reconciliation_id, p1.canonical(t00.RULE).decode(), rule_hash))
-        p1.log_event(db, "auditor-demo", "register_reconciled", reconciliation_id, {"upload_id": upload_id, "finding_count": len(findings), "ruleset_version": t00.RULE["version"], "ruleset_hash": rule_hash})
+        p1.log_event(db, "auditor-demo", "register_reconciled", reconciliation_id, {"upload_id": upload_id, "finding_count": len(findings), "ruleset_version": t00.RULE["version"], "ruleset_hash": rule_hash, "date_order": date_report})
         db.commit()
-        return {"reconciliation_id": reconciliation_id, "upload_id": upload_id, "source_sha256": upload["sha256"], "ruleset": t00.RULE, "ruleset_version": t00.RULE["version"], "ruleset_hash": rule_hash, "findings": findings}
+        return {"reconciliation_id": reconciliation_id, "upload_id": upload_id, "source_sha256": upload["sha256"], "gstin_not_applicable_rows": not_applicable, "date_order": date_report, "ruleset": t00.RULE, "ruleset_version": t00.RULE["version"], "ruleset_hash": rule_hash, "findings": findings}
     finally:
         db.close()
 

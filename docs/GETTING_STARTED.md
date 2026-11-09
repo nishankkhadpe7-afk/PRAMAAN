@@ -39,11 +39,11 @@ Each workspace opens with a short **Getting started** card. You can hide it and 
 
 ![Client overview with the getting-started card](assets/getting-started/2-client-overview.png)
 
-**Registers & disclosures.** Upload the original sales register: a CSV, or the XML file Tally exports (*Export → Day Book*, XML format). A bank statement can be a CSV or the text PDF your net banking gives you. PRAMAAN fingerprints the file and keeps it exactly as sent; a new upload is stored as a new version, never an overwrite. After an upload you see how many rows were imported, skipped, rejected or need a look, with the reason for each. For a bank statement PRAMAAN also checks that the running balance adds up, and it won't accept the same statement file twice.
+**Registers & disclosures.** Upload the original sales register: a CSV, or the XML file Tally exports (*Export → Day Book*, XML format). A bank statement can be a CSV or the text PDF your net banking gives you. PRAMAAN fingerprints the file and keeps it exactly as sent; a new upload is stored as a new version, never an overwrite. After an upload you see how many rows were imported, skipped, rejected or need a look, with the reason for each. For a bank statement PRAMAAN also checks that the running balance adds up and that it carries on from your previous statement, and it won't accept the same statement file twice. Statements with one Amount column and a Dr/Cr marker work too. A scanned statement is read by OCR if Tesseract is installed on the computer running PRAMAAN; anything OCR is unsure of is listed for a person to check.
 
 ![Upload a source file](assets/getting-started/3-client-register.png)
 
-**Evidence inbox.** Each row is one sale the auditor wants documents for. Open it and upload the file; one upload answers that request for every audit. If you upload an invoice as a PDF, PRAMAAN shows what it read from it (invoice number, date, total) and whether taxable value plus tax equals the total. If the PDF prints two different values for the same thing, it says so instead of picking one.
+**Evidence inbox.** Each row is one sale the auditor wants documents for. Open it and upload the file; one upload answers that request for every audit. If you upload an invoice as a PDF, PRAMAAN shows what it read from it (invoice number, date, total) and whether taxable value plus tax equals the total. If the PDF prints two different values for the same thing, it says so instead of picking one. Uploaded the wrong file? Open it under *Files you have submitted* and choose *Replace it*: the corrected file becomes version 2, and the original is kept.
 
 ![Evidence inbox](assets/getting-started/4-client-inbox.png)
 

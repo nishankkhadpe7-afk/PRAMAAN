@@ -5,6 +5,7 @@ import base64
 import csv
 import io
 import json
+from collections import defaultdict
 import os
 from datetime import datetime, timezone
 from decimal import Decimal, InvalidOperation
@@ -139,12 +140,19 @@ def audit_findings(snapshot, result, register=None):
     return findings
 
 
-def related_invoices(finding, snapshot):
+def related_invoices(finding, snapshot, look=None):
     refs = set(finding.get("invoice_ids", [])) | {finding.get("invoice_id"), finding["object_ref"]}
+    if look is None:  # callers outside enrich: same rules, scanning
+        if finding.get("bill_no"):
+            refs.update(i["invoice_id"] for i in snapshot["invoices"] if i["bill_no"] == finding["bill_no"])
+        refs.update(i["invoice_id"] for i in snapshot["invoices"] if i["customer_id"] in {finding.get("customer_id"), finding["object_ref"]})
+        refs.update(n["invoice_id"] for n in snapshot["credit_notes"] if n["credit_note_id"] == finding["object_ref"])
+        return {ref for ref in refs if ref}
     if finding.get("bill_no"):
-        refs.update(i["invoice_id"] for i in snapshot["invoices"] if i["bill_no"] == finding["bill_no"])
-    refs.update(i["invoice_id"] for i in snapshot["invoices"] if i["customer_id"] in {finding.get("customer_id"), finding["object_ref"]})
-    refs.update(n["invoice_id"] for n in snapshot["credit_notes"] if n["credit_note_id"] == finding["object_ref"])
+        refs |= look["invoices_by_bill"].get(finding["bill_no"], set())
+    for customer in {finding.get("customer_id"), finding["object_ref"]}:
+        refs |= look["invoices_by_customer"].get(customer, set())
+    refs |= look["invoices_by_credit_note"].get(finding["object_ref"], set())
     return {ref for ref in refs if ref}
 
 
@@ -180,30 +188,50 @@ def evidence_index(snapshot, register):
     return index
 
 
+def _lookups(snapshot, result, index):
+    """Lookup tables built once per request, so matching each finding to its evidence, related
+    invoices and samples is a dictionary lookup instead of a scan (it used to be findings x rows)."""
+    def group(pairs):
+        out = defaultdict(set)
+        for key, value in pairs:
+            out[key].add(value)
+        return out
+    by_file = group((item["file_name"], ref) for ref, item in index.items())
+    by_invoice = group((item.get("record", {}).get("invoice_id"), ref) for ref, item in index.items() if item["file_name"] == "invoices")
+    by_credit_note = group((item.get("record", {}).get("credit_note_id"), ref) for ref, item in index.items() if item["file_name"] == "credit_notes")
+    by_object = group((item.get("object_id"), ref) for ref, item in index.items() if item.get("object_id") is not None)
+    by_register_row = group((item.get("normalized_row_no"), ref) for ref, item in index.items() if item["file_name"] == "Sales Register")
+    samples = defaultdict(list)
+    for position, item in enumerate(result["sample_items"]):
+        samples[item["object_ref"]].append(position)
+    return {"by_file": by_file, "by_invoice": by_invoice, "by_credit_note": by_credit_note, "by_object": by_object,
+            "by_register_row": by_register_row, "samples": samples,
+            "invoices_by_bill": group((i["bill_no"], i["invoice_id"]) for i in snapshot["invoices"]),
+            "invoices_by_customer": group((i["customer_id"], i["invoice_id"]) for i in snapshot["invoices"]),
+            "invoices_by_credit_note": group((n["credit_note_id"], n["invoice_id"]) for n in snapshot["credit_notes"])}
+
+
 def enrich(findings, run, snapshot, result, index):
     enriched = []
+    look = _lookups(snapshot, result, index)
     for finding in findings:
-        refs = related_invoices(finding, snapshot)
+        refs = related_invoices(finding, snapshot, look)
         evidence = set(finding.get("evidence_ids", []))
-        for ref, item in index.items():
-            record = item.get("record", {})
-            # Source-rule inputs are explicitly cited; broad inputs are marked as such.
-            if item["file_name"] in FILES.get(finding["test_id"], []):
-                evidence.add(ref)
-            if item["file_name"] == "invoices" and record.get("invoice_id") in refs:
-                evidence.add(ref)
-            if item["file_name"] == "credit_notes" and record.get("credit_note_id") == finding["object_ref"]:
-                evidence.add(ref)
-            if item.get("object_id") in refs:
-                evidence.add(ref)
-            if finding["test_id"] == "T00" and item["file_name"] == "Sales Register" and (not finding.get("row_no") or item["normalized_row_no"] == finding["row_no"]):
-                evidence.add(ref)
-            if finding["test_id"] == "T01" and item["file_name"] == "related_party_upload":
-                evidence.add(ref)
+        # Source-rule inputs are explicitly cited; broad inputs are marked as such.
+        for file_name in FILES.get(finding["test_id"], []):
+            evidence |= look["by_file"].get(file_name, set())
+        for ref in refs:
+            evidence |= look["by_invoice"].get(ref, set()) | look["by_object"].get(ref, set())
+        evidence |= look["by_credit_note"].get(finding["object_ref"], set())
+        if finding["test_id"] == "T00":
+            evidence |= look["by_register_row"].get(finding["row_no"], set()) if finding.get("row_no") else look["by_file"].get("Sales Register", set())
+        if finding["test_id"] == "T01":
+            evidence |= look["by_file"].get("related_party_upload", set())
         if evidence and not evidence <= index.keys():
             raise HTTPException(409, "finding source references do not resolve")
+        positions = sorted({p for ref in refs | {finding["object_ref"]} for p in look["samples"].get(ref, [])})
         samples = [{"sheet": s["sheet"], "object_ref": s["object_ref"], "selection_reason": s["selection_reason"]}
-                   for s in result["sample_items"] if s["object_ref"] in refs or s["object_ref"] == finding["object_ref"]]
+                   for s in (result["sample_items"][p] for p in positions)]
         enriched.append({**finding, "assertion": finding.get("assertion", ASSERTIONS[finding["test_id"]]), "run_id": run["run_id"],
                          "snapshot_hash": run["snapshot_hash"], "ruleset_version": run["ruleset_version"] if finding["test_id"] != "T00" else finding.get("ruleset_version", "p2-t00-v1"),
                          "ruleset_hash": result["ruleset_hash"] if finding["test_id"] != "T00" else finding.get("ruleset_hash", p1.digest(p1.canonical(T00_RULE))), "evidence_ids": sorted(evidence), "samples": samples,

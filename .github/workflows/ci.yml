@@ -20,6 +20,8 @@ jobs:
           cache: pip
           cache-dependency-path: backend/requirements-dev.txt
       - run: python -m pip install -r backend/requirements-dev.txt
+      - name: Install Tesseract (local OCR for scanned PDFs; OCR tests skip without it)
+        run: sudo apt-get update && sudo apt-get install -y --no-install-recommends tesseract-ocr
       - name: Backend tests
         run: python -m pytest backend/tests -q
       - name: Automated rehearsal

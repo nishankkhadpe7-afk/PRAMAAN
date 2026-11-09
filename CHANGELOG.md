@@ -5,6 +5,20 @@ Notable changes to PRAMAAN, newest first. Dates are when the change landed on `m
 ## Unreleased
 
 ### Added
+- **Tally Sales Register (Excel) import** with header detection, subtotal/grand-total checks and credit notes; **local anonymiser** for Tally register and voucher exports (consistent pseudonyms, state code kept, figures proven identical, refuses to write inside a git repo).
+- **Register credit notes** are matched against the books' credit notes (date and amount). **GST split check** (CGST = SGST, total = books tax, one tax type, and same-state vs other-state when the company state code is given).
+- **Register date order** detected per file or stated by the auditor (rule `p2-t00-v4`); undetermined dates go to review. **Repeated bill numbers** are now `DUPLICATE_ROW` findings. A **synthetic Indian GST register** test covers GSTINs, B2B/B2C, day-first dates, Indian digit grouping and credit notes. The run page builds once per run and caches the result (context wait 4.4 s → 0.64 s on a real year).
+- **Round 2 of the import audit (P2/P3, [docs/IMPORT_AUDIT.md](docs/IMPORT_AUDIT.md)):**
+  - Bank statements with one **Amount** column and a **Dr/Cr** column or suffix, a minus sign, or only a running balance; any column order; multi-page. Each row records how its direction was decided; rows nothing settles are listed, never guessed.
+  - **Replace a wrong document:** the corrected file becomes version 2 with a reason. The original stays unchanged, frozen audits reproduce exactly, and the next run uses the new version.
+  - **OCR for scanned PDFs** with local Tesseract (optional, bounded). OCR values are marked as such and need human confirmation; uncertain words are never imported.
+  - **Field-quality states** (exact, validated, OCR, ambiguous, unreadable, human-verified) and a **Confirm field** form for human reviewers.
+  - **Statement continuity:** a gap between one statement's closing and the next one's opening balance is reported.
+  - **Cross-check** of each invoice PDF's total against the sales-register row; page and line traceability for bank rows; Tally rows mapped to vouchers.
+  - Full import reports kept in `import_reports`.
+  - Tally HTTP/XML fetch command (tested against a stand-in server only).
+  - Database: 4 new append-only tables, added automatically at start-up; no existing table changed.
+  - 25 more backend tests and 2 UI tests. CI installs Tesseract so the OCR tests run.
 - **Import checks (from the import-pipeline audit, [docs/IMPORT_AUDIT.md](docs/IMPORT_AUDIT.md)):**
   - Tally: the report now separates *skipped* (not a sale) from *rejected* (a sale that couldn't be read safely) and lists *warnings*: GSTIN check digit, repeated voucher numbers, unbalanced ledger entries, customer ledger credited.
   - Bank statements: running-balance check against the opening balance (PDF and CSV, oldest- or newest-first); value-date column; wrapped narration joined; `Dr`/negative balances keep their sign; repeated rows flagged.
@@ -33,6 +47,25 @@ Notable changes to PRAMAAN, newest first. Dates are when the change landed on `m
 - AI coding-tool folders (`.claude/`, `.cursor/`, `.gemini/`, `.specstory/`) are now git-ignored.
 
 ### Fixed
+- **Real-data fixes (Kaggle bank export and UCI Online Retail II; details in docs/IMPORT_AUDIT.md):**
+  - Bank CSVs with Withdrawal/Deposit columns, value dates and blank rows are accepted.
+  - Excel-damaged references (`3.00E+11`) are discarded and counted.
+  - The repeat check compares running balances: 102 false repeats → 5.
+  - The register check is now rule `p2-t00-v3`: GST No blank on both sides is not applicable. On the retail data that removed 19,647 false findings, leaving exactly the 6,659 unmatched rows.
+  - The run page sends only cited evidence (85.7 MB → 25.7 MB), and the API compresses responses (27 MB → 1.7 MB on the wire).
+- **Opening an audit run is about 10× faster on large data:** 8.5 s down to 0.84 s at 3,000 sales, and time now grows in proportion to the data. `p5.enrich` matched every finding against every evidence row and invoice; it now uses lookup tables built once per request. The output is byte-identical, checked against the old code on a 1,000-sale dataset.
+- An upload over the server's limit is refused before sending, with the file size and the limit. It used to show "The service could not complete this request." The identity response now includes `max_upload_bytes`.
+- Opening an audit run that doesn't exist shows "Audit run not available" with a link back, instead of a stuck "Loading audit…" title and a Rerun button.
+- A credential that isn't accepted at sign-in now says it may be mistyped, expired or revoked, instead of always "expired".
+- OCR set-up on Windows:
+  - a `PRAMAAN_TESSERACT` path in quotes now works;
+  - a wrong path, or missing English language data, gets its own clear message;
+  - Tesseract's own error text is kept;
+  - no console window flashes per page.
+- Added `python -m Pramaan.backend.ocr_check`, an end-to-end OCR self-check.
+- The Docker image now installs Tesseract (optional build argument `WITH_OCR`).
+- The round-1 tracker said import reports were kept in the event log; the log keeps only a hash of each report. Reports are now stored in full (`import_reports`) with that hash.
+- Bank imports no longer allow two uploads of the same file at the same moment.
 - A DOCTYPE or entity declaration is refused anywhere in a Tally XML file, not only in its first 4 KB.
 - If the invoice reader fails unexpectedly, the evidence upload still succeeds and the failure is recorded with the file.
 - The privacy filter no longer mistakes PRAMAAN's own IDs for bank account numbers. About 1 in 280 register IDs (like `REG-123456789012`) has an all-digit tail, and that withheld the assistant's run summary and agent tool results. It was also the cause of an occasional CI failure.

@@ -19,7 +19,12 @@ export function makeApi(token:string, onExpired:()=>void = ()=>{}) {
     download:async(path:string,name:string)=>{const blob=await(await response(path)).blob();const url=URL.createObjectURL(blob);const a=document.createElement('a');a.href=url;a.download=name;a.click();setTimeout(()=>URL.revokeObjectURL(url),1000)}}
 }
 export type API=ReturnType<typeof makeApi>
-export async function fileBase64(file:File){const bytes=new Uint8Array(await file.arrayBuffer());let value='';for(let start=0;start<bytes.length;start+=8192)value+=String.fromCharCode(...bytes.subarray(start,start+8192));return btoa(value)}
+let uploadLimit:number|undefined
+export function setUploadLimit(bytes?:number){uploadLimit=bytes&&bytes>0?bytes:undefined}
+const mb=(bytes:number)=>{const value=Math.round(bytes/104857.6)/10;return Number.isInteger(value)?String(value):value.toFixed(1)}
+// Checked before reading or sending: a file over the server's limit is refused with a clear reason.
+export function checkUploadSize(file:File){if(uploadLimit&&file.size>uploadLimit)throw new Error(`“${file.name}” is ${mb(file.size)} MB, which is over the ${mb(uploadLimit)} MB upload limit. Split it (for example by month) or ask the administrator to raise PRAMAAN_MAX_UPLOAD_BYTES.`)}
+export async function fileBase64(file:File){checkUploadSize(file);const bytes=new Uint8Array(await file.arrayBuffer());let value='';for(let start=0;start<bytes.length;start+=8192)value+=String.fromCharCode(...bytes.subarray(start,start+8192));return btoa(value)}
 export const id=(value:string)=>encodeURIComponent(value)
 
 export function localToday(){const now=new Date();return new Date(now.getTime()-now.getTimezoneOffset()*60000).toISOString().slice(0,10)}

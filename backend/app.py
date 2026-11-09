@@ -60,6 +60,11 @@ def connect() -> sqlite3.Connection:
       CREATE TABLE IF NOT EXISTS runs (run_id TEXT PRIMARY KEY, sale_id TEXT NOT NULL, snapshot_hash TEXT NOT NULL, ruleset TEXT NOT NULL, seed TEXT NOT NULL, result_json TEXT NOT NULL, snapshot_json TEXT NOT NULL, ruleset_json TEXT);
       CREATE TRIGGER IF NOT EXISTS events_no_update BEFORE UPDATE ON events BEGIN SELECT RAISE(ABORT,'event log is append-only'); END;
       CREATE TRIGGER IF NOT EXISTS events_no_delete BEFORE DELETE ON events BEGIN SELECT RAISE(ABORT,'event log is append-only'); END;
+      -- The event log stores only each payload's hash. Import reports are kept here in full; report_hash
+      -- equals the event's payload_hash, so a stored report can be proven to be the one that was logged.
+      CREATE TABLE IF NOT EXISTS import_reports (report_id INTEGER PRIMARY KEY AUTOINCREMENT, entry_hash TEXT NOT NULL REFERENCES events(entry_hash), action TEXT NOT NULL, object_ref TEXT NOT NULL, report_json TEXT NOT NULL, report_hash TEXT NOT NULL);
+      CREATE TRIGGER IF NOT EXISTS import_reports_no_update BEFORE UPDATE ON import_reports BEGIN SELECT RAISE(ABORT,'import reports are append-only'); END;
+      CREATE TRIGGER IF NOT EXISTS import_reports_no_delete BEFORE DELETE ON import_reports BEGIN SELECT RAISE(ABORT,'import reports are append-only'); END;
     """)
     evidence_columns = {row[1] for row in db.execute("PRAGMA table_info(evidence)")}
     if "verification_method" not in evidence_columns:
@@ -87,6 +92,15 @@ def log_event(db: sqlite3.Connection, actor: str, action: str, ref: str, payload
     event_hash = digest(bytes.fromhex(prev) + canonical(event))
     db.execute("INSERT INTO events(event_json,prev_hash,entry_hash) VALUES(?,?,?)", (canonical(event).decode(), prev, event_hash))
     return {**event, "prev_hash": prev, "entry_hash": event_hash}
+
+
+def log_import(db: sqlite3.Connection, actor: str, action: str, ref: str, payload: Any) -> dict[str, Any]:
+    """log_event, plus the full payload kept in import_reports (the event itself holds only its hash)."""
+    event = log_event(db, actor, action, ref, payload)
+    body = canonical(payload)
+    db.execute("INSERT INTO import_reports(entry_hash,action,object_ref,report_json,report_hash) VALUES(?,?,?,?,?)",
+               (event["entry_hash"], action, ref, body.decode(), digest(body)))
+    return event
 
 
 class EvidenceIn(BaseModel):
@@ -458,8 +472,12 @@ from .web_views import router as web_router
 app.include_router(web_router)
 app.add_middleware(SecurityMiddleware)
 from .body_limit import BodySizeLimitMiddleware
-# Outermost: size is enforced before authentication, parsing or logging (S4).
+# Size is enforced before authentication, parsing or logging (S4). Only the response-only gzip layer below wraps it.
 app.add_middleware(BodySizeLimitMiddleware)
+from starlette.middleware.gzip import GZipMiddleware
+# JSON responses compress about 15x (a year of real retail data: 27 MB run context -> 1.7 MB). Credentials travel
+# in headers, never in compressed bodies. Added last, so it wraps the whole stack.
+app.add_middleware(GZipMiddleware, minimum_size=1024, compresslevel=6)
 
 ERROR_CODES = {400: "bad_request", 401: "unauthenticated", 402: "provider_no_credit", 403: "forbidden", 404: "not_found",
                409: "conflict", 413: "payload_too_large", 422: "invalid_input", 429: "rate_limited", 503: "unavailable"}

@@ -139,6 +139,8 @@ def _t00(f: dict[str, Any], ctx: Context) -> str:
             field, reg, sys = d.get("field"), d.get("register_value"), d.get("system_value")
             if field == "Gross Amt":
                 parts.append(_diff_sentence(field, "register", reg, "system", sys).replace("Gross Amt", "the gross amount"))
+            elif field == "Tax split":
+                parts.append(f"the GST split is wrong ({d.get('normalized_difference') or 'unreadable tax columns'})")
             elif field == "Date":
                 parts.append(f"the date is {nice_date(reg)} in the register but {nice_date(sys)} in the system")
             else:
@@ -148,6 +150,8 @@ def _t00(f: dict[str, Any], ctx: Context) -> str:
         raw = ctx.register_rows.get(row_no, {})
         detail = ", ".join(x for x in [raw.get("Customer"), inr(raw["Gross Amt"]) if raw.get("Gross Amt") else None, nice_date(raw["Date"]) if raw.get("Date") else None] if x)
         return f"{row_text} records bill {bill}{f' ({detail})' if detail else ''}, but no matching sale exists in the company's system. The entry may be fictitious, duplicated or not yet recorded."
+    if category == "DUPLICATE_ROW":
+        return f"{row_text} repeats bill {bill}, which already appears earlier in the register, so the sale may be counted twice."
     if category == "SYSTEM_ONLY":
         return f"{ctx.describe(bill)} is recorded in the system but is missing from the uploaded register, so the register may be incomplete."
     if category == "PARSE_REVIEW":

@@ -1,6 +1,7 @@
 import asyncio
 import base64
 import json
+from Pramaan.backend import upload_safety
 import os
 from pathlib import Path
 import socket
@@ -52,7 +53,14 @@ class P4GateTests(unittest.TestCase):
         response = self.request("POST", "/p2/customers", "client", json={"name": self.client_token, "role": "auditor"})
         self.assertEqual(response.status_code, 422)
         self.assertNotIn(self.client_token, response.text)
-        self.assertEqual(self.request("GET", "/p4/identity", "client").json()["role"], "client_employee")
+        identity = self.request("GET", "/p4/identity", "client").json()
+        self.assertEqual(identity["role"], "client_employee")
+        self.assertEqual(identity["max_upload_bytes"], upload_safety.max_upload_bytes())  # lets the web app refuse oversized files early
+        big = self.client.get("/ui/business", headers={"Authorization": "Bearer " + self.client_token, "Accept-Encoding": "gzip"})
+        small = self.client.get("/health", headers={"Accept-Encoding": "gzip"})
+        if len(big.content) >= 1024:
+            self.assertEqual(big.headers.get("content-encoding"), "gzip")  # large JSON is compressed
+        self.assertNotEqual(small.headers.get("content-encoding"), "gzip")  # tiny responses are not
         with sqlite3.connect(p1.DB_PATH) as db:
             db.row_factory = sqlite3.Row
             events = [json.loads(r[0]) for r in db.execute("SELECT event_json FROM events")]

@@ -12,7 +12,10 @@ def whoami():
     # Request-scoped transport details (including the credential used internally
     # by the web MCP adapter) must never be reflected to a client.
     caller = identity.get() or {}
-    return {key: caller[key] for key in ("subject", "role", "human", "channel") if key in caller}
+    from .upload_safety import max_upload_bytes
+    # The upload limit lets the web app refuse an oversized file before sending it; the server
+    # still enforces it (a browser shows only a vague network error when it rejects mid-upload).
+    return {**{key: caller[key] for key in ("subject", "role", "human", "channel") if key in caller}, "max_upload_bytes": max_upload_bytes()}
 
 
 @router.post("/tool-denials", status_code=204)

@@ -3,6 +3,11 @@ FROM python:3.13-slim
 ENV PYTHONDONTWRITEBYTECODE=1 PYTHONUNBUFFERED=1 \
     PYTHONPATH=/app/launcher PRAMAAN_DATA=/data
 WORKDIR /app
+# Local OCR for scanned PDFs (backend/ocr.py). Debian's tesseract-ocr also installs the English data
+# (tesseract-ocr-eng). Build with --build-arg WITH_OCR=0 for a smaller image without OCR.
+ARG WITH_OCR=1
+RUN if [ "$WITH_OCR" = "1" ]; then apt-get update && apt-get install -y --no-install-recommends tesseract-ocr \
+    && rm -rf /var/lib/apt/lists/*; fi
 COPY backend/requirements.txt backend/requirements.txt
 RUN pip install --no-cache-dir -r backend/requirements.txt
 COPY backend/ backend/
