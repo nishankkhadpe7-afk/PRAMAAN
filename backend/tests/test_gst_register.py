@@ -33,10 +33,28 @@ class SyntheticGstRegisterTests(unittest.TestCase):
         for f in result["findings"]:
             got[f["category"]].add((f["bill_no"], tuple(d["field"] for d in f["field_differences"])))
         self.assertEqual(got["FIELD_DIFF"], {(planted["AMOUNT"], ("Gross Amt",)), (planted["DATE"], ("Date",)), (planted["GSTIN"], ("GST No",)), (planted["TAX_SPLIT"], ("Tax split",)), (planted["CREDIT_DIFF"], ("Gross Amt",))})
-        self.assertEqual(got["SYSTEM_ONLY"], {(planted["SYS_ONLY"], ())})
+        self.assertEqual(got["SYSTEM_ONLY"], {(planted["SYS_ONLY"], ()), ("CN/25-26/003", ())})
         self.assertEqual(got["DUPLICATE_ROW"], {(planted["DUP"], ())})
         self.assertEqual(got["REGISTER_ONLY"], {(planted["REG_ONLY"], ()), (planted["CREDIT_UNKNOWN"], ())})
         self.assertEqual(set(got) - {"FIELD_DIFF", "SYSTEM_ONLY", "DUPLICATE_ROW", "REGISTER_ONLY"}, set())
+
+
+class GstRateAndTaxableTests(unittest.TestCase):
+    invoice = {"net_cents": 100000_00, "tax_cents": 18000_00, "gstin": "27AABCP1000A1Z5"}
+
+    def check(self, **cols):
+        from Pramaan.backend.p2 import _tax_split
+        return {d["field"]: d["comparison"] for d in _tax_split(cols, self.invoice, "27")}
+
+    def test_standard_rate_and_matching_taxable_pass(self):
+        self.assertEqual(self.check(Taxable="1,00,000.00", CGST="9,000.00", SGST="9,000.00", IGST="0.00"), {})
+
+    def test_wrong_taxable_is_a_difference(self):
+        self.assertEqual(self.check(Taxable="1,01,000.00", CGST="9,000.00", SGST="9,000.00", IGST="0.00"), {"Taxable value": "DIFFERENT", "GST rate": "PARSE_REVIEW"})
+
+    def test_non_standard_rate_goes_to_review_not_difference(self):
+        self.invoice = {**self.invoice, "tax_cents": 15000_00}  # 15%: e.g. a mixed 12% + 18% invoice
+        self.assertEqual(self.check(Taxable="1,00,000.00", CGST="7,500.00", SGST="7,500.00", IGST="0.00"), {"GST rate": "PARSE_REVIEW"})
 
 
 if __name__ == "__main__":

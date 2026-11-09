@@ -424,14 +424,29 @@ def money_text(cents_value: int) -> str:
     return f"{Decimal(cents_value) / Decimal(100):.2f}"
 
 
+GST_RATES = (0, 0.1, 0.25, 1, 1.5, 3, 5, 6, 7.5, 12, 18, 28)  # percent, the notified GST slabs
+
+
 def _tax_split(raw: dict, invoice, company_state: str | None) -> list[dict]:
-    """Checks the CGST/SGST/IGST columns if the register has them. Returns field differences (empty when fine)."""
+    """Checks the Taxable and CGST/SGST/IGST columns if the register has them. Returns field differences: DIFFERENT for
+    a definite mismatch, PARSE_REVIEW for something a person must look at (an unreadable value, or a rate that is not a
+    standard GST rate, which a mixed-rate invoice can produce legitimately)."""
+    out: list[dict] = []
+    taxable = None
+    if "Taxable" in raw and str(raw.get("Taxable") or "").strip():
+        read = t00.normalize("Gross Amt", raw["Taxable"])
+        if read["status"] != "VALID":
+            out.append({"field": "Taxable value", "register_value": raw["Taxable"], "system_value": money_text(invoice["net_cents"]), "comparison": "PARSE_REVIEW", "normalized_difference": None})
+        else:
+            taxable = read["value"]
+            if taxable != invoice["net_cents"]:
+                out.append({"field": "Taxable value", "register_value": raw["Taxable"], "system_value": money_text(invoice["net_cents"]), "comparison": "DIFFERENT", "normalized_difference": money_text(taxable - invoice["net_cents"])})
     heads = [h for h in ("CGST", "SGST", "IGST") if h in raw]
     if not heads:
-        return []
+        return out
     parsed = {h: t00.normalize("Gross Amt", raw.get(h) or "0") for h in heads}
     if any(v["status"] != "VALID" for v in parsed.values()):
-        return [{"field": "Tax split", "register_value": {h: raw.get(h) for h in heads}, "system_value": money_text(invoice["tax_cents"]), "comparison": "PARSE_REVIEW", "normalized_difference": None}]
+        return out + [{"field": "Tax split", "register_value": {h: raw.get(h) for h in heads}, "system_value": money_text(invoice["tax_cents"]), "comparison": "PARSE_REVIEW", "normalized_difference": None}]
     c, s, i = (parsed[h]["value"] if h in parsed else 0 for h in ("CGST", "SGST", "IGST"))
     problems = []
     if c + s + i != invoice["tax_cents"]:
@@ -446,7 +461,15 @@ def _tax_split(raw: dict, invoice, company_state: str | None) -> list[dict]:
             problems.append("IGST charged on a sale inside the state")
         if buyer != company_state and (c or s):
             problems.append("CGST/SGST charged on a sale to another state")
-    return [{"field": "Tax split", "register_value": {h: raw.get(h) for h in heads}, "system_value": money_text(invoice["tax_cents"]), "comparison": "DIFFERENT", "normalized_difference": "; ".join(problems)}] if problems else []
+    if problems:
+        out.append({"field": "Tax split", "register_value": {h: raw.get(h) for h in heads}, "system_value": money_text(invoice["tax_cents"]), "comparison": "DIFFERENT", "normalized_difference": "; ".join(problems)})
+    base = taxable if taxable is not None else invoice["net_cents"]
+    if base > 0 and c + s + i:
+        rate = (c + s + i) * 100 / base
+        if min(abs(rate - r) for r in GST_RATES) > max(0.05, 100 / base):  # allow paisa rounding
+            out.append({"field": "GST rate", "register_value": f"{rate:.2f}%", "system_value": "a standard GST rate", "comparison": "PARSE_REVIEW",
+                        "normalized_difference": f"tax is {rate:.2f}% of the taxable value, which is not a standard GST rate; a mixed-rate invoice can do this, so review"})
+    return out
 
 
 @router.post("/registers/{upload_id}/reconcile")
@@ -473,6 +496,7 @@ def reconcile_register(upload_id: str, date_order: Literal["detect", "DMY", "MDY
         date_report = {"used": order_used, "source": "stated" if date_order != "detect" else "detected" if order_used else "undetermined", **detected}
         compared = {"Bill No": "bill_no", "Date": "invoice_date", "Customer": "customer_name", "Gross Amt": "gross_cents", "GST No": "gstin"}
         seen_rows = {}
+        credits_listed: set[str] = set()
         for row in rows:
             raw = json.loads(row["raw_json"])
             bill = raw.get("Bill No", raw.get("bill_no", ""))
@@ -483,6 +507,7 @@ def reconcile_register(upload_id: str, date_order: Literal["detect", "DMY", "MDY
             invoice = by_bill.get(bill)
             if invoice is None and bill in credits:
                 note = credits[bill]
+                credits_listed.add(bill)
                 diffs = [c for c in (t00.compare("Date", raw.get("Date"), note["credit_date"], order_used), t00.compare("Gross Amt", raw.get("Gross Amt"), money_text(-note["amount_cents"]), order_used)) if c["comparison"] in ("DIFFERENT", "PARSE_REVIEW")]
                 if diffs:
                     findings.append({"finding_id": f"T00-v2-{upload_id}-{row['row_no']}-CREDIT_DIFF", "test_id": "T00", "category": "FIELD_DIFF", "row_no": row["row_no"], "bill_no": bill, "field_differences": diffs, "reason": "Register credit note differs from the credit note in the books: " + ", ".join(d["field"] for d in diffs) + "."})
@@ -505,7 +530,8 @@ def reconcile_register(upload_id: str, date_order: Literal["detect", "DMY", "MDY
                     parse_reviews.append(comparison)
                 elif comparison["comparison"] == "NOT_APPLICABLE":
                     not_applicable += 1
-            differences += _tax_split(raw, invoice, company_state)
+            for check in _tax_split(raw, invoice, company_state):
+                (differences if check["comparison"] == "DIFFERENT" else parse_reviews).append(check)
             if differences:
                 findings.append({"finding_id": f"T00-v2-{upload_id}-{row['row_no']}-FIELD_DIFF", "test_id": "T00", "category": "FIELD_DIFF", "row_no": row["row_no"], "bill_no": bill, "field_differences": differences, "reason": "Normalized register values differ from the matched system invoice: " + ", ".join(d["field"] for d in differences) + "."})
             if parse_reviews:
@@ -517,6 +543,13 @@ def reconcile_register(upload_id: str, date_order: Literal["detect", "DMY", "MDY
         for invoice in invoices:
             if invoice["bill_no"] not in found_bills:
                 findings.append({"finding_id": f"T00-v2-{upload_id}-{invoice['invoice_id']}-SOR_ONLY", "test_id": "T00", "category": "SYSTEM_ONLY", "bill_no": invoice["bill_no"], "field_differences": [], "reason": "System invoice is absent from the uploaded register."})
+        # Once a register lists credit notes, a credit note in the books for the same period that it leaves out is a gap.
+        found_dates = [by_bill[b]["invoice_date"] for b in found_bills if b in by_bill]
+        if credits_listed and found_dates:
+            first, last = min(found_dates), max(found_dates)
+            for note_id, note in sorted(credits.items()):
+                if note_id not in credits_listed and first <= note["credit_date"] <= last:
+                    findings.append({"finding_id": f"T00-v2-{upload_id}-{note_id}-CN_ONLY", "test_id": "T00", "category": "SYSTEM_ONLY", "bill_no": note_id, "field_differences": [], "reason": "Credit note in the books is absent from the register, which lists other credit notes for this period."})
         for finding in findings:
             finding.update({"ruleset_version": t00.RULE["version"], "ruleset_hash": rule_hash})
         reconciliation_id = "T00-" + p1.digest(p1.canonical([upload_id, rule_hash, order_used, findings]))[:12]

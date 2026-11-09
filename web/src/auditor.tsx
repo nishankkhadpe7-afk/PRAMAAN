@@ -5,10 +5,10 @@ import {AlertTriangle,ArrowRight,ArrowUpRight,CheckCircle,CircleDashed,Clipboard
 import {humanState,AreaTrend,Donut,FindingInsights,FrozenPill,HBars,LivePill,StackBar,TIERS,TIER_COLOR,TierBadge,VIZ,countBy,testLabel,tierMeta,tierOf,useLiveTick} from './charts'
 import {useSession} from './session'
 import {ApiError,id} from './api'
-import {Badge,Drawer,Facts,Field,Header,Json,Metrics,Mutation,Panel,ReadableData,Row,State,Table,money,toTitleLabel,useData} from './components'
+import {Badge,Drawer,Facts,Field,Header,Json,Metrics,Mutation,Panel,Row,State,Table,toTitleLabel,useData} from './components'
 
 import {CryptographicChainView,McpSecurityPipelineView} from './visualizations'
-import {EmptyState,ProgressBar,ProvenanceTag,formatWhen} from './ui'
+import {EmptyState,ProgressBar,ProvenanceTag} from './ui'
 import {InvestigationPanel} from './investigate'
 
 const auditName=(run:Row)=>run.audit_name||`Revenue audit - ${run.period_start||run.result?.period_start||''} to ${run.period_end||run.result?.period_end||''}`
@@ -122,7 +122,7 @@ function NewRunForm({setup}:{setup:Row}){
 export function RunWorkspace(){
  const {runId=''}=useParams();const location=useLocation();const navigate=useNavigate();const {api}=useSession();const [query,setQuery]=useSearchParams();
  const [refresh,setRefresh]=useState(0),[search,setSearch]=useState('');const sheet=query.get('view')||'sales_tod';
- const upload=query.get('upload')||'';const filter=query.get('filter')||'all';
+ const upload=query.get('upload')||'';
  const tick=0/* F1: a saved run is immutable; refresh only on demand */;const context=useData(`/ui/runs/${id(runId)}/context${upload?'?upload_id='+id(upload):''}`,refresh+tick);
  const tab=location.pathname.split('/')[4]||'summary';const base='/auditor/runs/'+id(runId);const suffix=upload?'?upload='+id(upload):'';
  const tabs=[['summary','Summary'],['samples','Samples'],['findings','Findings'],['workpapers','Workpapers'],['integrity','Integrity']];
@@ -224,7 +224,7 @@ function FindingsView({context,runId,search,setSearch,onChanged}:{context:Row;ru
  const rows=scoped.filter(f=>(!tier||tierOf(f.state)===tier)&&(!test||f.test_id===test)&&(!assertion||f.assertion===assertion)&&(!status||statusOf(f)===status)&&JSON.stringify(f).toLowerCase().includes(search.toLowerCase())).sort((a,b)=>tierRank(a)-tierRank(b)||Number(!!a.human_decision)-Number(!!b.human_decision)||String(a.test_id).localeCompare(String(b.test_id))||String(a.object_ref).localeCompare(String(b.object_ref)))
  const tiers=countBy(scoped,f=>tierOf(f.state)),statuses=countBy(scoped,statusOf)
  const chips:[string,string][]=([['tier',tier&&tierMeta(tier as any)?.label],['test',test&&testLabel(test)],['assertion',assertion],['status',status&&{open:'No proposal or decision',proposed:'Proposed',decided:'Decided'}[status]]] as [string,string][]).filter(([,v])=>v)
- const visibleIds=new Set(rows.map(r=>r.finding_id));const selectedRows=rows.filter(r=>selected.has(r.finding_id));const hidden=[...selected].filter(k=>!visibleIds.has(k)).length
+ const visibleIds=new Set(rows.map(r=>r.finding_id));const hidden=[...selected].filter(k=>!visibleIds.has(k)).length
  const toggle=(key:string)=>setSelected(prev=>{const next=new Set(prev);next.has(key)?next.delete(key):next.add(key);return next})
  const allSelected=rows.length>0&&rows.every(r=>selected.has(r.finding_id))
  // Keyboard triage: j/k move between findings, x selects, Enter opens (focus stays on the row link).

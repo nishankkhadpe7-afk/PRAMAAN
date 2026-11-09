@@ -178,8 +178,12 @@ def parse_tally_sales(source: bytes) -> dict[str, Any]:
         signed = [(_text(e, "LEDGERNAME"), parse_signed_cents(_text(e, "AMOUNT"))) for e in entries]
         unreadable = [name or "unnamed ledger" for name, amount in signed if amount is None]
         party_amounts = [amount for name, amount in signed if party and name == party and amount is not None]
-        if not number or not party or not party_amounts:
-            rejected.append({"voucher": label, "reason": "missing voucher number, party ledger or party amount"})
+        if not number:
+            # Never invented: without the number the voucher can't be matched to a register line.
+            rejected.append({"voucher": label, "reason": "no voucher number (an import file can leave it to Tally to assign; export the Day Book from Tally to get the numbers)"})
+            continue
+        if not party or not party_amounts:
+            rejected.append({"voucher": label, "reason": "no party ledger, or no amount on the party ledger"})
             continue
         if unreadable:
             rejected.append({"voucher": label, "reason": "unreadable amount on ledger " + ", ".join(unreadable[:3])})
@@ -191,7 +195,9 @@ def parse_tally_sales(source: bytes) -> dict[str, Any]:
                 break
         if gstin and (problem := gstin_check(gstin)):
             warnings.append({"voucher": number, "reason": f"buyer GSTIN {gstin}: {problem}"})
-        balance = sum(amount for _, amount in signed if amount is not None)
+        # Invoice-view vouchers carry the sales/income line inside each inventory entry (ACCOUNTINGALLOCATIONS.LIST).
+        allocations = [parse_signed_cents(_text(a, "AMOUNT")) for a in voucher.iter("ACCOUNTINGALLOCATIONS.LIST")]
+        balance = sum(amount for _, amount in signed if amount is not None) + sum(a for a in allocations if a is not None)
         if balance != 0:
             warnings.append({"voucher": number, "reason": f"ledger entries do not balance (difference {_rupees(balance)})"})
         if sum(party_amounts) > 0:
@@ -606,12 +612,16 @@ def duplicate_rows(rows: list[dict[str, Any]]) -> list[dict[str, Any]]:
 
 # --------------------------------------------------------------------------- invoice PDF
 
-_INV_NO = re.compile(r"(?i)\b(?:invoice|inv|bill)\s*(?:no|number|#)\.?\s*[:\-]?\s*([A-Z0-9][A-Z0-9/\-]{1,39})")
+_INV_NO = re.compile(r"(?i)\b(?:invoice|inv|bill)\s*(?:no|number|#)\.?\s*[:\-]?\s*([A-Z0-9][A-Z0-9/\-'’]{1,39}[A-Z0-9])")
 _INV_DATE = re.compile(r"(?i)\b(invoice\s*date|inv\.?\s*date|bill\s*date|date\s*of\s*invoice|dated|date)\s*[:\-]?\s*([0-9]{1,2}[-/. ][A-Za-z0-9]{1,9}[-/. ][0-9]{2,4}|[0-9]{4}-[0-9]{2}-[0-9]{2})")
 _DATE_RANK = {"invoice date": 0, "inv date": 0, "inv. date": 0, "bill date": 0, "date of invoice": 0, "dated": 1, "date": 2}
 _TOTAL = re.compile(r"(?i)\b(grand\s*total|invoice\s*total|total\s*invoice\s*value|total\s*amount(?:\s*payable)?|amount\s*payable|net\s*payable|(?<!sub\s)(?<!sub)total(?!\s*(?:tax|gst|qty|quantity|taxable)))\b[^0-9₹\n]{0,25}(?:₹|rs\.?|inr)?\s*([0-9][0-9,]*(?:\.[0-9]{1,2})?)")
 _TOTAL_RANK = {"grand total": 0, "invoice total": 1, "total invoice value": 1, "total amount payable": 2, "amount payable": 2, "net payable": 2, "total amount": 3, "total": 4}
 _TAXABLE = re.compile(r"(?i)\b(?:total\s*)?(?:taxable\s*(?:value|amount)|assessable\s*value)\b[^0-9\n]{0,25}(?:₹|rs\.?|inr)?\s*([0-9][0-9,]*\.[0-9]{2})")
+# Weaker labels, used only when the stronger ones are absent: "Subtotal" for the taxable value, and a single combined
+# GST line (small-trader bills often print "GST" / "Total GST" with no CGST/SGST/IGST split). Never "GSTIN".
+_SUBTOTAL = re.compile(r"(?i)\bsub\s*-?\s*total\b(?:\s*\((?:before|excl\.?|excluding)\s*(?:gst|tax)\))?[^0-9\n]{0,20}(?:₹|rs\.?|inr)?\s*([0-9][0-9,]*\.[0-9]{2})")
+_GST_TOTAL = re.compile(r"(?i)(?<![A-Z])(?:total\s*)?gst(?:\s*amount)?(?![A-Z])(?:[^0-9\n]{0,15}\d{1,2}(?:\.\d{1,2})?\s*%\)?)?[^0-9\n]{0,15}(?:₹|rs\.?|inr)?\s*([0-9][0-9,]*\.[0-9]{2})")
 _TAX = re.compile(r"(?i)\b(CGST|SGST|UTGST|IGST)\b(?:[^0-9\n]{0,15}\d{1,2}(?:\.\d{1,2})?\s*%\)?)?[^0-9\n]{0,15}(?:₹|rs\.?|inr)?\s*([0-9][0-9,]*\.[0-9]{2})")
 _ROUND = re.compile(r"(?i)\bround(?:ing|ed)?\s*off\b[^0-9\n\-(]{0,15}(\(?-?\s*[0-9][0-9,]*\.[0-9]{2}\)?)")
 
@@ -653,7 +663,7 @@ def read_invoice_pdf(source: bytes) -> dict[str, Any]:
         if text.failed_pages:
             raise DocumentReadError(text.failed_pages[0]["reason"])
         raise DocumentReadError("the PDF has no readable text")
-    found: dict[str, list[tuple[int, Any, int]]] = {k: [] for k in ("invoice_number", "invoice_date", "total", "taxable", "CGST", "SGST", "IGST", "round_off")}
+    found: dict[str, list[tuple[int, Any, int]]] = {k: [] for k in ("invoice_number", "invoice_date", "total", "taxable", "CGST", "SGST", "IGST", "round_off", "GST_TOTAL")}
     uncertain: dict[str, list[str]] = {}
     gstins: dict[str, int] = {}
 
@@ -667,7 +677,7 @@ def read_invoice_pdf(source: bytes) -> dict[str, Any]:
     for page_no, page_text, low in pages:
         for m in _INV_NO.finditer(page_text):
             if keep("invoice_number", m, low):
-                found["invoice_number"].append((0, m.group(1).strip(), page_no))
+                found["invoice_number"].append((0, re.sub(r"['’]", "/", m.group(1).strip()), page_no))  # OCR often reads "/" as an apostrophe
         for m in _INV_DATE.finditer(page_text):
             iso = parse_date(m.group(2))
             if iso and keep("invoice_date", m, low):
@@ -679,6 +689,12 @@ def read_invoice_pdf(source: bytes) -> dict[str, Any]:
         for m in _TAXABLE.finditer(page_text):
             if keep("taxable", m, low):
                 found["taxable"].append((0, parse_amount_cents(m.group(1)), page_no))
+        for m in _SUBTOTAL.finditer(page_text):
+            if keep("taxable", m, low):
+                found["taxable"].append((1, parse_amount_cents(m.group(1)), page_no))  # rank 1: an explicit taxable value wins
+        for m in _GST_TOTAL.finditer(page_text):
+            if keep("GST_TOTAL", m, low):
+                found["GST_TOTAL"].append((0, parse_amount_cents(m.group(1)), page_no))
         for m in _TAX.finditer(page_text):
             kind = "SGST" if m.group(1).upper() == "UTGST" else m.group(1).upper()
             if keep(kind, m, low):
@@ -693,7 +709,7 @@ def read_invoice_pdf(source: bytes) -> dict[str, Any]:
     pages_of: dict[str, int] = {}
     ambiguous: dict[str, list[Any]] = {}
     names = {"invoice_number": "invoice_number", "invoice_date": "invoice_date", "total": "total_cents", "taxable": "taxable_cents",
-             "CGST": "cgst_cents", "SGST": "sgst_cents", "IGST": "igst_cents", "round_off": "round_off_cents"}
+             "CGST": "cgst_cents", "SGST": "sgst_cents", "IGST": "igst_cents", "round_off": "round_off_cents", "GST_TOTAL": "gst_total_cents"}
     for key, out in names.items():
         value, page, alternatives = _pick(found[key])
         read[out] = value
@@ -706,7 +722,7 @@ def read_invoice_pdf(source: bytes) -> dict[str, Any]:
     read["page_count"] = text.doc.page_count
     read.update(text.provenance())
     if uncertain:
-        names_out = {"total": "total_cents", "taxable": "taxable_cents", "CGST": "cgst_cents", "SGST": "sgst_cents", "IGST": "igst_cents", "round_off": "round_off_cents"}
+        names_out = {"total": "total_cents", "taxable": "taxable_cents", "CGST": "cgst_cents", "SGST": "sgst_cents", "IGST": "igst_cents", "round_off": "round_off_cents", "GST_TOTAL": "gst_total_cents"}
         read["uncertain"] = {names_out.get(k, k): v[:3] for k, v in uncertain.items()}
     if text.failed_pages:
         read["unread_pages"] = text.failed_pages
@@ -733,6 +749,8 @@ def _invoice_arithmetic(read: dict[str, Any]) -> dict[str, Any]:
     round-off line, a difference of up to 50 paise is accepted as rounding to the rupee."""
     total, taxable = read.get("total_cents"), read.get("taxable_cents")
     taxes = [read.get(k) for k in ("cgst_cents", "sgst_cents", "igst_cents") if read.get(k) is not None]
+    if not taxes and read.get("gst_total_cents") is not None:
+        taxes = [read["gst_total_cents"]]  # a single combined GST line, only when no split is printed
     if total is None or taxable is None or not taxes:
         return {"status": "not_checked", "reason": "total, taxable value or tax amounts were not all read"}
     expected = taxable + sum(taxes) + (read.get("round_off_cents") or 0)
@@ -748,8 +766,8 @@ def _norm_bill(value: str | None) -> str:
 
 # --------------------------------------------------------------------------- field quality
 
-READ_FIELDS = ("invoice_number", "invoice_date", "total_cents", "taxable_cents", "cgst_cents", "sgst_cents", "igst_cents", "round_off_cents", "gstins")
-MONEY_FIELDS = {"total_cents", "taxable_cents", "cgst_cents", "sgst_cents", "igst_cents", "round_off_cents"}
+READ_FIELDS = ("invoice_number", "invoice_date", "total_cents", "taxable_cents", "cgst_cents", "sgst_cents", "igst_cents", "gst_total_cents", "round_off_cents", "gstins")
+MONEY_FIELDS = {"total_cents", "taxable_cents", "cgst_cents", "sgst_cents", "igst_cents", "gst_total_cents", "round_off_cents"}
 
 # Every state is decided by a fixed rule from recorded evidence; there are no percentages.
 FIELD_STATES = {
@@ -864,6 +882,8 @@ def compare_invoice(read: dict[str, Any], invoice: dict[str, Any] | None, verifi
         add("taxable_value", "taxable_cents", _rupees(value("taxable_cents")), _rupees(invoice["net_cents"]), value("taxable_cents") == invoice["net_cents"])
     taxes = [value(k) for k in ("cgst_cents", "sgst_cents", "igst_cents") if value(k) is not None]
     tax_field = next((k for k in ("igst_cents", "cgst_cents", "sgst_cents") if value(k) is not None), "igst_cents")
+    if not taxes and value("gst_total_cents") is not None:
+        taxes, tax_field = [value("gst_total_cents")], "gst_total_cents"
     if taxes and invoice.get("tax_cents") is not None:
         add("total_tax", tax_field, _rupees(sum(taxes)), _rupees(invoice["tax_cents"]), sum(taxes) == invoice["tax_cents"])
     cross: dict[str, Any] = {}

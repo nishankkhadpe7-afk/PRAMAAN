@@ -394,7 +394,7 @@ Review outcomes are EXCEPTION_CONFIRMED, EXPLAINED, or DATA_ERROR; a final decis
 **Help for first-time users.** The interface explains itself without hiding the audit detail:
 
 - **Plain-language hints:** audit terms (observation, assertion, test of details, population, certainty item, snapshot, seed, potential misstatement and others) carry a small **?** that explains the word on hover, keyboard focus + Enter, or tap. One shared glossary ([web/src/glossary.tsx](web/src/glossary.tsx)) supplies every definition.
-- **Help** in the top bar: next steps for the signed-in role and the full glossary.
+- **Help & guide** in the account menu (your avatar, top right): next steps for the signed-in role and the full glossary.
 - **Getting started** card on each overview: 3–4 linked steps. It can be dismissed and restored from Help.
 - **Next-step empty states:** empty tables say what to do (for example "No register uploaded yet. Upload your original sales register CSV above").
 - **Readable labels:** activity events and coverage statuses are shown as sentences rather than codes; sample tabs read Sales sample / Year-end cut-off / Credit notes.
@@ -445,7 +445,7 @@ $env:PRAMAAN_DATA = Join-Path $PWD.Path '.demo/runtime'
 | PRAMAAN_E2E_CHANNEL         | chrome                | Playwright browser channel; set to empty to use Playwright's bundled Chromium.                                  |
 | PRAMAAN_E2E_VIDEO           | on                    | Set to `off` where Playwright's ffmpeg is not installed.                                                         |
 
-**Tests.** CI (`.github/workflows/ci.yml`) runs all of these on every push and pull request; a separate `Secret scan` workflow checks the full history for leaked credentials. Current suite: 218 backend tests (9 of them need Tesseract and skip without it), 39 UI unit tests (and validated on two real Kaggle datasets: see docs/IMPORT_AUDIT.md), 8 browser journeys.
+**Tests.** CI (`.github/workflows/ci.yml`) runs all of these on every push and pull request; a separate `Secret scan` workflow checks the full history for leaked credentials. Current suite: 233 backend tests (9 of them need Tesseract and skip without it), 39 UI unit tests (and validated on two real Kaggle datasets: see docs/IMPORT_AUDIT.md), 8 browser journeys.
 
 ```powershell
 $env:PYTHONPATH = Join-Path $PWD.Path 'launcher'

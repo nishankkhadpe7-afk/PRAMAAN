@@ -148,6 +148,98 @@ def _money(cents: int) -> str:
     return f"{'-' if cents < 0 else ''}{Decimal(abs(cents)) / 100:.2f}"
 
 
+_TAX_LEDGER = re.compile(r"(?i)\b(cgst|sgst|utgst|igst|cess)\b")
+_ROUND_LEDGER = re.compile(r"(?i)round(ing)?[\s-]*off")
+
+
+def _voucher_template(grid: list[list[Any]]) -> dict[str, int] | None:
+    """Tally's official Excel voucher format ("Accounting Voucher" sheet): one voucher spans several rows, one per
+    ledger line. Returns the needed column positions if row 1 is that header."""
+    if not grid:
+        return None
+    labels = {_label(v): i for i, v in enumerate(grid[0]) if v not in (None, "")}
+    need = {"date": "voucher date", "type": "voucher type name", "number": "voucher number", "ledger": "ledger name",
+            "amount": "ledger amount", "drcr": "ledger amount dr/cr"}
+    if not all(v in labels for v in need.values()):
+        return None
+    cols = {k: labels[v] for k, v in need.items()}
+    gst = next((i for t, i in labels.items() if "gstin" in t), None)
+    if gst is not None:
+        cols["gstin"] = gst
+    if "item amount" in labels:
+        cols["item_amount"] = labels["item amount"]
+    return cols
+
+
+def _parse_voucher_template(sheet_title: str, grid: list[list[Any]], cols: dict[str, int], out: dict[str, list]) -> None:
+    cell = lambda row, key: row[cols[key]] if key in cols and cols[key] < len(row) else None
+    vouchers: list[dict[str, Any]] = []
+    for index in range(1, len(grid)):
+        row = grid[index]
+        if all(v in (None, "") for v in row):
+            continue
+        if cell(row, "date") not in (None, "") or cell(row, "number") not in (None, ""):
+            vouchers.append({"start": index + 1, "date": cell(row, "date"), "type": str(cell(row, "type") or ""), "number": str(cell(row, "number") or "").strip(),
+                             "gstin": re.sub(r"\s+", "", str(cell(row, "gstin") or "")).upper(), "lines": [], "items": 0, "bad": []})
+        if not vouchers:
+            out["rejected"].append({"sheet": sheet_title, "source_row": index + 1, "reason": "ledger line before any voucher header row"})
+            continue
+        v = vouchers[-1]
+        name = str(cell(row, "ledger") or "").strip()
+        if name:
+            amount, side = _cents(cell(row, "amount")), str(cell(row, "drcr") or "").strip().lower()
+            if amount is None or side not in ("dr", "cr"):
+                v["bad"].append(f"row {index + 1}: unreadable ledger amount or Dr/Cr for {name}")
+            else:
+                v["lines"].append((name, abs(amount), side))
+        item = _cents(cell(row, "item_amount")) if "item_amount" in cols else 0
+        if item is None:
+            v["bad"].append(f"row {index + 1}: unreadable item amount")
+        elif item:
+            v["items"] += abs(item)
+    for v in vouchers:
+        where = {"sheet": sheet_title, "source_row": v["start"]}
+        label = v["number"] or f"row {v['start']}"
+        vtype = v["type"].lower()
+        if "sales" not in vtype and "credit" not in vtype:
+            out["skipped"].append({**where, "voucher": label, "reason": f"not a sales voucher ({v['type'] or 'type missing'})"})
+            continue
+        if not v["number"]:
+            out["rejected"].append({**where, "reason": "voucher number missing"})
+            continue
+        iso = _date(v["date"])
+        if iso is None:
+            out["rejected"].append({**where, "voucher": label, "reason": f"unreadable date {v['date']!r}"})
+            continue
+        if v["bad"] or not v["lines"]:
+            out["rejected"].append({**where, "voucher": label, "reason": "; ".join(v["bad"]) or "no ledger lines"})
+            continue
+        credit_note = "credit" in vtype or "return" in vtype
+        party_side = "cr" if credit_note else "dr"
+        party = next(((n, a) for n, a, s in v["lines"] if s == party_side), None)
+        if party is None:
+            out["rejected"].append({**where, "voucher": label, "reason": f"no {party_side.title()} party line"})
+            continue
+        other = [(n, a, s) for n, a, s in v["lines"] if (n, a, s) != (party[0], party[1], party_side)]
+        tax = {k: sum(a for n, a, s in other if re.search(rf"(?i)\b{k}\b", n) or (k == "sgst" and "utgst" in n.lower())) for k in ("cgst", "sgst", "igst", "cess")}
+        taxable = sum(a for n, a, s in other if not _TAX_LEDGER.search(n) and not _ROUND_LEDGER.search(n))
+        dr = sum(a for n, a, s in v["lines"] if s == "dr")
+        cr = sum(a for n, a, s in v["lines"] if s == "cr")
+        if dr != cr:
+            out["warnings"].append({**where, "voucher": label, "reason": f"Dr {_money(dr)} and Cr {_money(cr)} do not balance"})
+        if v["items"] and v["items"] != taxable:
+            out["warnings"].append({**where, "voucher": label, "reason": f"item amounts ({_money(v['items'])}) do not equal the sales ledger ({_money(taxable)})"})
+        if v["gstin"] and (problem := gstin_check(v["gstin"])):
+            out["warnings"].append({**where, "voucher": label, "reason": f"buyer GSTIN: {problem}"})
+        sign = -1 if credit_note else 1
+        row = {"Bill No": v["number"], "Date": iso, "Customer": party[0], "Gross Amt": _money(sign * party[1]), "GST No": v["gstin"], "Taxable": _money(sign * taxable),
+               "CGST": _money(sign * tax["cgst"]), "SGST": _money(sign * tax["sgst"]), "IGST": _money(sign * tax["igst"])}
+        if tax["cess"]:
+            row["Cess"] = _money(sign * tax["cess"])
+        out["rows"].append(row)
+        out["sources"].append({"row_no": len(out["rows"]), **where, "voucher": v["number"], "voucher_type": v["type"], "status": "credit_note" if credit_note else "sale", "layout": "tally-voucher-template"})
+
+
 def parse_tally_register(source: bytes) -> dict[str, Any]:
     if not source.startswith(b"PK"):
         raise DocumentReadError("not an .xlsx file; in Tally choose Export > Excel (.xlsx). Old .xls files are not supported")
@@ -169,6 +261,10 @@ def parse_tally_register(source: bytes) -> dict[str, Any]:
             warnings.append({"sheet": sheet.title, "reason": f"{sheet.sheet_state} sheet not read"})
             continue
         grid = _grid(sheet)
+        if (template := _voucher_template(grid)) is not None:
+            _parse_voucher_template(sheet.title, grid, template, {"rows": rows, "skipped": skipped, "rejected": rejected, "warnings": warnings, "sources": sources})
+            sheets.append({"sheet": sheet.title, "header_row": 1, "header_rows": 1, "layout": "tally-voucher-template", "columns": sorted(template)})
+            continue
         header = _find_header(grid)
         if header is None:
             sheets.append({"sheet": sheet.title, "header": None, "rows": 0})

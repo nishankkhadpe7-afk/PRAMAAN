@@ -13,7 +13,8 @@ Planted problems (the expected result of reconciling the register against the bo
   SYS_ONLY  one sale is in the books but missing from the register
   DUP       one bill number appears twice in the register (DUPLICATE_ROW)
   TAX_SPLIT IGST charged on a sale inside the state (needs company_state=27)
-  CREDIT_*  credit note 001 matches the books, 002 has a different amount, 004 is not in the books
+  CREDIT_*  credit note 001 matches the books, 002 has a different amount, 004 is not in the books,
+            and 003 is in the books but missing from the register
 """
 from __future__ import annotations
 
@@ -66,6 +67,7 @@ def build(count: int = 300):
                       "invoice_date": when.isoformat(), "bill_no": bill, "net_amount": f"{net:.2f}", "tax_amount": f"{tax:.2f}"})
         register.append({"Bill No": bill, "Date": f"{when.day:02d}/{when.month:02d}/{when.year}", "Customer": customer["name"] + ("  " if n % 17 == 0 else ""),
                          "Gross Amt": indian(net + tax), "GST No": customer["gstin"] or "",
+                         "Taxable": indian(net),
                          **({"CGST": indian(tax / 2), "SGST": indian(tax - tax / 2), "IGST": "0.00"} if customer["state"] == "27" else {"CGST": "0.00", "SGST": "0.00", "IGST": indian(tax)})})
     by_bill = {r["Bill No"]: r for r in register}
     planted = {}
@@ -104,7 +106,7 @@ def register_csv(rows) -> bytes:
     import csv
     import io
     out = io.StringIO()
-    writer = csv.DictWriter(out, fieldnames=["Bill No", "Date", "Customer", "Gross Amt", "GST No", "CGST", "SGST", "IGST"], restval="", lineterminator="\r\n")
+    writer = csv.DictWriter(out, fieldnames=["Bill No", "Date", "Customer", "Gross Amt", "GST No", "Taxable", "CGST", "SGST", "IGST"], restval="", lineterminator="\r\n")
     writer.writeheader()
     writer.writerows(rows)
     return out.getvalue().encode("utf-8")

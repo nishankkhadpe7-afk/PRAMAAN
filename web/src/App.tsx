@@ -1,6 +1,6 @@
 import {Suspense,lazy,useEffect,useState,useRef} from 'react'
 import {Link,NavLink,Navigate,Outlet,Route,Routes,useLocation,useNavigate} from 'react-router-dom'
-import {ArrowLeft,ArrowRight,Check,ChevronDown,ArrowUpRight,BookOpen,Building2,CircleHelp,ClipboardCheck,Eye,EyeOff,FileSearch,Files,LayoutDashboard,LogOut,Menu,MessageSquare,ShieldCheck,Workflow,X} from 'lucide-react'
+import {ArrowLeft,ArrowRight,ChevronDown,ArrowUpRight,Building2,CircleHelp,ClipboardCheck,Eye,EyeOff,FileSearch,Files,LayoutDashboard,LogOut,Menu,MessageSquare,ShieldCheck,X} from 'lucide-react'
 import {useSession} from './session'
 import {Drawer,Header,Mutation} from './components'
 import {HelpContent} from './glossary'
@@ -76,12 +76,11 @@ export function Login(){
     </footer>
   </div>
 }
-// One logo everywhere (landing, login, workspace sidebar).
+// One logo everywhere (landing, login, workspace top bar).
 function Brand(){return <Link to="/" className="landing-brand"><img className="brand-logo" src="/pramaan-logo.png" alt="Pramaan" width={121} height={24}/></Link>}
 export function Guard({role}:{role:'client_employee'|'auditor'}){const {identity,restoring}=useSession();return restoring?<div className="skeleton-loader" role="status" aria-label="Restoring session"/>:!identity?<Navigate to="/login" replace/>:identity.role!==role?<Navigate to="/unauthorized" replace/>:<Outlet/>}
 // "demo-human-reviewer" -> "Human Reviewer"; "launcher-client" -> "Client". Technical prefixes are dropped.
 export function displayName(subject:string){const words=subject.replace(/^(demo|launcher|local|test)[-_.]/i,'').split(/[-_.\s@]+/).filter(Boolean);return (words.length?words:[subject]).map(w=>w[0].toUpperCase()+w.slice(1)).join(' ')}
-function initialsOf(name:string){const w=name.split(' ');return (w.length>1?w[0][0]+w[1][0]:name.slice(0,2)).toUpperCase()}
 function hueOf(s:string){let h=0;for(const c of s)h=(h*31+c.charCodeAt(0))%360;return h}
 function UserChip({subject,role,onHelp,onSignOut}:{subject:string;role:'human'|'auditor'|'client';onHelp:()=>void;onSignOut:()=>void}){
   const name=displayName(subject);const status={human:['Auditor','Human review on','on'],auditor:['Auditor','Proposals only','limited'],client:['Client','Records & evidence','client']}[role]

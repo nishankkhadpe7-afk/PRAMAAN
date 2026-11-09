@@ -321,3 +321,27 @@ button.user-chip:focus-visible{outline:2px solid var(--focus);outline-offset:2px
 button.user-chip{padding:7px 16px 7px 9px;gap:13px}
 button.user-chip .user-caret{margin-left:4px}
 @media (max-width:1100px){button.user-chip{padding:6px}}
+
+/* ---- inner pages: last older-style pieces ---- */
+/* definition lists (e.g. "Invoice records" on New audit run): sentence case, quiet */
+.top-nav-shell .readable-data dt{text-transform:none!important;letter-spacing:0!important;font-size:12.5px!important;color:var(--subtle)!important}
+.top-nav-shell .readable-data dd{font-size:15px;color:var(--ink)}
+/* integrity check cards: neutral frame, the status shows as a small top line and the icon colour, not a heavy border */
+.top-nav-shell .check-card{position:relative;border:1px solid var(--line)!important;border-radius:var(--radius)!important;background:var(--surface-2)!important;background-image:none!important;box-shadow:none!important;overflow:hidden}
+.top-nav-shell .check-card::before{content:"";position:absolute;inset:0 0 auto 0;height:2px;background:var(--line-strong)}
+.top-nav-shell .check-card[class*="problem"]::before,.top-nav-shell .check-card[class*="fail"]::before{background:var(--error)}
+.top-nav-shell .check-card[class*="attention"]::before,.top-nav-shell .check-card[class*="warn"]::before{background:var(--warning)}
+.top-nav-shell .check-card[class*="clear"]::before,.top-nav-shell .check-card[class*="pass"]::before,.top-nav-shell .check-card[class*="ok"]::before{background:var(--success)}
+/* MCP assistant: plain heading instead of a mono all-caps label; quieter tool-call cards */
+.top-nav-shell .eyebrow-tech{font:500 12.5px var(--sans)!important;letter-spacing:0!important;text-transform:lowercase!important;color:var(--subtle)!important}
+.top-nav-shell .eyebrow-tech::first-letter{text-transform:uppercase}
+.top-nav-shell .mcp-step-card{border:1px solid var(--line)!important;border-left:1px solid var(--line)!important;border-radius:10px!important;background:var(--surface-2)!important;box-shadow:none!important}
+.top-nav-shell .mcp-step-card:hover{border-color:var(--line-strong)!important}
+/* file picker: matches the other buttons instead of the browser default */
+.top-nav-shell input[type=file]{font-size:13.5px;color:var(--subtle);padding:6px;border:1px dashed var(--line-strong);border-radius:10px;background:var(--surface-2);width:100%}
+.top-nav-shell input[type=file]::file-selector-button{margin-right:12px;padding:8px 14px;border:1px solid var(--line-strong);border-radius:8px;background:var(--surface-3);color:var(--ink);font:inherit;font-weight:500;cursor:pointer;transition:background .15s}
+.top-nav-shell input[type=file]::file-selector-button:hover{background:var(--surface-4)}
+/* small "chip" labels like "Certainty (risk-based)": tinted, not outlined */
+.top-nav-shell .chip{border:0!important;background:var(--surface-3)!important;color:var(--muted)!important;border-radius:999px}
+.top-nav-shell .facts dt{text-transform:none!important;letter-spacing:0!important;font:400 12.5px var(--sans)!important;color:var(--subtle)!important}
+.top-nav-shell .facts dd{font-size:15px;color:var(--ink);font-weight:500}

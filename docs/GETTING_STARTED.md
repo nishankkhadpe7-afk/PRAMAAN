@@ -31,7 +31,7 @@ Paste one key from the Notepad file into **Access credential** and press **Enter
 
 ![Sign-in page](assets/getting-started/1-sign-in.png)
 
-Each workspace opens with a short **Getting started** card. You can hide it and bring it back any time from **Help** at the top right. Words marked with a small **?** explain themselves when you hover over or tap them, and **Help** also has the full list of audit words in plain language.
+Each workspace opens with a short **Getting started** card. You can hide it and bring it back any time from **Help & guide** in the account menu (your avatar, top right). Words marked with a small **?** explain themselves when you hover over or tap them, and **Help** also has the full list of audit words in plain language.
 
 ## 4. The client side
 

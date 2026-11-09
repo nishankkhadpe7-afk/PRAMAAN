@@ -118,6 +118,9 @@ _SPLIT_CREDIT = {"deposit", "deposits", "deposit amt", "deposit amount", "credit
 _EXCEL_MANGLED = re.compile(r"^[0-9](?:\.[0-9]+)?E\+[0-9]+$", re.IGNORECASE)
 
 
+_BALANCE_LINE = re.compile(r"(?i)\b(opening|closing)\s+balance\b|\bbalance\s+(b/f|c/f|brought|carried)|\bb/f\b|\bc/f\b|brought\s+forward|carried\s+forward")
+
+
 def parse_bank_csv(source: bytes, report: dict[str, Any] | None = None) -> list[dict[str, Any]]:
     """CSV statements. Two layouts, recognised from the header:
       - amount + direction: the documented columns (date, amount, direction, narration, reference), with common
@@ -158,7 +161,7 @@ def parse_bank_csv(source: bytes, report: dict[str, Any] | None = None) -> list[
     if missing:
         raise ValueError("bank statement is missing columns: " + ", ".join(missing) +
                          " (use date, amount, direction, narration, reference; or Withdrawal and Deposit columns)")
-    parsed, mangled = [], 0
+    parsed, mangled, balance_lines = [], 0, []
     for line_no, cells in enumerate(table[1:], 2):
         if not any(c.strip() for c in cells):
             continue  # blank spacer rows that spreadsheet exports often contain
@@ -170,6 +173,10 @@ def parse_bank_csv(source: bytes, report: dict[str, Any] | None = None) -> list[
         if split:
             out_cents = _cents(row["withdrawal"] or "0", f"line {line_no} withdrawal")
             in_cents = _cents(row["deposit"] or "0", f"line {line_no} deposit")
+            if out_cents == 0 and in_cents == 0 and _BALANCE_LINE.search(row["narration"]):
+                # "OPENING BALANCE", "Balance b/f" and similar carry a balance but no transaction: listed, not imported
+                balance_lines.append({"line": line_no, "text": row["narration"][:80], "balance_cents": parse_signed_cents(row.get("balance") or "")})
+                continue
             if (out_cents > 0) == (in_cents > 0):
                 raise ValueError(f"line {line_no}: needs an amount in exactly one of Withdrawal or Deposit")
             direction, amount = ("debit", out_cents) if out_cents > 0 else ("credit", in_cents)
@@ -199,6 +206,8 @@ def parse_bank_csv(source: bytes, report: dict[str, Any] | None = None) -> list[
         raise ValueError("bank statement contains no rows")
     if report is not None:
         report["layout"] = "split" if split else "amount"
+        if balance_lines:
+            report["balance_lines_skipped"] = balance_lines
         if mangled:
             report["references_damaged_by_excel"] = mangled
     return parsed

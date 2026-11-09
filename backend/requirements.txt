@@ -11,3 +11,5 @@ PyMuPDF>=1.26,<2
 jsonschema>=4.20,<5
 # Reads Tally Sales Register Excel exports (tally_register.py).
 openpyxl==3.1.5
+# Smooth upscaling of small scans before OCR (ocr.py); OCR still works without it, less accurately on phone photos.
+pillow==12.3.0

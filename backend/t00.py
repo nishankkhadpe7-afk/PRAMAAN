@@ -12,8 +12,8 @@ RULE = {"version": "p2-t00-v4", "implementation": "field-aware calendar/exact-ce
         "unavailable": "missing/invalid values produce PARSE_REVIEW, never equal",
         "optional": "GST No blank on BOTH sides is NOT_APPLICABLE (B2C sales and non-GST registers carry no buyer GSTIN); blank or invalid on one side is PARSE_REVIEW",
         "duplicates": "a bill number on more than one register row: the first row is compared, each repeat is DUPLICATE_ROW",
-        "credit_notes": "a register row whose Bill No is a credit note in the books is compared on Date and Gross Amt (books amount shown negative); credit notes absent from the register are not flagged",
-        "tax_split": "only when the register has CGST/SGST/IGST columns: their total must equal the books tax; CGST must equal SGST; CGST/SGST and IGST are not both charged; with company_state given, a buyer GSTIN in the same state must not carry IGST and one in another state must carry only IGST",
+        "credit_notes": "a register row whose Bill No is a credit note in the books is compared on Date and Gross Amt (books amount shown negative); once the register lists any credit note, a books credit note dated inside the register's period that it omits is SYSTEM_ONLY",
+        "tax_split": "only when the register has CGST/SGST/IGST columns: their total must equal the books tax; CGST must equal SGST; CGST/SGST and IGST are not both charged; with company_state given, a buyer GSTIN in the same state must not carry IGST and one in another state must carry only IGST; a Taxable column must equal the books net amount; tax that is not a standard GST rate of the taxable value goes to review (mixed-rate invoices can cause it)",
         "delta": "register minus system; cents/INR for money, calendar days for dates"}
 
 

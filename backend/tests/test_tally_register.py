@@ -188,5 +188,38 @@ class AnonymiserTests(unittest.TestCase):
         self.assertEqual(anon.main(["--register", str(self.tmp / "missing.xlsx"), "--out", str(self.out), "--key", str(self.key)]), 2)
 
 
+class RealFormatRegressionTests(unittest.TestCase):
+    """Shapes seen in a public Tally practice company (puneetkeshav/tally-integration, MIT): rebuilt here by hand."""
+
+    INVOICE_VIEW = (b'<ENVELOPE><BODY><IMPORTDATA><REQUESTDATA><TALLYMESSAGE><VOUCHER VCHTYPE="Sales" OBJVIEW="Invoice Voucher View">'
+                    b'<DATE>20240901</DATE><VOUCHERTYPENAME>Sales</VOUCHERTYPENAME>%s<PARTYLEDGERNAME>Client ABC</PARTYLEDGERNAME>'
+                    b'<ALLINVENTORYENTRIES.LIST><STOCKITEMNAME>Widget A</STOCKITEMNAME><AMOUNT>12000</AMOUNT>'
+                    b'<ACCOUNTINGALLOCATIONS.LIST><LEDGERNAME>Sales</LEDGERNAME><AMOUNT>12000</AMOUNT></ACCOUNTINGALLOCATIONS.LIST></ALLINVENTORYENTRIES.LIST>'
+                    b'<LEDGERENTRIES.LIST><LEDGERNAME>Client ABC</LEDGERNAME><AMOUNT>-14160</AMOUNT></LEDGERENTRIES.LIST>'
+                    b'<LEDGERENTRIES.LIST><LEDGERNAME>Output CGST</LEDGERNAME><AMOUNT>1080</AMOUNT></LEDGERENTRIES.LIST>'
+                    b'<LEDGERENTRIES.LIST><LEDGERNAME>Output SGST</LEDGERNAME><AMOUNT>1080</AMOUNT></LEDGERENTRIES.LIST>'
+                    b'</VOUCHER></TALLYMESSAGE></REQUESTDATA></IMPORTDATA></BODY></ENVELOPE>')
+
+    def test_invoice_view_voucher_balances_with_its_inventory_sales_line(self):
+        read = parse_tally_sales(self.INVOICE_VIEW % b"<VOUCHERNUMBER>S-1</VOUCHERNUMBER>")
+        self.assertEqual(read["rows"], [{"Bill No": "S-1", "Date": "2024-09-01", "Customer": "Client ABC", "Gross Amt": "14160.00", "GST No": ""}])
+        self.assertEqual(read["warnings"], [])  # the 12,000 sales line inside the stock entry counts toward the balance
+
+    def test_voucher_without_a_number_is_rejected_with_the_reason_never_numbered(self):
+        read = parse_tally_sales(self.INVOICE_VIEW % b"")
+        self.assertEqual(read["rows"], [])
+        self.assertIn("no voucher number", read["rejected"][0]["reason"])
+
+    def test_bank_csv_opening_balance_line_is_listed_not_fatal(self):
+        from Pramaan.backend import app  # noqa: F401  (loads the package in the right order)
+        from Pramaan.backend.p6_agent import parse_bank_csv
+        report = {}
+        rows = parse_bank_csv(b"Date,Description,Debit,Credit,Balance\n01-04-2025,OPENING BALANCE (b/f FY24-25),,,294200\n02-04-2025,RENT APRIL,25000,,269200\n30-04-2025,NEFT-CLIENT ABC,,60000,329200\n", report)
+        self.assertEqual([(r["direction"], r["amount_cents"]) for r in rows], [("debit", 2500000), ("credit", 6000000)])
+        self.assertEqual(report["balance_lines_skipped"][0]["balance_cents"], 29420000)
+        with self.assertRaises(ValueError):  # an empty line that is NOT a balance line is still an error
+            parse_bank_csv(b"Date,Description,Debit,Credit,Balance\n02-04-2025,RENT APRIL,,,269200\n")
+
+
 if __name__ == "__main__":
     unittest.main()

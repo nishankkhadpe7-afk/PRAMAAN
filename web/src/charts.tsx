@@ -1,6 +1,6 @@
 import {Term} from './glossary'
 import {ReactNode,useEffect,useRef,useState} from 'react'
-import {AlertOctagon,AlertTriangle,CheckCircle2,FileQuestion,Radio,SearchCheck} from 'lucide-react'
+import {AlertOctagon,AlertTriangle,FileQuestion,Radio,SearchCheck} from 'lucide-react'
 import {Row} from './components'
 import './charts.css'
 import './workflow.css'
