@@ -31,6 +31,8 @@ Paste one key from the Notepad file into **Access credential** and press **Enter
 
 ![Sign-in page](assets/getting-started/1-sign-in.png)
 
+**Trying it on a full company.** `.\START_PRAMAAN.bat company hiding` loads Neelgiri Lifestyle, a fictional company with a year of records and 12 hidden problems, and runs the audit for you (about 15 seconds). `.\START_PRAMAAN.bat company honest` loads one whose records agree, and `.\START_PRAMAAN.bat clean` gives an empty workspace for your own files. Each replaces the current workspace and asks first. See `docs/sample-companies/README.md`.
+
 **Signing in with an account instead (password + authenticator code).** Create the account once, in PowerShell from the project folder:
 
 ```powershell

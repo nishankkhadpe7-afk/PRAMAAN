@@ -1,0 +1,70 @@
+{
+ "dataset_name": "Kesar Home Decor Pvt Ltd - PRAMAAN sample company",
+ "dataset_version": "1.0",
+ "created_for": "PRAMAAN sample companies",
+ "data_classification": "synthetic-fictional-not-real-taxpayer-data",
+ "warning": "Fictional company. GSTINs have valid check digits but are not real registrations. E-invoice QR codes are signed with PRAMAAN's DEMO key, not a government key.",
+ "derived_from": {
+  "name": "UCI Online Retail II (trading patterns only)",
+  "url": "https://archive.ics.uci.edu/dataset/502/online+retail+ii",
+  "licence": "CC BY 4.0"
+ },
+ "public_schema_references": [],
+ "files": {
+  "dispatches.csv": {
+   "sha256": "0dfe4790d5a6420809cc4eedeca2070b1ee019cb9f9bef30191c36fce0de5437",
+   "bytes": 135551,
+   "rows": 1280
+  },
+  "gstr1_rows.csv": {
+   "sha256": "b15752839c8cfae1661f5a9bef03218039225d16b377811536148fef5e2d3a6e",
+   "bytes": 155012,
+   "rows": 1245
+  },
+  "historical_sales.csv": {
+   "sha256": "08c85fd81a36544f804f977fa7719f5469fc0a1faf7dbda8756c10c10495b8ba",
+   "bytes": 13023,
+   "rows": 250
+  },
+  "invoice_verification_status.csv": {
+   "sha256": "b561c140a5160ac9f9a19338ceb4d7924ed606d5a683239e38a4977d393c3f7e",
+   "bytes": 719572,
+   "rows": 1280
+  },
+  "invoices.csv": {
+   "sha256": "453bf641ec5eadbfc2d419eb6a39b2f7276346b9c7acb6afd985a89a06449d61",
+   "bytes": 316238,
+   "rows": 1280
+  },
+  "journal_entries.csv": {
+   "sha256": "5acb198dc653a74e876ecd54ba0bf3a48fdb4653a542a0be5bc2c4482a9e8829",
+   "bytes": 434315,
+   "rows": 4207
+  },
+  "movement_routes.csv": {
+   "sha256": "7386623d6da0767f9409cc44dceff7e7bd62316a8e39e66d90865629f7addc3d",
+   "bytes": 187077,
+   "rows": 1280
+  },
+  "price_lists.csv": {
+   "sha256": "20473176ce683a6131d977f91da18a6e4f1d59b59fb62c2dd17ef8e67798792a",
+   "bytes": 2931,
+   "rows": 39
+  },
+  "promotions.csv": {
+   "sha256": "45b7ab0b04fcab0643f9ddfe93b823324e208c86764eaddeb2ba5c875c751497",
+   "bytes": 194,
+   "rows": 1
+  },
+  "related_party_edges.csv": {
+   "sha256": "b6ca662e0fea20c8606adfd52121816b3115661ff99de81ac69ce7a83e86e89d",
+   "bytes": 245,
+   "rows": 1
+  },
+  "threshold_policies.csv": {
+   "sha256": "52fa90ab0898d24333c4a5e97b37446a135400c05c82d76a7dfe9d3bc1711479",
+   "bytes": 489,
+   "rows": 2
+  }
+ }
+}

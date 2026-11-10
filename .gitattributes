@@ -1,2 +1,4 @@
 # The synthetic manifest hashes canonical LF bytes, including on Windows.
 data/* text eol=lf
+# Sample-company manifests hash canonical LF bytes too.
+docs/sample-companies/** text eol=lf

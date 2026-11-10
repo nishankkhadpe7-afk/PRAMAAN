@@ -1,0 +1,2017 @@
+{
+ "gstin": "24SFTCE9275L1ZZ",
+ "fp": "012026",
+ "b2b": [
+  {
+   "ctin": "07DBBCW9125F1Z6",
+   "inv": [
+    {
+     "inum": "NLP/25-26/1018",
+     "idt": "05-01-2026",
+     "val": 71774.21,
+     "pos": "07",
+     "itms": [
+      {
+       "num": 1,
+       "itm_det": {
+        "rt": 18,
+        "txval": 60825.6,
+        "iamt": 10948.61,
+        "camt": 0.0,
+        "samt": 0.0,
+        "csamt": 0
+       }
+      }
+     ],
+     "rchrg": "N",
+     "inv_typ": "R"
+    },
+    {
+     "inum": "NLP/25-26/1036",
+     "idt": "13-01-2026",
+     "val": 39625.34,
+     "pos": "07",
+     "itms": [
+      {
+       "num": 1,
+       "itm_det": {
+        "rt": 18,
+        "txval": 33580.8,
+        "iamt": 6044.54,
+        "camt": 0.0,
+        "samt": 0.0,
+        "csamt": 0
+       }
+      }
+     ],
+     "rchrg": "N",
+     "inv_typ": "R"
+    },
+    {
+     "inum": "NLP/25-26/1046",
+     "idt": "17-01-2026",
+     "val": 79250.69,
+     "pos": "07",
+     "itms": [
+      {
+       "num": 1,
+       "itm_det": {
+        "rt": 18,
+        "txval": 67161.6,
+        "iamt": 12089.09,
+        "camt": 0.0,
+        "samt": 0.0,
+        "csamt": 0
+       }
+      }
+     ],
+     "rchrg": "N",
+     "inv_typ": "R"
+    }
+   ]
+  },
+  {
+   "ctin": "07RLHCJ9917F1Z6",
+   "inv": [
+    {
+     "inum": "NLP/25-26/1010",
+     "idt": "05-01-2026",
+     "val": 33099.0,
+     "pos": "07",
+     "itms": [
+      {
+       "num": 1,
+       "itm_det": {
+        "rt": 18,
+        "txval": 28050.0,
+        "iamt": 5049.0,
+        "camt": 0.0,
+        "samt": 0.0,
+        "csamt": 0
+       }
+      }
+     ],
+     "rchrg": "N",
+     "inv_typ": "R"
+    },
+    {
+     "inum": "NLP/25-26/1011",
+     "idt": "05-01-2026",
+     "val": 24090.88,
+     "pos": "07",
+     "itms": [
+      {
+       "num": 1,
+       "itm_det": {
+        "rt": 18,
+        "txval": 20416.0,
+        "iamt": 3674.88,
+        "camt": 0.0,
+        "samt": 0.0,
+        "csamt": 0
+       }
+      }
+     ],
+     "rchrg": "N",
+     "inv_typ": "R"
+    },
+    {
+     "inum": "NLP/25-26/1019",
+     "idt": "06-01-2026",
+     "val": 73518.72,
+     "pos": "07",
+     "itms": [
+      {
+       "num": 1,
+       "itm_det": {
+        "rt": 18,
+        "txval": 62304.0,
+        "iamt": 11214.72,
+        "camt": 0.0,
+        "samt": 0.0,
+        "csamt": 0
+       }
+      }
+     ],
+     "rchrg": "N",
+     "inv_typ": "R"
+    },
+    {
+     "inum": "NLP/25-26/1032",
+     "idt": "13-01-2026",
+     "val": 26479.2,
+     "pos": "07",
+     "itms": [
+      {
+       "num": 1,
+       "itm_det": {
+        "rt": 18,
+        "txval": 22440.0,
+        "iamt": 4039.2,
+        "camt": 0.0,
+        "samt": 0.0,
+        "csamt": 0
+       }
+      }
+     ],
+     "rchrg": "N",
+     "inv_typ": "R"
+    },
+    {
+     "inum": "NLP/25-26/1043",
+     "idt": "17-01-2026",
+     "val": 39718.8,
+     "pos": "07",
+     "itms": [
+      {
+       "num": 1,
+       "itm_det": {
+        "rt": 18,
+        "txval": 33660.0,
+        "iamt": 6058.8,
+        "camt": 0.0,
+        "samt": 0.0,
+        "csamt": 0
+       }
+      }
+     ],
+     "rchrg": "N",
+     "inv_typ": "R"
+    },
+    {
+     "inum": "NLP/25-26/1067",
+     "idt": "26-01-2026",
+     "val": 79437.6,
+     "pos": "07",
+     "itms": [
+      {
+       "num": 1,
+       "itm_det": {
+        "rt": 18,
+        "txval": 67320.0,
+        "iamt": 12117.6,
+        "camt": 0.0,
+        "samt": 0.0,
+        "csamt": 0
+       }
+      }
+     ],
+     "rchrg": "N",
+     "inv_typ": "R"
+    },
+    {
+     "inum": "NLP/25-26/1072",
+     "idt": "27-01-2026",
+     "val": 28036.8,
+     "pos": "07",
+     "itms": [
+      {
+       "num": 1,
+       "itm_det": {
+        "rt": 18,
+        "txval": 23760.0,
+        "iamt": 4276.8,
+        "camt": 0.0,
+        "samt": 0.0,
+        "csamt": 0
+       }
+      }
+     ],
+     "rchrg": "N",
+     "inv_typ": "R"
+    },
+    {
+     "inum": "NLP/25-26/1074",
+     "idt": "28-01-2026",
+     "val": 19859.4,
+     "pos": "07",
+     "itms": [
+      {
+       "num": 1,
+       "itm_det": {
+        "rt": 18,
+        "txval": 16830.0,
+        "iamt": 3029.4,
+        "camt": 0.0,
+        "samt": 0.0,
+        "csamt": 0
+       }
+      }
+     ],
+     "rchrg": "N",
+     "inv_typ": "R"
+    },
+    {
+     "inum": "NLP/25-26/1077",
+     "idt": "31-01-2026",
+     "val": 52958.4,
+     "pos": "07",
+     "itms": [
+      {
+       "num": 1,
+       "itm_det": {
+        "rt": 18,
+        "txval": 44880.0,
+        "iamt": 8078.4,
+        "camt": 0.0,
+        "samt": 0.0,
+        "csamt": 0
+       }
+      }
+     ],
+     "rchrg": "N",
+     "inv_typ": "R"
+    },
+    {
+     "inum": "NLP/25-26/1078",
+     "idt": "31-01-2026",
+     "val": 72272.64,
+     "pos": "07",
+     "itms": [
+      {
+       "num": 1,
+       "itm_det": {
+        "rt": 18,
+        "txval": 61248.0,
+        "iamt": 11024.64,
+        "camt": 0.0,
+        "samt": 0.0,
+        "csamt": 0
+       }
+      }
+     ],
+     "rchrg": "N",
+     "inv_typ": "R"
+    }
+   ]
+  },
+  {
+   "ctin": "08RBJCS9117G1ZK",
+   "inv": [
+    {
+     "inum": "NLP/25-26/1039",
+     "idt": "14-01-2026",
+     "val": 65419.2,
+     "pos": "08",
+     "itms": [
+      {
+       "num": 1,
+       "itm_det": {
+        "rt": 18,
+        "txval": 55440.0,
+        "iamt": 9979.2,
+        "camt": 0.0,
+        "samt": 0.0,
+        "csamt": 0
+       }
+      }
+     ],
+     "rchrg": "N",
+     "inv_typ": "R"
+    }
+   ]
+  },
+  {
+   "ctin": "09EFFCU7508J1ZJ",
+   "inv": [
+    {
+     "inum": "NLP/25-26/1062",
+     "idt": "24-01-2026",
+     "val": 18379.68,
+     "pos": "09",
+     "itms": [
+      {
+       "num": 1,
+       "itm_det": {
+        "rt": 18,
+        "txval": 15576.0,
+        "iamt": 2803.68,
+        "camt": 0.0,
+        "samt": 0.0,
+        "csamt": 0
+       }
+      }
+     ],
+     "rchrg": "N",
+     "inv_typ": "R"
+    }
+   ]
+  },
+  {
+   "ctin": "19BNGCV5091D1ZD",
+   "inv": [
+    {
+     "inum": "NLP/25-26/1029",
+     "idt": "11-01-2026",
+     "val": 52958.4,
+     "pos": "19",
+     "itms": [
+      {
+       "num": 1,
+       "itm_det": {
+        "rt": 18,
+        "txval": 44880.0,
+        "iamt": 8078.4,
+        "camt": 0.0,
+        "samt": 0.0,
+        "csamt": 0
+       }
+      }
+     ],
+     "rchrg": "N",
+     "inv_typ": "R"
+    },
+    {
+     "inum": "NLP/25-26/1073",
+     "idt": "27-01-2026",
+     "val": 52958.4,
+     "pos": "19",
+     "itms": [
+      {
+       "num": 1,
+       "itm_det": {
+        "rt": 18,
+        "txval": 44880.0,
+        "iamt": 8078.4,
+        "camt": 0.0,
+        "samt": 0.0,
+        "csamt": 0
+       }
+      }
+     ],
+     "rchrg": "N",
+     "inv_typ": "R"
+    }
+   ]
+  },
+  {
+   "ctin": "19VHKCD6676Z1Z2",
+   "inv": [
+    {
+     "inum": "NLP/25-26/1020",
+     "idt": "06-01-2026",
+     "val": 120714.0,
+     "pos": "19",
+     "itms": [
+      {
+       "num": 1,
+       "itm_det": {
+        "rt": 18,
+        "txval": 102300.0,
+        "iamt": 18414.0,
+        "camt": 0.0,
+        "samt": 0.0,
+        "csamt": 0
+       }
+      }
+     ],
+     "rchrg": "N",
+     "inv_typ": "R"
+    },
+    {
+     "inum": "NLP/25-26/1027",
+     "idt": "10-01-2026",
+     "val": 52958.4,
+     "pos": "19",
+     "itms": [
+      {
+       "num": 1,
+       "itm_det": {
+        "rt": 18,
+        "txval": 44880.0,
+        "iamt": 8078.4,
+        "camt": 0.0,
+        "samt": 0.0,
+        "csamt": 0
+       }
+      }
+     ],
+     "rchrg": "N",
+     "inv_typ": "R"
+    },
+    {
+     "inum": "NLP/25-26/1049",
+     "idt": "18-01-2026",
+     "val": 126352.51,
+     "pos": "19",
+     "itms": [
+      {
+       "num": 1,
+       "itm_det": {
+        "rt": 18,
+        "txval": 107078.4,
+        "iamt": 19274.11,
+        "camt": 0.0,
+        "samt": 0.0,
+        "csamt": 0
+       }
+      }
+     ],
+     "rchrg": "N",
+     "inv_typ": "R"
+    },
+    {
+     "inum": "NLP/25-26/1070",
+     "idt": "26-01-2026",
+     "val": 99437.18,
+     "pos": "19",
+     "itms": [
+      {
+       "num": 1,
+       "itm_det": {
+        "rt": 18,
+        "txval": 84268.8,
+        "iamt": 15168.38,
+        "camt": 0.0,
+        "samt": 0.0,
+        "csamt": 0
+       }
+      }
+     ],
+     "rchrg": "N",
+     "inv_typ": "R"
+    },
+    {
+     "inum": "NLP/25-26/1071",
+     "idt": "26-01-2026",
+     "val": 126352.51,
+     "pos": "19",
+     "itms": [
+      {
+       "num": 1,
+       "itm_det": {
+        "rt": 18,
+        "txval": 107078.4,
+        "iamt": 19274.11,
+        "camt": 0.0,
+        "samt": 0.0,
+        "csamt": 0
+       }
+      }
+     ],
+     "rchrg": "N",
+     "inv_typ": "R"
+    },
+    {
+     "inum": "NLP/25-26/1319",
+     "idt": "12-01-2026",
+     "val": 792960.0,
+     "pos": "19",
+     "itms": [
+      {
+       "num": 1,
+       "itm_det": {
+        "rt": 18,
+        "txval": 672000.0,
+        "iamt": 120960.0,
+        "camt": 0.0,
+        "samt": 0.0,
+        "csamt": 0
+       }
+      }
+     ],
+     "rchrg": "N",
+     "inv_typ": "R"
+    },
+    {
+     "inum": "NLP/25-26/1320",
+     "idt": "14-01-2026",
+     "val": 792960.0,
+     "pos": "19",
+     "itms": [
+      {
+       "num": 1,
+       "itm_det": {
+        "rt": 18,
+        "txval": 672000.0,
+        "iamt": 120960.0,
+        "camt": 0.0,
+        "samt": 0.0,
+        "csamt": 0
+       }
+      }
+     ],
+     "rchrg": "N",
+     "inv_typ": "R"
+    }
+   ]
+  },
+  {
+   "ctin": "23LGDCG4739B1ZE",
+   "inv": [
+    {
+     "inum": "NLP/25-26/1038",
+     "idt": "14-01-2026",
+     "val": 1739.32,
+     "pos": "23",
+     "itms": [
+      {
+       "num": 1,
+       "itm_det": {
+        "rt": 18,
+        "txval": 1474.0,
+        "iamt": 265.32,
+        "camt": 0.0,
+        "samt": 0.0,
+        "csamt": 0
+       }
+      }
+     ],
+     "rchrg": "N",
+     "inv_typ": "R"
+    },
+    {
+     "inum": "NLP/25-26/1045",
+     "idt": "17-01-2026",
+     "val": 5062.2,
+     "pos": "23",
+     "itms": [
+      {
+       "num": 1,
+       "itm_det": {
+        "rt": 18,
+        "txval": 4290.0,
+        "iamt": 772.2,
+        "camt": 0.0,
+        "samt": 0.0,
+        "csamt": 0
+       }
+      }
+     ],
+     "rchrg": "N",
+     "inv_typ": "R"
+    }
+   ]
+  },
+  {
+   "ctin": "24CGBCJ5440V1ZN",
+   "inv": [
+    {
+     "inum": "NLP/25-26/1015",
+     "idt": "05-01-2026",
+     "val": 30373.2,
+     "pos": "24",
+     "itms": [
+      {
+       "num": 1,
+       "itm_det": {
+        "rt": 18,
+        "txval": 25740.0,
+        "iamt": 0.0,
+        "camt": 2316.6,
+        "samt": 2316.6,
+        "csamt": 0
+       }
+      }
+     ],
+     "rchrg": "N",
+     "inv_typ": "R"
+    }
+   ]
+  },
+  {
+   "ctin": "24FFJCN4483D1Z2",
+   "inv": [
+    {
+     "inum": "NLP/25-26/1006",
+     "idt": "04-01-2026",
+     "val": 108558.48,
+     "pos": "24",
+     "itms": [
+      {
+       "num": 1,
+       "itm_det": {
+        "rt": 18,
+        "txval": 91998.72,
+        "iamt": 0.0,
+        "camt": 8279.88,
+        "samt": 8279.88,
+        "csamt": 0
+       }
+      }
+     ],
+     "rchrg": "N",
+     "inv_typ": "R"
+    },
+    {
+     "inum": "NLP/25-26/1025",
+     "idt": "09-01-2026",
+     "val": 87381.36,
+     "pos": "24",
+     "itms": [
+      {
+       "num": 1,
+       "itm_det": {
+        "rt": 18,
+        "txval": 74052.0,
+        "iamt": 0.0,
+        "camt": 6664.68,
+        "samt": 6664.68,
+        "csamt": 0
+       }
+      }
+     ],
+     "rchrg": "N",
+     "inv_typ": "R"
+    },
+    {
+     "inum": "NLP/25-26/1031",
+     "idt": "12-01-2026",
+     "val": 13239.6,
+     "pos": "24",
+     "itms": [
+      {
+       "num": 1,
+       "itm_det": {
+        "rt": 18,
+        "txval": 11220.0,
+        "iamt": 0.0,
+        "camt": 1009.8,
+        "samt": 1009.8,
+        "csamt": 0
+       }
+      }
+     ],
+     "rchrg": "N",
+     "inv_typ": "R"
+    },
+    {
+     "inum": "NLP/25-26/1041",
+     "idt": "16-01-2026",
+     "val": 6619.8,
+     "pos": "24",
+     "itms": [
+      {
+       "num": 1,
+       "itm_det": {
+        "rt": 18,
+        "txval": 5610.0,
+        "iamt": 0.0,
+        "camt": 504.9,
+        "samt": 504.9,
+        "csamt": 0
+       }
+      }
+     ],
+     "rchrg": "N",
+     "inv_typ": "R"
+    },
+    {
+     "inum": "NLP/25-26/1042",
+     "idt": "16-01-2026",
+     "val": 77101.2,
+     "pos": "24",
+     "itms": [
+      {
+       "num": 1,
+       "itm_det": {
+        "rt": 18,
+        "txval": 65340.0,
+        "iamt": 0.0,
+        "camt": 5880.6,
+        "samt": 5880.6,
+        "csamt": 0
+       }
+      }
+     ],
+     "rchrg": "N",
+     "inv_typ": "R"
+    },
+    {
+     "inum": "NLP/25-26/1051",
+     "idt": "19-01-2026",
+     "val": 61680.96,
+     "pos": "24",
+     "itms": [
+      {
+       "num": 1,
+       "itm_det": {
+        "rt": 18,
+        "txval": 52272.0,
+        "iamt": 0.0,
+        "camt": 4704.48,
+        "samt": 4704.48,
+        "csamt": 0
+       }
+      }
+     ],
+     "rchrg": "N",
+     "inv_typ": "R"
+    },
+    {
+     "inum": "NLP/25-26/1058",
+     "idt": "23-01-2026",
+     "val": 10280.16,
+     "pos": "24",
+     "itms": [
+      {
+       "num": 1,
+       "itm_det": {
+        "rt": 18,
+        "txval": 8712.0,
+        "iamt": 0.0,
+        "camt": 784.08,
+        "samt": 784.08,
+        "csamt": 0
+       }
+      }
+     ],
+     "rchrg": "N",
+     "inv_typ": "R"
+    },
+    {
+     "inum": "NLP/25-26/1069",
+     "idt": "26-01-2026",
+     "val": 61680.96,
+     "pos": "24",
+     "itms": [
+      {
+       "num": 1,
+       "itm_det": {
+        "rt": 18,
+        "txval": 52272.0,
+        "iamt": 0.0,
+        "camt": 4704.48,
+        "samt": 4704.48,
+        "csamt": 0
+       }
+      }
+     ],
+     "rchrg": "N",
+     "inv_typ": "R"
+    },
+    {
+     "inum": "NLP/25-26/1076",
+     "idt": "30-01-2026",
+     "val": 46338.6,
+     "pos": "24",
+     "itms": [
+      {
+       "num": 1,
+       "itm_det": {
+        "rt": 18,
+        "txval": 39270.0,
+        "iamt": 0.0,
+        "camt": 3534.3,
+        "samt": 3534.3,
+        "csamt": 0
+       }
+      }
+     ],
+     "rchrg": "N",
+     "inv_typ": "R"
+    }
+   ]
+  },
+  {
+   "ctin": "24THNCW1835F1ZD",
+   "inv": [
+    {
+     "inum": "NLP/25-26/1047",
+     "idt": "17-01-2026",
+     "val": 18068.16,
+     "pos": "24",
+     "itms": [
+      {
+       "num": 1,
+       "itm_det": {
+        "rt": 18,
+        "txval": 15312.0,
+        "iamt": 0.0,
+        "camt": 1378.08,
+        "samt": 1378.08,
+        "csamt": 0
+       }
+      }
+     ],
+     "rchrg": "N",
+     "inv_typ": "R"
+    }
+   ]
+  },
+  {
+   "ctin": "24VULCJ1887J1ZL",
+   "inv": [
+    {
+     "inum": "NLP/25-26/1316",
+     "idt": "09-01-2026",
+     "val": 101952.0,
+     "pos": "24",
+     "itms": [
+      {
+       "num": 1,
+       "itm_det": {
+        "rt": 18,
+        "txval": 86400.0,
+        "iamt": 0.0,
+        "camt": 7776.0,
+        "samt": 7776.0,
+        "csamt": 0
+       }
+      }
+     ],
+     "rchrg": "N",
+     "inv_typ": "R"
+    }
+   ]
+  },
+  {
+   "ctin": "24WAZCH4116R1Z6",
+   "inv": [
+    {
+     "inum": "NLP/25-26/1005",
+     "idt": "04-01-2026",
+     "val": 109517.98,
+     "pos": "24",
+     "itms": [
+      {
+       "num": 1,
+       "itm_det": {
+        "rt": 18,
+        "txval": 92811.84,
+        "iamt": 0.0,
+        "camt": 8353.07,
+        "samt": 8353.07,
+        "csamt": 0
+       }
+      }
+     ],
+     "rchrg": "N",
+     "inv_typ": "R"
+    },
+    {
+     "inum": "NLP/25-26/1024",
+     "idt": "09-01-2026",
+     "val": 51400.8,
+     "pos": "24",
+     "itms": [
+      {
+       "num": 1,
+       "itm_det": {
+        "rt": 18,
+        "txval": 43560.0,
+        "iamt": 0.0,
+        "camt": 3920.4,
+        "samt": 3920.4,
+        "csamt": 0
+       }
+      }
+     ],
+     "rchrg": "N",
+     "inv_typ": "R"
+    },
+    {
+     "inum": "NLP/25-26/1030",
+     "idt": "12-01-2026",
+     "val": 41484.08,
+     "pos": "24",
+     "itms": [
+      {
+       "num": 1,
+       "itm_det": {
+        "rt": 18,
+        "txval": 35156.0,
+        "iamt": 0.0,
+        "camt": 3164.04,
+        "samt": 3164.04,
+        "csamt": 0
+       }
+      }
+     ],
+     "rchrg": "N",
+     "inv_typ": "R"
+    },
+    {
+     "inum": "NLP/25-26/1044",
+     "idt": "17-01-2026",
+     "val": 1323.96,
+     "pos": "24",
+     "itms": [
+      {
+       "num": 1,
+       "itm_det": {
+        "rt": 18,
+        "txval": 1122.0,
+        "iamt": 0.0,
+        "camt": 100.98,
+        "samt": 100.98,
+        "csamt": 0
+       }
+      }
+     ],
+     "rchrg": "N",
+     "inv_typ": "R"
+    },
+    {
+     "inum": "NLP/25-26/1050",
+     "idt": "19-01-2026",
+     "val": 248904.48,
+     "pos": "24",
+     "itms": [
+      {
+       "num": 1,
+       "itm_det": {
+        "rt": 18,
+        "txval": 210936.0,
+        "iamt": 0.0,
+        "camt": 18984.24,
+        "samt": 18984.24,
+        "csamt": 0
+       }
+      }
+     ],
+     "rchrg": "N",
+     "inv_typ": "R"
+    },
+    {
+     "inum": "NLP/25-26/1057",
+     "idt": "23-01-2026",
+     "val": 104670.72,
+     "pos": "24",
+     "itms": [
+      {
+       "num": 1,
+       "itm_det": {
+        "rt": 18,
+        "txval": 88704.0,
+        "iamt": 0.0,
+        "camt": 7983.36,
+        "samt": 7983.36,
+        "csamt": 0
+       }
+      }
+     ],
+     "rchrg": "N",
+     "inv_typ": "R"
+    },
+    {
+     "inum": "NLP/25-26/1068",
+     "idt": "26-01-2026",
+     "val": 746713.44,
+     "pos": "24",
+     "itms": [
+      {
+       "num": 1,
+       "itm_det": {
+        "rt": 18,
+        "txval": 632808.0,
+        "iamt": 0.0,
+        "camt": 56952.72,
+        "samt": 56952.72,
+        "csamt": 0
+       }
+      }
+     ],
+     "rchrg": "N",
+     "inv_typ": "R"
+    }
+   ]
+  },
+  {
+   "ctin": "27BVTCF8529Y1ZR",
+   "inv": [
+    {
+     "inum": "NLP/25-26/1016",
+     "idt": "05-01-2026",
+     "val": 56156.67,
+     "pos": "27",
+     "itms": [
+      {
+       "num": 1,
+       "itm_det": {
+        "rt": 18,
+        "txval": 47590.4,
+        "iamt": 8566.27,
+        "camt": 0.0,
+        "samt": 0.0,
+        "csamt": 0
+       }
+      }
+     ],
+     "rchrg": "N",
+     "inv_typ": "R"
+    }
+   ]
+  },
+  {
+   "ctin": "27DDYCX8791K1ZN",
+   "inv": [
+    {
+     "inum": "NLP/25-26/1037",
+     "idt": "14-01-2026",
+     "val": 237378.24,
+     "pos": "27",
+     "itms": [
+      {
+       "num": 1,
+       "itm_det": {
+        "rt": 18,
+        "txval": 201168.0,
+        "iamt": 36210.24,
+        "camt": 0.0,
+        "samt": 0.0,
+        "csamt": 0
+       }
+      }
+     ],
+     "rchrg": "N",
+     "inv_typ": "R"
+    },
+    {
+     "inum": "NLP/25-26/1052",
+     "idt": "19-01-2026",
+     "val": 338933.76,
+     "pos": "27",
+     "itms": [
+      {
+       "num": 1,
+       "itm_det": {
+        "rt": 18,
+        "txval": 287232.0,
+        "iamt": 51701.76,
+        "camt": 0.0,
+        "samt": 0.0,
+        "csamt": 0
+       }
+      }
+     ],
+     "rchrg": "N",
+     "inv_typ": "R"
+    },
+    {
+     "inum": "NLP/25-26/1053",
+     "idt": "20-01-2026",
+     "val": 79250.69,
+     "pos": "27",
+     "itms": [
+      {
+       "num": 1,
+       "itm_det": {
+        "rt": 18,
+        "txval": 67161.6,
+        "iamt": 12089.09,
+        "camt": 0.0,
+        "samt": 0.0,
+        "csamt": 0
+       }
+      }
+     ],
+     "rchrg": "N",
+     "inv_typ": "R"
+    },
+    {
+     "inum": "NLP/25-26/1056",
+     "idt": "21-01-2026",
+     "val": 138314.88,
+     "pos": "27",
+     "itms": [
+      {
+       "num": 1,
+       "itm_det": {
+        "rt": 18,
+        "txval": 117216.0,
+        "iamt": 21098.88,
+        "camt": 0.0,
+        "samt": 0.0,
+        "csamt": 0
+       }
+      }
+     ],
+     "rchrg": "N",
+     "inv_typ": "R"
+    }
+   ]
+  },
+  {
+   "ctin": "27FFRCZ6851N1ZR",
+   "inv": [
+    {
+     "inum": "NLP/25-26/1023",
+     "idt": "07-01-2026",
+     "val": 90963.84,
+     "pos": "27",
+     "itms": [
+      {
+       "num": 1,
+       "itm_det": {
+        "rt": 18,
+        "txval": 77088.0,
+        "iamt": 13875.84,
+        "camt": 0.0,
+        "samt": 0.0,
+        "csamt": 0
+       }
+      }
+     ],
+     "rchrg": "N",
+     "inv_typ": "R"
+    },
+    {
+     "inum": "NLP/25-26/1064",
+     "idt": "25-01-2026",
+     "val": 34267.2,
+     "pos": "27",
+     "itms": [
+      {
+       "num": 1,
+       "itm_det": {
+        "rt": 18,
+        "txval": 29040.0,
+        "iamt": 5227.2,
+        "camt": 0.0,
+        "samt": 0.0,
+        "csamt": 0
+       }
+      }
+     ],
+     "rchrg": "N",
+     "inv_typ": "R"
+    },
+    {
+     "inum": "NLP/25-26/1065",
+     "idt": "25-01-2026",
+     "val": 31152.0,
+     "pos": "27",
+     "itms": [
+      {
+       "num": 1,
+       "itm_det": {
+        "rt": 18,
+        "txval": 26400.0,
+        "iamt": 4752.0,
+        "camt": 0.0,
+        "samt": 0.0,
+        "csamt": 0
+       }
+      }
+     ],
+     "rchrg": "N",
+     "inv_typ": "R"
+    },
+    {
+     "inum": "NLP/25-26/1079",
+     "idt": "31-01-2026",
+     "val": 196257.6,
+     "pos": "27",
+     "itms": [
+      {
+       "num": 1,
+       "itm_det": {
+        "rt": 18,
+        "txval": 166320.0,
+        "iamt": 29937.6,
+        "camt": 0.0,
+        "samt": 0.0,
+        "csamt": 0
+       }
+      }
+     ],
+     "rchrg": "N",
+     "inv_typ": "R"
+    }
+   ]
+  },
+  {
+   "ctin": "27HGMCL7626H1ZK",
+   "inv": [
+    {
+     "inum": "NLP/25-26/1008",
+     "idt": "05-01-2026",
+     "val": 5391.37,
+     "pos": "27",
+     "itms": [
+      {
+       "num": 1,
+       "itm_det": {
+        "rt": 18,
+        "txval": 4568.96,
+        "iamt": 822.41,
+        "camt": 0.0,
+        "samt": 0.0,
+        "csamt": 0
+       }
+      }
+     ],
+     "rchrg": "N",
+     "inv_typ": "R"
+    },
+    {
+     "inum": "NLP/25-26/1009",
+     "idt": "05-01-2026",
+     "val": 3089.24,
+     "pos": "27",
+     "itms": [
+      {
+       "num": 1,
+       "itm_det": {
+        "rt": 18,
+        "txval": 2618.0,
+        "iamt": 471.24,
+        "camt": 0.0,
+        "samt": 0.0,
+        "csamt": 0
+       }
+      }
+     ],
+     "rchrg": "N",
+     "inv_typ": "R"
+    },
+    {
+     "inum": "NLP/25-26/1040",
+     "idt": "16-01-2026",
+     "val": 3089.24,
+     "pos": "27",
+     "itms": [
+      {
+       "num": 1,
+       "itm_det": {
+        "rt": 18,
+        "txval": 2618.0,
+        "iamt": 471.24,
+        "camt": 0.0,
+        "samt": 0.0,
+        "csamt": 0
+       }
+      }
+     ],
+     "rchrg": "N",
+     "inv_typ": "R"
+    },
+    {
+     "inum": "NLP/25-26/1048",
+     "idt": "18-01-2026",
+     "val": 92677.2,
+     "pos": "27",
+     "itms": [
+      {
+       "num": 1,
+       "itm_det": {
+        "rt": 18,
+        "txval": 78540.0,
+        "iamt": 14137.2,
+        "camt": 0.0,
+        "samt": 0.0,
+        "csamt": 0
+       }
+      }
+     ],
+     "rchrg": "N",
+     "inv_typ": "R"
+    }
+   ]
+  },
+  {
+   "ctin": "27YTJCP2550N1Z9",
+   "inv": [
+    {
+     "inum": "NLP/25-26/1035",
+     "idt": "13-01-2026",
+     "val": 10124.4,
+     "pos": "27",
+     "itms": [
+      {
+       "num": 1,
+       "itm_det": {
+        "rt": 18,
+        "txval": 8580.0,
+        "iamt": 1544.4,
+        "camt": 0.0,
+        "samt": 0.0,
+        "csamt": 0
+       }
+      }
+     ],
+     "rchrg": "N",
+     "inv_typ": "R"
+    },
+    {
+     "inum": "NLP/25-26/1081",
+     "idt": "31-01-2026",
+     "val": 44132.0,
+     "pos": "27",
+     "itms": [
+      {
+       "num": 1,
+       "itm_det": {
+        "rt": 18,
+        "txval": 37400.0,
+        "iamt": 6732.0,
+        "camt": 0.0,
+        "samt": 0.0,
+        "csamt": 0
+       }
+      }
+     ],
+     "rchrg": "N",
+     "inv_typ": "R"
+    }
+   ]
+  },
+  {
+   "ctin": "29DZACS3935A1Z4",
+   "inv": [
+    {
+     "inum": "NLP/25-26/1026",
+     "idt": "09-01-2026",
+     "val": 39718.8,
+     "pos": "29",
+     "itms": [
+      {
+       "num": 1,
+       "itm_det": {
+        "rt": 18,
+        "txval": 33660.0,
+        "iamt": 6058.8,
+        "camt": 0.0,
+        "samt": 0.0,
+        "csamt": 0
+       }
+      }
+     ],
+     "rchrg": "N",
+     "inv_typ": "R"
+    },
+    {
+     "inum": "NLP/25-26/1060",
+     "idt": "23-01-2026",
+     "val": 25700.4,
+     "pos": "29",
+     "itms": [
+      {
+       "num": 1,
+       "itm_det": {
+        "rt": 18,
+        "txval": 21780.0,
+        "iamt": 3920.4,
+        "camt": 0.0,
+        "samt": 0.0,
+        "csamt": 0
+       }
+      }
+     ],
+     "rchrg": "N",
+     "inv_typ": "R"
+    }
+   ]
+  },
+  {
+   "ctin": "32KZNCL1809Z1ZW",
+   "inv": [
+    {
+     "inum": "NLP/25-26/1013",
+     "idt": "05-01-2026",
+     "val": 97194.24,
+     "pos": "32",
+     "itms": [
+      {
+       "num": 1,
+       "itm_det": {
+        "rt": 18,
+        "txval": 82368.0,
+        "iamt": 14826.24,
+        "camt": 0.0,
+        "samt": 0.0,
+        "csamt": 0
+       }
+      }
+     ],
+     "rchrg": "N",
+     "inv_typ": "R"
+    },
+    {
+     "inum": "NLP/25-26/1014",
+     "idt": "05-01-2026",
+     "val": 169466.88,
+     "pos": "32",
+     "itms": [
+      {
+       "num": 1,
+       "itm_det": {
+        "rt": 18,
+        "txval": 143616.0,
+        "iamt": 25850.88,
+        "camt": 0.0,
+        "samt": 0.0,
+        "csamt": 0
+       }
+      }
+     ],
+     "rchrg": "N",
+     "inv_typ": "R"
+    },
+    {
+     "inum": "NLP/25-26/1022",
+     "idt": "07-01-2026",
+     "val": 85668.0,
+     "pos": "32",
+     "itms": [
+      {
+       "num": 1,
+       "itm_det": {
+        "rt": 18,
+        "txval": 72600.0,
+        "iamt": 13068.0,
+        "camt": 0.0,
+        "samt": 0.0,
+        "csamt": 0
+       }
+      }
+     ],
+     "rchrg": "N",
+     "inv_typ": "R"
+    },
+    {
+     "inum": "NLP/25-26/1028",
+     "idt": "11-01-2026",
+     "val": 44132.0,
+     "pos": "32",
+     "itms": [
+      {
+       "num": 1,
+       "itm_det": {
+        "rt": 18,
+        "txval": 37400.0,
+        "iamt": 6732.0,
+        "camt": 0.0,
+        "samt": 0.0,
+        "csamt": 0
+       }
+      }
+     ],
+     "rchrg": "N",
+     "inv_typ": "R"
+    },
+    {
+     "inum": "NLP/25-26/1059",
+     "idt": "23-01-2026",
+     "val": 220400.4,
+     "pos": "32",
+     "itms": [
+      {
+       "num": 1,
+       "itm_det": {
+        "rt": 18,
+        "txval": 186780.0,
+        "iamt": 33620.4,
+        "camt": 0.0,
+        "samt": 0.0,
+        "csamt": 0
+       }
+      }
+     ],
+     "rchrg": "N",
+     "inv_typ": "R"
+    }
+   ]
+  },
+  {
+   "ctin": "33DPYCF7310T1ZS",
+   "inv": [
+    {
+     "inum": "NLP/25-26/1012",
+     "idt": "05-01-2026",
+     "val": 70611.2,
+     "pos": "33",
+     "itms": [
+      {
+       "num": 1,
+       "itm_det": {
+        "rt": 18,
+        "txval": 59840.0,
+        "iamt": 10771.2,
+        "camt": 0.0,
+        "samt": 0.0,
+        "csamt": 0
+       }
+      }
+     ],
+     "rchrg": "N",
+     "inv_typ": "R"
+    },
+    {
+     "inum": "NLP/25-26/1033",
+     "idt": "13-01-2026",
+     "val": 75284.0,
+     "pos": "33",
+     "itms": [
+      {
+       "num": 1,
+       "itm_det": {
+        "rt": 18,
+        "txval": 63800.0,
+        "iamt": 11484.0,
+        "camt": 0.0,
+        "samt": 0.0,
+        "csamt": 0
+       }
+      }
+     ],
+     "rchrg": "N",
+     "inv_typ": "R"
+    },
+    {
+     "inum": "NLP/25-26/1075",
+     "idt": "28-01-2026",
+     "val": 276629.76,
+     "pos": "33",
+     "itms": [
+      {
+       "num": 1,
+       "itm_det": {
+        "rt": 18,
+        "txval": 234432.0,
+        "iamt": 42197.76,
+        "camt": 0.0,
+        "samt": 0.0,
+        "csamt": 0
+       }
+      }
+     ],
+     "rchrg": "N",
+     "inv_typ": "R"
+    }
+   ]
+  },
+  {
+   "ctin": "33JHVCY9203S1ZL",
+   "inv": [
+    {
+     "inum": "NLP/25-26/1066",
+     "idt": "25-01-2026",
+     "val": 85668.0,
+     "pos": "33",
+     "itms": [
+      {
+       "num": 1,
+       "itm_det": {
+        "rt": 18,
+        "txval": 72600.0,
+        "iamt": 13068.0,
+        "camt": 0.0,
+        "samt": 0.0,
+        "csamt": 0
+       }
+      }
+     ],
+     "rchrg": "N",
+     "inv_typ": "R"
+    }
+   ]
+  },
+  {
+   "ctin": "36XGZCV6693W1ZE",
+   "inv": [
+    {
+     "inum": "NLP/25-26/1021",
+     "idt": "06-01-2026",
+     "val": 42366.72,
+     "pos": "36",
+     "itms": [
+      {
+       "num": 1,
+       "itm_det": {
+        "rt": 18,
+        "txval": 35904.0,
+        "iamt": 6462.72,
+        "camt": 0.0,
+        "samt": 0.0,
+        "csamt": 0
+       }
+      }
+     ],
+     "rchrg": "N",
+     "inv_typ": "R"
+    },
+    {
+     "inum": "NLP/25-26/1061",
+     "idt": "24-01-2026",
+     "val": 58410.0,
+     "pos": "36",
+     "itms": [
+      {
+       "num": 1,
+       "itm_det": {
+        "rt": 18,
+        "txval": 49500.0,
+        "iamt": 8910.0,
+        "camt": 0.0,
+        "samt": 0.0,
+        "csamt": 0
+       }
+      }
+     ],
+     "rchrg": "N",
+     "inv_typ": "R"
+    },
+    {
+     "inum": "NLP/25-26/1080",
+     "idt": "31-01-2026",
+     "val": 120454.4,
+     "pos": "36",
+     "itms": [
+      {
+       "num": 1,
+       "itm_det": {
+        "rt": 18,
+        "txval": 102080.0,
+        "iamt": 18374.4,
+        "camt": 0.0,
+        "samt": 0.0,
+        "csamt": 0
+       }
+      }
+     ],
+     "rchrg": "N",
+     "inv_typ": "R"
+    }
+   ]
+  }
+ ],
+ "b2cl": [
+  {
+   "pos": "30",
+   "inv": [
+    {
+     "inum": "NLP/25-26/1017",
+     "idt": "05-01-2026",
+     "val": 126726.34,
+     "pos": "30",
+     "itms": [
+      {
+       "num": 1,
+       "itm_det": {
+        "rt": 18,
+        "txval": 107395.2,
+        "iamt": 19331.14,
+        "camt": 0.0,
+        "samt": 0.0,
+        "csamt": 0
+       }
+      }
+     ]
+    }
+   ]
+  }
+ ],
+ "b2cs": [
+  {
+   "sply_ty": "INTRA",
+   "pos": "24",
+   "typ": "OE",
+   "rt": 18,
+   "txval": 497956.8,
+   "iamt": 0.0,
+   "camt": 44816.11,
+   "samt": 44816.11,
+   "csamt": 0
+  }
+ ],
+ "cdnr": [
+  {
+   "ctin": "07RLHCJ9917F1Z6",
+   "nt": [
+    {
+     "ntty": "C",
+     "nt_num": "NLP-CN203",
+     "nt_dt": "31-01-2026",
+     "val": 52958.4,
+     "itms": [
+      {
+       "num": 1,
+       "itm_det": {
+        "rt": 18,
+        "txval": 44880.0,
+        "iamt": 8078.4,
+        "camt": 0.0,
+        "samt": 0.0,
+        "csamt": 0
+       }
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "ctin": "08RBJCS9117G1ZK",
+   "nt": [
+    {
+     "ntty": "C",
+     "nt_num": "NLP-CN202",
+     "nt_dt": "27-01-2026",
+     "val": 24142.8,
+     "itms": [
+      {
+       "num": 1,
+       "itm_det": {
+        "rt": 18,
+        "txval": 20460.0,
+        "iamt": 3682.8,
+        "camt": 0.0,
+        "samt": 0.0,
+        "csamt": 0
+       }
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "ctin": "19BNGCV5091D1ZD",
+   "nt": [
+    {
+     "ntty": "C",
+     "nt_num": "NLP-CN194",
+     "nt_dt": "13-01-2026",
+     "val": 9657.12,
+     "itms": [
+      {
+       "num": 1,
+       "itm_det": {
+        "rt": 18,
+        "txval": 8184.0,
+        "iamt": 1473.12,
+        "camt": 0.0,
+        "samt": 0.0,
+        "csamt": 0
+       }
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "ctin": "24FFJCN4483D1Z2",
+   "nt": [
+    {
+     "ntty": "C",
+     "nt_num": "NLP-CN195",
+     "nt_dt": "16-01-2026",
+     "val": 6619.8,
+     "itms": [
+      {
+       "num": 1,
+       "itm_det": {
+        "rt": 18,
+        "txval": 5610.0,
+        "iamt": 0.0,
+        "camt": 504.9,
+        "samt": 504.9,
+        "csamt": 0
+       }
+      }
+     ]
+    },
+    {
+     "ntty": "C",
+     "nt_num": "NLP-CN197",
+     "nt_dt": "20-01-2026",
+     "val": 649.0,
+     "itms": [
+      {
+       "num": 1,
+       "itm_det": {
+        "rt": 18,
+        "txval": 550.0,
+        "iamt": 0.0,
+        "camt": 49.5,
+        "samt": 49.5,
+        "csamt": 0
+       }
+      }
+     ]
+    },
+    {
+     "ntty": "C",
+     "nt_num": "NLP-CN199",
+     "nt_dt": "23-01-2026",
+     "val": 7762.04,
+     "itms": [
+      {
+       "num": 1,
+       "itm_det": {
+        "rt": 18,
+        "txval": 6578.0,
+        "iamt": 0.0,
+        "camt": 592.02,
+        "samt": 592.02,
+        "csamt": 0
+       }
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "ctin": "24WAZCH4116R1Z6",
+   "nt": [
+    {
+     "ntty": "C",
+     "nt_num": "NLP-CN188",
+     "nt_dt": "04-01-2026",
+     "val": 8800.44,
+     "itms": [
+      {
+       "num": 1,
+       "itm_det": {
+        "rt": 18,
+        "txval": 7458.0,
+        "iamt": 0.0,
+        "camt": 671.22,
+        "samt": 671.22,
+        "csamt": 0
+       }
+      }
+     ]
+    },
+    {
+     "ntty": "C",
+     "nt_num": "NLP-CN191",
+     "nt_dt": "09-01-2026",
+     "val": 4646.84,
+     "itms": [
+      {
+       "num": 1,
+       "itm_det": {
+        "rt": 18,
+        "txval": 3938.0,
+        "iamt": 0.0,
+        "camt": 354.42,
+        "samt": 354.42,
+        "csamt": 0
+       }
+      }
+     ]
+    },
+    {
+     "ntty": "C",
+     "nt_num": "NLP-CN193",
+     "nt_dt": "12-01-2026",
+     "val": 1323.96,
+     "itms": [
+      {
+       "num": 1,
+       "itm_det": {
+        "rt": 18,
+        "txval": 1122.0,
+        "iamt": 0.0,
+        "camt": 100.98,
+        "samt": 100.98,
+        "csamt": 0
+       }
+      }
+     ]
+    },
+    {
+     "ntty": "C",
+     "nt_num": "NLP-CN196",
+     "nt_dt": "17-01-2026",
+     "val": 1323.96,
+     "itms": [
+      {
+       "num": 1,
+       "itm_det": {
+        "rt": 18,
+        "txval": 1122.0,
+        "iamt": 0.0,
+        "camt": 100.98,
+        "samt": 100.98,
+        "csamt": 0
+       }
+      }
+     ]
+    },
+    {
+     "ntty": "C",
+     "nt_num": "NLP-CN201",
+     "nt_dt": "26-01-2026",
+     "val": 856.68,
+     "itms": [
+      {
+       "num": 1,
+       "itm_det": {
+        "rt": 18,
+        "txval": 726.0,
+        "iamt": 0.0,
+        "camt": 65.34,
+        "samt": 65.34,
+        "csamt": 0
+       }
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "ctin": "32KZNCL1809Z1ZW",
+   "nt": [
+    {
+     "ntty": "C",
+     "nt_num": "NLP-CN200",
+     "nt_dt": "23-01-2026",
+     "val": 8826.4,
+     "itms": [
+      {
+       "num": 1,
+       "itm_det": {
+        "rt": 18,
+        "txval": 7480.0,
+        "iamt": 1346.4,
+        "camt": 0.0,
+        "samt": 0.0,
+        "csamt": 0
+       }
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "ctin": "33JHVCY9203S1ZL",
+   "nt": [
+    {
+     "ntty": "C",
+     "nt_num": "NLP-CN198",
+     "nt_dt": "21-01-2026",
+     "val": 1090.32,
+     "itms": [
+      {
+       "num": 1,
+       "itm_det": {
+        "rt": 18,
+        "txval": 924.0,
+        "iamt": 166.32,
+        "camt": 0.0,
+        "samt": 0.0,
+        "csamt": 0
+       }
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "ctin": "36XGZCV6693W1ZE",
+   "nt": [
+    {
+     "ntty": "C",
+     "nt_num": "NLP-CN192",
+     "nt_dt": "11-01-2026",
+     "val": 15887.52,
+     "itms": [
+      {
+       "num": 1,
+       "itm_det": {
+        "rt": 18,
+        "txval": 13464.0,
+        "iamt": 2423.52,
+        "camt": 0.0,
+        "samt": 0.0,
+        "csamt": 0
+       }
+      }
+     ]
+    }
+   ]
+  }
+ ]
+}

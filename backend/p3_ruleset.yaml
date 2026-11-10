@@ -1,5 +1,5 @@
 {
-  "version": "p3-2026-02",
+  "version": "p3-2026-03",
   "sampler_version": "p3-hash-ranked-v1",
   "sales_tod": {
     "target": 30,
@@ -29,15 +29,18 @@
     "classification": "synthetic_test_only"
   },
   "transaction_splitting": {
-    "window_days": 90,
+    "window_days": 3,
+    "minimum_fraction_of_threshold": "0.50",
+    "same_item_only": true,
     "amount_basis": "gross_amount",
     "classification": "synthetic_test_only"
   },
   "pricing": {
-    "hsn_to_item_code": {"8501": "ITEM-8501"},
+    "hsn_to_item_code": {"3406": "ITEM-3406", "4202": "ITEM-4202", "4414": "ITEM-4414", "4817": "ITEM-4817", "6302": "ITEM-6302", "6912": "ITEM-6912", "7013": "ITEM-7013", "7323": "ITEM-7323", "8501": "ITEM-8501", "9105": "ITEM-9105", "9404": "ITEM-9404", "9405": "ITEM-9405", "9503": "ITEM-9503", "9505": "ITEM-9505", "9610": "ITEM-9610"},
     "unit_price_tolerance_inr": "0.00",
     "mapping_classification": "synthetic_test_only"
   },
+  "movement_documents": {"e_way_bill_min_value_inr": "50000.00"},
   "evidence_requests": {
     "sales_tod": ["invoice", "e_way_bill", "lorry_receipt"],
     "cutoff_tod": ["invoice", "e_way_bill", "lorry_receipt", "proof_of_delivery"],

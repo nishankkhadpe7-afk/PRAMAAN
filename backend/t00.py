@@ -3,9 +3,9 @@ import re
 from datetime import date
 from decimal import Decimal, InvalidOperation, localcontext
 
-RULE = {"version": "p2-t00-v4", "implementation": "field-aware calendar/exact-cents comparison",
+RULE = {"version": "p2-t00-v5", "implementation": "field-aware calendar/exact-cents comparison",
         "fields": ["Bill No", "Date", "Customer", "Gross Amt", "GST No"],
-        "dates": "YYYY-MM-DD, or D/M/YYYY or M/D/YYYY with the order stated by the user or detected from the file (a first part above 12 means day-first, a second part above 12 means month-first); a slash date the order cannot settle, or one that contradicts it, needs review; calendar validation",
+        "dates": "YYYY-MM-DD, or D/M/YYYY or M/D/YYYY (separator /, - or ., the same one twice; 01-04-2025 is common in Indian exports) with the order stated by the user or detected from the file (a first part above 12 means day-first, a second part above 12 means month-first); a slash date the order cannot settle, or one that contradicts it, needs review; calendar validation",
         "money": "signed decimal INR; optional validated western/Indian comma groups; exact cents, no rounding/exponents/symbols",
         "customer": "collapse whitespace only; case sensitive",
         "identifiers": "exact text, including whitespace/case/punctuation/leading zeros",
@@ -14,13 +14,14 @@ RULE = {"version": "p2-t00-v4", "implementation": "field-aware calendar/exact-ce
         "duplicates": "a bill number on more than one register row: the first row is compared, each repeat is DUPLICATE_ROW",
         "credit_notes": "a register row whose Bill No is a credit note in the books is compared on Date and Gross Amt (books amount shown negative); once the register lists any credit note, a books credit note dated inside the register's period that it omits is SYSTEM_ONLY",
         "tax_split": "only when the register has CGST/SGST/IGST columns: their total must equal the books tax; CGST must equal SGST; CGST/SGST and IGST are not both charged; with company_state given, a buyer GSTIN in the same state must not carry IGST and one in another state must carry only IGST; a Taxable column must equal the books net amount; tax that is not a standard GST rate of the taxable value goes to review (mixed-rate invoices can cause it)",
+        "gstr1_scope": "a GSTR-1 upload (one return period) is compared only with books invoices dated in that month; a books invoice or credit note is missing from it only if the buyer has a GSTIN; B2C bills are counted, not matched, because whether they belong in B2CL or the B2CS totals depends on the buyer's state, which the books do not record",
         "delta": "register minus system; cents/INR for money, calendar days for dates"}
 
 
 OPTIONAL_FIELDS = {"GST No"}
 
 
-_SLASH_DATE = re.compile(r"([0-9]{1,2})/([0-9]{1,2})/([0-9]{4})")
+_SLASH_DATE = re.compile(r"([0-9]{1,2})([/.-])([0-9]{1,2})\2([0-9]{4})")
 
 
 def detect_date_order(values) -> dict:
@@ -31,7 +32,7 @@ def detect_date_order(values) -> dict:
     for value in values:
         match = _SLASH_DATE.fullmatch(value.strip()) if isinstance(value, str) else None
         if match:
-            first, second = int(match.group(1)), int(match.group(2))
+            first, second = int(match.group(1)), int(match.group(3))
             dmy += first > 12
             mdy += second > 12
     order = "DMY" if dmy and not mdy else "MDY" if mdy and not dmy else "CONFLICT" if dmy and mdy else None
@@ -49,7 +50,7 @@ def normalize(field, value, date_order="MDY"):
             if re.fullmatch(r"[0-9]{4}-[0-9]{2}-[0-9]{2}", text):
                 parsed = date.fromisoformat(text)
             elif match := _SLASH_DATE.fullmatch(text):
-                first, second, year = map(int, match.groups())
+                first, second, year = int(match.group(1)), int(match.group(3)), int(match.group(4))
                 order = date_order if date_order in ("DMY", "MDY") else ("DMY" if first > 12 else "MDY" if second > 12 else None)
                 if order is None:
                     raise ValueError("date order cannot be settled")

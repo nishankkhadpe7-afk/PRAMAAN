@@ -12,6 +12,35 @@ if /I "%~1"=="web" goto :RUN_WEB
 if /I "%~1"=="accounts" goto :RUN_TOOL
 if /I "%~1"=="backup" goto :RUN_TOOL
 if /I "%~1"=="vault" goto :RUN_TOOL
+REM Choose what the workspace holds (asks before replacing an existing one):
+REM   START_PRAMAAN.bat clean             empty workspace: add your own company and files
+REM   START_PRAMAAN.bat company honest    sample company whose records agree (Kesar Home Decor)
+REM   START_PRAMAAN.bat company hiding    sample company hiding problems (Neelgiri Lifestyle)
+REM   START_PRAMAAN.bat demo              the original small synthetic demo
+set "WORKSPACE_ARGS="
+set "WORKSPACE_LABEL="
+if /I "%~1"=="clean" (
+    set "WORKSPACE_ARGS=empty"
+    set "WORKSPACE_LABEL=an empty workspace"
+)
+if /I "%~1"=="demo" (
+    set "WORKSPACE_ARGS=reset"
+    set "WORKSPACE_LABEL=the original synthetic demo"
+)
+if /I "%~1"=="company" (
+    if /I "%~2"=="honest" (
+        set "WORKSPACE_ARGS=company --company honest"
+        set "WORKSPACE_LABEL=sample company Kesar Home Decor - records agree"
+    )
+    if /I "%~2"=="hiding" (
+        set "WORKSPACE_ARGS=company --company hiding"
+        set "WORKSPACE_LABEL=sample company Neelgiri Lifestyle - hiding problems"
+    )
+)
+if /I "%~1"=="company" if not defined WORKSPACE_ARGS (
+    echo Usage: START_PRAMAAN.bat company honest  or  START_PRAMAAN.bat company hiding
+    exit /b 1
+)
 goto :MAIN
 
 REM Admin tools, run against the same data folder as the app:
@@ -160,8 +189,21 @@ REM repository folder is named PRAMAAN-main. The tracked launcher\Pramaan shim
 REM resolves that import name to this repository root at run time (no absolute paths).
 if not exist "%PACKAGE_SHIM%\__init__.py" goto :SHIM_FAILED
 
-REM Never overwrite existing local demo data automatically.
-if not exist "%DEMO_DATA%\demo-state.json" (
+REM Never overwrite existing local demo data automatically; replacing it needs an explicit option and a yes.
+if defined WORKSPACE_ARGS (
+    if exist "%DEMO_DATA%" (
+        echo.
+        echo This replaces the current workspace in .demo\runtime with: %WORKSPACE_LABEL%
+        echo Everything in the current workspace will be deleted. Make a backup first if you need it.
+        choice /C YN /M "Replace it"
+        if errorlevel 2 goto :WORKSPACE_KEPT
+    )
+    echo [4/6] Preparing %WORKSPACE_LABEL%...
+    set "PYTHONPATH=%LAUNCH_DIR%"
+    set "PRAMAAN_DATA=%DEMO_DATA%"
+    "%VENV_PY%" -m Pramaan.backend.demo %WORKSPACE_ARGS%
+    if errorlevel 1 goto :DEMO_RESET_FAILED
+) else if not exist "%DEMO_DATA%\demo-state.json" (
     if exist "%DEMO_DATA%" goto :DATA_INCOMPLETE
     echo [4/6] Creating the synthetic demo workspace...
     set "PYTHONPATH=%LAUNCH_DIR%"
@@ -262,6 +304,9 @@ goto :FAIL
 echo ERROR: .demo\runtime exists but has no demo-state.json.
 echo To avoid deleting local work, the launcher did not reset it. Back it up, then rename or remove .demo\runtime and retry.
 goto :FAIL
+:WORKSPACE_KEPT
+echo Kept the current workspace; nothing was changed.
+exit /b 0
 :DEMO_RESET_FAILED
 echo ERROR: Synthetic demo initialization failed. Review the error output above.
 goto :FAIL

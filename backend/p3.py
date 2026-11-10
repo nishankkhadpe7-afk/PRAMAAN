@@ -269,13 +269,21 @@ def build_snapshot(db: sqlite3.Connection, inline_sources: bool = False) -> dict
     for line in source_rows.get("journal_entries.csv", []):
         if line["invoice_id"]:
             journals_by_invoice.setdefault(line["invoice_id"], []).append(line)
-    p2_invoice_ids = {row["invoice_id"] for row in invoices}
+    p2_by_id = {row["invoice_id"]: row for row in invoices}
+
+    def cents(value: Any) -> int:
+        return int(Decimal(str(value)) * 100)
     for source in source_rows.get("invoices.csv", []):
-        if source["invoice_id"] in p2_invoice_ids:
-            raise HTTPException(409, f"P3 fixture invoice ID collides with P2 invoice {source['invoice_id']}")
+        books = p2_by_id.get(source["invoice_id"])
+        if books is not None:
+            # A detail row may describe an invoice already in the books (an ERP export carrying
+            # quantity, HSN and the tax split) only if it agrees on number, date and amount.
+            # Any disagreement is still refused: the books are never silently overridden.
+            if (books["bill_no"], books["invoice_date"], books["gross_cents"]) != (source["bill_no"], source["invoice_date"], cents(source["gross_amount"])):
+                raise HTTPException(409, f"P3 fixture invoice ID collides with P2 invoice {source['invoice_id']}")
+            books.update({"quantity": source["quantity"], "hsn_code": source["hsn_code"], "detail_source": "dataset"})
+            continue
         dispatch = dispatch_by_invoice.get(source["invoice_id"], {})
-        def cents(value: Any) -> int:
-            return int(Decimal(str(value)) * 100)
         invoices.append({
             "invoice_id": source["invoice_id"], "bill_no": source["bill_no"], "invoice_date": source["invoice_date"],
             "customer_id": source["customer_id"], "customer_name": source["customer_name"], "gstin": source["buyer_gstin"],
@@ -471,11 +479,18 @@ def calculate(snapshot: dict[str, Any], period_start: str, period_end: str, seed
         if parse_date(policy["effective_from"]) > end or (policy["effective_to"] and parse_date(policy["effective_to"]) < end):
             continue
         threshold = Decimal(policy["threshold_inr"])
-        by_customer: dict[str, list[dict[str, Any]]] = {}
+        # A split is one order cut into bills that each stay under the limit: optionally the same
+        # item (HSN) and each at least a set fraction of the limit, so ordinary repeat orders from a
+        # frequent buyer are not reported as splits.
+        floor = threshold * Decimal(str(split_rules.get("minimum_fraction_of_threshold", "0")))
+        same_item = bool(split_rules.get("same_item_only", False))
+        by_customer: dict[Any, list[dict[str, Any]]] = {}
         for inv in source_invoices.values():
-            if start <= parse_date(inv["invoice_date"]) <= end and Decimal(inv["gross_amount"]) < threshold:
-                by_customer.setdefault(inv["customer_id"], []).append(inv)
-        for customer, rows in by_customer.items():
+            if start <= parse_date(inv["invoice_date"]) <= end and floor <= Decimal(inv["gross_amount"]) < threshold:
+                key = (inv["customer_id"], str(inv.get("hsn_code") or "")) if same_item else inv["customer_id"]
+                by_customer.setdefault(key, []).append(inv)
+        for group, rows in by_customer.items():
+            customer = group[0] if same_item else group
             rows.sort(key=lambda row: (row["invoice_date"], row["invoice_id"]))
             for index, first in enumerate(rows):
                 for second in rows[index+1:]:
@@ -707,6 +722,7 @@ def calculate(snapshot: dict[str, Any], period_start: str, period_end: str, seed
 
     # T04 evaluates the versioned movement-document request set for every selected workpaper item.
     typed_evidence = snapshot["p3_evidence"]
+    gross_by_invoice = {inv["invoice_id"]: inv["gross_cents"] for inv in snapshot["invoices"]}
     source_dispatches = {row["invoice_id"]: row for row in source.get("dispatches.csv", [])}
     for sample in sample_items:
         if sample["sheet"] not in {"sales_tod", "cutoff_tod"}:
@@ -718,6 +734,12 @@ def calculate(snapshot: dict[str, Any], period_start: str, period_end: str, seed
         for document_type, field in (("e_way_bill", "eway_bill_no"), ("lorry_receipt", "document_no"), ("proof_of_delivery", "proof_of_delivery")):
             if dispatch.get(field):
                 present.add(document_type)
+        # India: an e-way bill is needed only when the consignment value exceeds the configured limit
+        # (Rs 50,000 by default); below it, a missing e-way bill is not a gap.
+        eway_min = ruleset.get("movement_documents", {}).get("e_way_bill_min_value_inr")
+        invoice_gross = gross_by_invoice.get(sample["object_ref"])
+        if eway_min is not None and invoice_gross is not None and invoice_gross <= Decimal(str(eway_min)) * 100:
+            movement_docs.discard("e_way_bill")
         missing = sorted(movement_docs - present)
         if missing:
             findings.append(make_finding("T04", sample["object_ref"], "GAP", "Expected movement documents are missing from the selected sample: " + ", ".join(missing) + ". Missing records alone do not establish that goods did not move.", missing_documents=missing, sample_sheet=sample["sheet"]))

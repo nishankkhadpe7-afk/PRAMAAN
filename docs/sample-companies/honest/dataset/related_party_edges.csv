@@ -1,0 +1,2 @@
+edge_id,subject_type,subject_id,object_type,object_id,relationship_type,valid_from,valid_to,source_type,source_ref,confidence
+KHD-REL-01,customer,KHD-C006,person,KHD-DIR-02,director_relative,2024-04-01,,disclosed_register,KHD-RPT-2025,disclosed

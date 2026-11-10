@@ -1,0 +1,28 @@
+customer_id,name,gstin,city,state_code
+NLP-C001,Swastik Distributors,27HGMCL7626H1ZK,Nagpur,27
+NLP-C002,Kesari Collections,07RLHCJ9917F1Z6,Delhi,07
+NLP-C003,Marigold Gifting Co,24WAZCH4116R1Z6,Surat,24
+NLP-C004,Shree Ganesh Traders,24FFJCN4483D1Z2,Rajkot,24
+NLP-C005,Bodhi Lifestyle,19VHKCD6676Z1Z2,Kolkata,19
+NLP-C006,Yamuna Home Store,27DDYCX8791K1ZN,Nashik,27
+NLP-C007,Lotus Home Mart,33DPYCF7310T1ZS,Chennai,33
+NLP-C008,Saraswati Stationers,32KZNCL1809Z1ZW,Kochi,32
+NLP-C009,Sagar Decor Mart,,Vadodara,24
+NLP-C010,Shivam Party Store,23LGDCG4739B1ZE,Indore,23
+NLP-C011,Konark Kitchen World,27FFRCZ6851N1ZR,Pune,27
+NLP-C012,Devika Lifestyle,36XGZCV6693W1ZE,Hyderabad,36
+NLP-C013,Sitara Home Accents,09EFFCU7508J1ZJ,Lucknow,09
+NLP-C014,Sahyadri Stores,24CGBCJ5440V1ZN,Ahmedabad,24
+NLP-C015,Pooja Enterprises,08RBJCS9117G1ZK,Jaipur,08
+NLP-C016,Anand Novelties,27BVTCF8529Y1ZR,Mumbai,27
+NLP-C017,Mehendi Gift Corner,29DZACS3935A1Z4,Bengaluru,29
+NLP-C018,Deccan Decor House,,Panaji,30
+NLP-C019,Mangal Murti Traders,27YTJCP2550N1Z9,Nagpur,27
+NLP-C020,Ujjwal Retail,07DBBCW9125F1Z6,Delhi,07
+NLP-C021,Narmada Home Needs,24THNCW1835F1ZD,Surat,24
+NLP-C022,Arihant Housewares,24HFMCC7587W1ZU,Rajkot,24
+NLP-C023,Vaibhav Gift Shop,19BNGCV5091D1ZD,Kolkata,19
+NLP-C024,Rohini Crafts,27TJRCS2547X1ZY,Nashik,27
+NLP-C025,Panchavati Traders,33JHVCY9203S1ZL,Chennai,33
+NLP-C900,Vardhan Distributors,24AFSCR7656L1Z8,Ahmedabad,24
+NLP-C901,Om Sai Trading Company,24VULCJ1887J1ZL,Rajkot,24

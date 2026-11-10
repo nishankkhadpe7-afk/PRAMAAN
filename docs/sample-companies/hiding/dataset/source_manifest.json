@@ -1,0 +1,70 @@
+{
+ "dataset_name": "Neelgiri Lifestyle Pvt Ltd - PRAMAAN sample company",
+ "dataset_version": "1.0",
+ "created_for": "PRAMAAN sample companies",
+ "data_classification": "synthetic-fictional-not-real-taxpayer-data",
+ "warning": "Fictional company. GSTINs have valid check digits but are not real registrations. E-invoice QR codes are signed with PRAMAAN's DEMO key, not a government key.",
+ "derived_from": {
+  "name": "UCI Online Retail II (trading patterns only)",
+  "url": "https://archive.ics.uci.edu/dataset/502/online+retail+ii",
+  "licence": "CC BY 4.0"
+ },
+ "public_schema_references": [],
+ "files": {
+  "dispatches.csv": {
+   "sha256": "4a01748b9ad92aa75d7890a8be302bab9fa319e8d07f271bbe2f19098ba54f6c",
+   "bytes": 130806,
+   "rows": 1228
+  },
+  "gstr1_rows.csv": {
+   "sha256": "e15473458aa63fb20fe43f2eb8579eba1408c9ce7a2e00280f8c8e2cbf2e0970",
+   "bytes": 147311,
+   "rows": 1187
+  },
+  "historical_sales.csv": {
+   "sha256": "dee833ffab572e976ed81bc8852749b0372b769832b1f15c49eb4ab3a52032d5",
+   "bytes": 14244,
+   "rows": 274
+  },
+  "invoice_verification_status.csv": {
+   "sha256": "a838b56fe47f0fe7f84ff86a1cb9217e4bc782aed3c1293156b9702d18784b3e",
+   "bytes": 693350,
+   "rows": 1237
+  },
+  "invoices.csv": {
+   "sha256": "c883789d70f522712304e6b0acb08db9a1f0b966c683338bc09d6f9316114574",
+   "bytes": 304590,
+   "rows": 1237
+  },
+  "journal_entries.csv": {
+   "sha256": "a8240f20a36e8411d2baa3d4b8c764bacbb5a7b5dfb88a0cbdad2ad9c366c5de",
+   "bytes": 413856,
+   "rows": 4010
+  },
+  "movement_routes.csv": {
+   "sha256": "e3f35f0816bf4b3d6e787c053c628c7fa2e109e13f2eb17d6f48f30c99e5c004",
+   "bytes": 175510,
+   "rows": 1228
+  },
+  "price_lists.csv": {
+   "sha256": "995ca89055d57daf705c01deafbb8f66a7aec4894b001185cbf878d96a71b2c9",
+   "bytes": 2939,
+   "rows": 39
+  },
+  "promotions.csv": {
+   "sha256": "fc1e93cdd36be9ecd430da2ec886a88b5f2510295e39c5b3dab2f90fb49ec365",
+   "bytes": 276,
+   "rows": 2
+  },
+  "related_party_edges.csv": {
+   "sha256": "228e550d8117c2419d4d5fd384199260c2f78ca2f653e30103cf93fc1045343f",
+   "bytes": 694,
+   "rows": 4
+  },
+  "threshold_policies.csv": {
+   "sha256": "d880589c7086ca760c97800dfc3588e63d7fefdb3698c7ea850c6e0e3995aef2",
+   "bytes": 489,
+   "rows": 2
+  }
+ }
+}

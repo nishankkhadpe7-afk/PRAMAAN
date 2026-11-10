@@ -81,7 +81,7 @@ class P3WorkflowTests(unittest.TestCase):
         self.assertEqual(len({s["object_ref"] for s in sales}), len(sales))
         self.assertTrue(all(s["selection_reason"] for s in run["sample_items"]))
         self.assertTrue(any(s["stratum"] == "probability" and s["random_draw"] for s in sales))
-        self.assertEqual(run["ruleset_version"], "p3-2026-02")
+        self.assertEqual(run["ruleset_version"], "p3-2026-03")
         status, reproduction = self.request("POST", f"/p3/audit-runs/{run['run_id']}/reproduce")
         self.assertEqual(status, 200, reproduction)
         self.assertTrue(reproduction["identical"])
@@ -153,7 +153,7 @@ class P3WorkflowTests(unittest.TestCase):
             self.assertFalse(uploaded["independently_verified"])
             self.assertEqual(uploaded["status"], "fulfilled" if index == len(required) - 1 else "partially_fulfilled")
         db = sqlite3.connect(p1.DB_PATH)
-        self.assertEqual(db.execute("SELECT sampling_seed,ruleset_version,sampler_version FROM p3_audit_runs WHERE run_id=?", (run["run_id"],)).fetchone(), ("p3-test-seed-2026-0001", "p3-2026-02", "p3-hash-ranked-v1"))
+        self.assertEqual(db.execute("SELECT sampling_seed,ruleset_version,sampler_version FROM p3_audit_runs WHERE run_id=?", (run["run_id"],)).fetchone(), ("p3-test-seed-2026-0001", "p3-2026-03", "p3-hash-ranked-v1"))
         self.assertGreater(db.execute("SELECT count(*) FROM p3_draws WHERE run_id=?", (run["run_id"],)).fetchone()[0], 0)
         self.assertEqual(db.execute("SELECT count(*) FROM p3_samples WHERE run_id=? AND selection_reason<>''", (run["run_id"],)).fetchone()[0], len(run["sample_items"]))
         self.assertEqual(db.execute("SELECT count(*) FROM p3_evidence WHERE request_id=? AND independently_verified=0 AND verification_method IS NULL", (sales_request["request_id"],)).fetchone()[0], 3)
@@ -172,7 +172,7 @@ class P3WorkflowTests(unittest.TestCase):
         self.assertEqual(imported["row_count"], 66)
         self.assertEqual(p3_dataset.validate_dataset(p3_dataset.DATA_DIR)[0]["data_classification"], "synthetic-fictional-not-real-taxpayer-data")
         ruleset = p3.load_ruleset()
-        self.assertEqual(ruleset["version"], "p3-2026-02")
+        self.assertEqual(ruleset["version"], "p3-2026-03")
         self.assertEqual(ruleset["period_end_concentration"]["classification"], "synthetic_test_only")
         self.assertEqual(ruleset["pricing"]["mapping_classification"], "synthetic_test_only")
         status, idempotent = self.request("POST", "/p3/datasets/import")
@@ -211,8 +211,11 @@ class P3WorkflowTests(unittest.TestCase):
         self.assertIn("quantity", found("T06", "INV-005")[0]["differences"])
         self.assertTrue(found("T04", "INV-004"))
         self.assertFalse(found("T04", "INV-001"))
-        self.assertTrue(found("T10", "INV-001:INV-004"))
-        self.assertTrue(found("T10", "INV-003:INV-008"))
+        # Rule p3-2026-03: a split is bills for the same item within 3 days, each at least half the limit.
+        # These fixture pairs are 25 and 79 days apart and below half the limit: repeat orders, not splits.
+        # Positive cases are covered by tests/test_sample_companies.py.
+        self.assertFalse(found("T10", "INV-001:INV-004"))
+        self.assertFalse(found("T10", "INV-003:INV-008"))
         self.assertFalse(found("T10", "INV-002"))
         # T11 physical plausibility P1-P5
         self.assertEqual(found("T11", "INV-005")[0]["state"], "REVIEW")           # P3 load
@@ -264,7 +267,7 @@ class P3WorkflowTests(unittest.TestCase):
         self.assertEqual(run["rule_coverage"]["T02"]["status"], "candidate_edges_and_directed_cycles_evaluated")
         self.assertEqual(run["rule_coverage"]["T15"]["status"], "synthetic_row_comparison_only")
         self.assertEqual(run["rule_coverage"]["T06"]["status"], "evaluated_imported_taxable_value_quantity_gstin")
-        self.assertEqual(run["ruleset_version"], "p3-2026-02")
+        self.assertEqual(run["ruleset_version"], "p3-2026-03")
         self.assertEqual(run["source_dataset_id"], imported["dataset_id"])
         self.assertEqual(run["source_manifest_sha256"], imported["manifest_sha256"])
         self.assertTrue(run["coverage"]["sales_tod"]["reduced_population"])

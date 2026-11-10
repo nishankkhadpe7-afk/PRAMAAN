@@ -1,0 +1,3 @@
+policy_id,policy_version,effective_from,effective_to,rule_type,threshold_inr,source,notes
+KHD-POL-01,v1,2025-04-01,,high_value_transaction,100000,company_delegation_of_authority,"Sales above Rs 1,00,000 need a manager's approval (synthetic test-only policy)."
+KHD-POL-02,v1,2025-04-01,,split_transaction_window_total,1500000.00,company_delegation_of_authority,"Orders above Rs 1,500,000 need director approval; splitting one order to avoid it is not allowed (synthetic test-only policy)."

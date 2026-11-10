@@ -1,0 +1,5 @@
+edge_id,subject_type,subject_id,object_type,object_id,relationship_type,valid_from,valid_to,source_type,source_ref,confidence
+NLP-REL-01,customer,NLP-C900,person,NLP-DIR-01,common_director_candidate,2025-01-01,,mca_director_search_synthetic,SYN-MCA-0091,candidate_requires_review
+NLP-REL-02,company,HIDING,customer,NLP-C900,sells_to_candidate,2025-04-01,,books_synthetic,SYN-LEDGER-01,candidate_requires_review
+NLP-REL-03,customer,NLP-C900,customer,NLP-C901,pays_onward_candidate,2026-03-01,,bank_statement_synthetic,SYN-BANK-01,candidate_requires_review
+NLP-REL-04,customer,NLP-C901,company,HIDING,pays_back_candidate,2026-03-01,,bank_statement_synthetic,SYN-BANK-02,candidate_requires_review

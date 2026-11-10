@@ -447,6 +447,17 @@ def web_run_context(run_id: str, upload_id: str | None = None, sale_id: str | No
         db.close()
 
 
+@router.get("/runs/{run_id}/proof")
+def web_run_proof(run_id: str, finding_id: str):
+    """Proof chain and "How we know" for one finding, computed from the frozen run (no AI)."""
+    from . import proof
+    db = p3.db_open()
+    try:
+        return proof.proof(db, run_id, finding_id)
+    finally:
+        db.close()
+
+
 @router.get("/runs/{run_id}/integrity")
 def web_run_integrity(run_id: str, upload_id: str | None = None):
     """Recompute every integrity property of one saved run, live, without writing anything."""

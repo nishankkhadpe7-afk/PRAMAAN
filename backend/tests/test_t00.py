@@ -25,8 +25,15 @@ class T00NormalizationTests(unittest.TestCase):
                                     ("Bill No", " B-1", "B-1"), ("GST No", "abc", "ABC")]:
             self.assertEqual(t00.compare(field, left, right)["comparison"], "DIFFERENT")
 
+    def test_dash_and_dot_dates_read_like_slash_dates(self):
+        # p2-t00-v5: Indian exports often write 01-04-2025 or 01.04.2025; the same separator must be used twice.
+        self.assertEqual(t00.normalize("Date", "01-04-2025", "DMY"), {"status": "VALID", "value": "2025-04-01"})
+        self.assertEqual(t00.normalize("Date", "13.04.2025", "DMY"), {"status": "VALID", "value": "2025-04-13"})
+        self.assertEqual(t00.detect_date_order(["13-04-2025", "01-05-2025"])["order"], "DMY")
+        self.assertEqual(t00.normalize("Date", "01-04.2025", "DMY")["status"], "INVALID")
+
     def test_missing_invalid_and_fractional_cent_never_equal(self):
-        for field, value in [("Date", "13/4/2026"), ("Date", "2026-02-30"), ("Date", "04-13-2026"),
+        for field, value in [("Date", "13/4/2026"), ("Date", "2026-02-30"), ("Date", "04-13/2026"),
                              ("Date", "04/13/26"), ("Gross Amt", "48,40"), ("Gross Amt", "NaN"),
                              ("Gross Amt", "1e3"), ("Gross Amt", "100.001"), ("Gross Amt", "₹48400"),
                              ("Customer", ""), ("Bill No", " ")]:
@@ -116,7 +123,7 @@ class T00IntegrationTests(unittest.TestCase):
         run_id = self.run_audit()
         context = self.api('GET', f"/ui/runs/{run_id}/context?upload_id={upload['upload_id']}").json()
         enriched = next(f for f in context['findings'] if f['test_id']=='T00')
-        self.assertEqual(enriched['ruleset_version'], 'p2-t00-v4')
+        self.assertEqual(enriched['ruleset_version'], 'p2-t00-v5')
         self.assertEqual(context['reconciliation_rule'], t00.RULE)
         self.assertTrue(set(enriched['evidence_ids']) <= context['evidence_index'].keys())
         self.assertEqual(enriched['field_differences'], finding['field_differences'])
@@ -177,7 +184,7 @@ class T00IntegrationTests(unittest.TestCase):
         context = self.api('GET', f'/ui/runs/{new_run}/context?upload_id={uid}').json()
         findings = [f for f in context['findings'] if f['test_id']=='T00']
         self.assertEqual(len(findings), 1)
-        self.assertEqual(findings[0]['ruleset_version'], 'p2-t00-v4')
+        self.assertEqual(findings[0]['ruleset_version'], 'p2-t00-v5')
         self.assertNotEqual(findings[0]['finding_id'], legacy['finding_id'])
         self.assertIsNone(findings[0]['human_decision'])
         self.assertEqual(self.api('GET', f'/ui/runs/{old_run}/context?upload_id={uid}').json(), old_context)
@@ -186,5 +193,5 @@ class T00IntegrationTests(unittest.TestCase):
         self.assertEqual(next(f for f in queue if f['finding_id'] == legacy['finding_id'])['human_decision'], review)
         new_package = self.api('POST', f'/p5/runs/{new_run}/packages', body={'upload_id':uid}).json()['package_id']
         report = self.api('GET', f'/p5/packages/{new_package}').json()
-        self.assertEqual(report['reconciliation_rule']['version'], 'p2-t00-v4')
+        self.assertEqual(report['reconciliation_rule']['version'], 'p2-t00-v5')
         self.assertEqual(report['receipt']['reconciliation_rules'][0]['hash'], p1.digest(p1.canonical(t00.RULE)))

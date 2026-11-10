@@ -10,13 +10,15 @@
 
 # Pramaan (प्रमाण)
 
+**AI that doesn't just find financial discrepancies: it investigates, proves and explains them.** Every finding opens with *How we know* (the rule, the calculation with real numbers, the fingerprinted source files, and what is still needed) and a *Proof chain* that follows the sale through books, register, GSTR-1, price, dispatch, transport, e-invoice, credit notes and bank. Both are computed by the rule engine from the frozen run; the AI investigates and drafts, a human decides.
+
 Pramaan is a local, synthetic-data prototype for statutory revenue-audit work. It preserves a client-provided sales register, reconciles it with recorded sales, runs deterministic checks against an immutable snapshot, and produces reviewable workpapers.
 
 An invoice can show a sale was recorded; it does not itself establish that the sale occurred. Pramaan preserves the original source, evidence and rules behind each observation, sampling provenance, later changes, and a separately authorized human conclusion.
 
 > Scope: a single-company SQLite prototype using fictional synthetic data. It is not a production deployment, audit opinion, official GST/IRP verification, or fraud determination.
 
-**New here?** Read **[Getting started](docs/GETTING_STARTED.md)**, or the **[complete walkthrough PDF](docs/PRAMAAN_Walkthrough.pdf)** (28 pages, for both non-technical readers and engineers): install, double-click the launcher, sign in, and take a tour with screenshots. Every screen also has a **Help** button and plain-language hints on audit terms.
+**New here?** Read **[Getting started](docs/GETTING_STARTED.md)**, or the **[complete walkthrough PDF](docs/PRAMAAN_Walkthrough.pdf)** (33 pages, for both non-technical readers and engineers): install, double-click the launcher, sign in, and take a tour with screenshots. Every screen also has a **Help** button and plain-language hints on audit terms.
 
 <p align="center">
   <img src="docs/assets/agent-investigation.gif" alt="An auditor runs the investigation agent on a finding: the agent checks the invoice and bank records, finds an unexplained register difference, proposes an evidence request, and a human confirms it before anything is sent." width="760">
@@ -66,6 +68,19 @@ $env:PYTHONPATH = Join-Path $PWD.Path 'launcher'
 reset reloads only .demo/runtime; it does not change source fixtures or backend/data. It creates synthetic business data, revocable credentials, preserved sources, reconciliation data, and a sample audit run. Do not reset an instance whose work must be retained.
 
 > **Important — Python package import.** Backend modules import themselves as `from Pramaan.backend import ...`. Set `PYTHONPATH` to the absolute path of the tracked `launcher/` folder; its shim maps `Pramaan` to the repository root for any checkout folder name, on every OS. `START_PRAMAAN.bat`, `start-local.ps1`, `run-local.sh`, Playwright and CI all do this.
+
+### Choose what's in the workspace
+
+The first launch creates a small synthetic demo. To start from something else (Windows PowerShell, from the project folder):
+
+```powershell
+.\START_PRAMAAN.bat clean             # empty workspace: add your own company and files
+.\START_PRAMAAN.bat company honest    # Kesar Home Decor: a full year whose records agree
+.\START_PRAMAAN.bat company hiding    # Neelgiri Lifestyle: a full year hiding 12 problems
+.\START_PRAMAAN.bat demo              # back to the original small demo
+```
+
+Each option replaces `.demo\runtime` and asks first. The two sample companies are fictional Indian businesses built from real trading patterns (UCI Online Retail II, CC BY 4.0); see [docs/sample-companies](docs/sample-companies/README.md) and, after trying, the [answer key](docs/sample-companies/ANSWER_KEY.md).
 
 ## Demonstration
 
@@ -206,7 +221,7 @@ Every import report is kept in full in `import_reports`, linked to its hash-chai
 
 ## Audit engine and detection rules
 
-Audit rules operate on saved audit-run data. Their output is a deterministic observation for review, not an automatic fraud conclusion. The synthetic pack is documented in [data/README.md](data/README.md).
+Audit rules operate on saved audit-run data (rule set `p3-2026-03`: T10 as above, and an e-way bill is expected only above ₹50,000). Their output is a deterministic observation for review, not an automatic fraud conclusion. The synthetic pack is documented in [data/README.md](data/README.md).
 
 | Test    | Current implementation                                                                                                                       | Result framing                                                                                                                                   |
 | ------- | -------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------ |
@@ -216,7 +231,7 @@ Audit rules operate on saved audit-run data. Their output is a deterministic obs
 | T03/T04 | Cut-off/control-date and movement-evidence gaps.                                                                                             | A gap is not proof that a sale is false.                                                                                                         |
 | T05     | Revenue journal without sale/invoice reference.                                                                                              | Book-record inconsistency for review.                                                                                                            |
 | T06     | Invoice/dispatch value, quantity, and configured exact-field comparison.                                                                     | Deterministic inconsistency when inputs disagree.                                                                                                |
-| T09/T10 | Post-period credit-note and threshold-pattern signals.                                                                                       | Review patterns; no inferred intent.                                                                                                             |
+| T09/T10 | Post-period credit notes; T10 bill splitting (same buyer and product within 3 days, each bill at least half the approval limit, together over it).                                                                                       | Review patterns; no inferred intent.                                                                                                             |
 | T11     | Route/time bounds, vehicle overlap, load estimate, event order, and PIN/consignee checks.                                                    | IMPOSSIBLE is reserved for a supported hard speed constraint with configured verified timestamp input; other conflicts stay review/inconsistent. |
 | T12     | Assertion-specific evidence/provenance state.                                                                                                | Caller-supplied company evidence is not promoted to independent substantiation.                                                                  |
 | T13     | Ed25519 signed demo e-invoice envelope check, field comparison, and acknowledgement timing.                                                  | Shipped path is DEMO_IRP_TEST_ONLY, never official registration verification.                                                                    |
@@ -475,7 +490,7 @@ $env:PRAMAAN_DATA = Join-Path $PWD.Path '.demo/runtime'
 | PRAMAAN_E2E_CHANNEL         | chrome                | Playwright browser channel; set to empty to use Playwright's bundled Chromium.                                  |
 | PRAMAAN_E2E_VIDEO           | on                    | Set to `off` where Playwright's ffmpeg is not installed.                                                         |
 
-**Tests.** CI (`.github/workflows/ci.yml`) runs all of these on every push and pull request; a separate `Secret scan` workflow checks the full history for leaked credentials. Current suite: 253 backend tests (9 of them need Tesseract and skip without it), 39 UI unit tests (and validated on two real Kaggle datasets: see docs/IMPORT_AUDIT.md), 8 browser journeys.
+**Tests.** CI (`.github/workflows/ci.yml`) runs all of these on every push and pull request; a separate `Secret scan` workflow checks the full history for leaked credentials. Current suite: 260 backend tests (9 of them need Tesseract and skip without it), 39 UI unit tests (and validated on two real Kaggle datasets: see docs/IMPORT_AUDIT.md), 8 browser journeys.
 
 ```powershell
 $env:PYTHONPATH = Join-Path $PWD.Path 'launcher'

@@ -44,7 +44,7 @@ AUDITOR = {"get_sale", "create_snapshot", "run_audit", "detect_changes", "reprod
 AUDITOR |= {"create_export_package", "get_export_package", "export_p5_workpaper", "export_memo",
             "export_defensibility_pack", "get_review_queue", "record_review_decision", "propose_review_decision", "get_p5_lifecycle"}
 CLIENT |= {"web_business", "web_registers", "web_inbox"}
-AUDITOR |= {"web_business", "web_registers", "web_inbox", "web_runs", "web_run_context", "web_run_assistant", "web_events", "web_evidence_content", "web_audit_setup", "web_run_integrity", "web_access_log"}
+AUDITOR |= {"web_business", "web_registers", "web_inbox", "web_runs", "web_run_context", "web_run_proof", "web_run_assistant", "web_events", "web_evidence_content", "web_audit_setup", "web_run_integrity", "web_access_log"}
 # MCP egress-DLP audit logging is available to any authenticated identity/channel.
 CLIENT |= {"egress_audit", "record_tool_denial"}
 AUDITOR |= {"egress_audit", "record_tool_denial"}

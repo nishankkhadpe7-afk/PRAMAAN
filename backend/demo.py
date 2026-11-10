@@ -204,9 +204,54 @@ def empty(name="runtime"):
     return state
 
 
+def company(slug: str, name: str = "runtime") -> dict:
+    """Load a sample company (docs/sample-companies/<slug>): its books and detail files, plus the
+    register, three monthly GSTR-1 returns and the bank statement it hands to the auditor; then run the audit."""
+    pack = Path(__file__).resolve().parents[1] / "docs" / "sample-companies" / slug
+    if slug not in ("honest", "hiding") or not (pack / "dataset" / "source_manifest.json").is_file():
+        raise ValueError("unknown sample company; run: python -m Pramaan.backend.sample_companies")
+    state = empty(name)
+    root = data_path(name)
+    credentials = json.loads((root / "session-credentials.json").read_text(encoding="utf-8"))
+    configure(root)
+    from . import p3_dataset
+    db = p3.db_open()
+    try:
+        p3_dataset.import_endpoint(pack / "dataset", db, p1.VAULT)
+    finally:
+        db.close()
+    sales_rows = list(csv.DictReader((pack / "books" / "sales.csv").open(encoding="utf-8")))
+    with TestClient(p1.app) as client:
+        for c in csv.DictReader((pack / "books" / "customers.csv").open(encoding="utf-8")):
+            call(client, credentials["client"], "POST", "/p2/customers", {k: c[k] for k in ("customer_id", "name", "gstin") if c[k]})
+        for s in sales_rows:
+            sale = {"order_id": s["invoice_id"].replace("-I", "-O"), "dispatch_id": s["invoice_id"].replace("-I", "-D"), "invoice_id": s["invoice_id"],
+                    "journal_id": s["invoice_id"].replace("-I", "-J"), "customer_id": s["customer_id"], "order_date": s["invoice_date"],
+                    "dispatch_date": s["invoice_date"], "invoice_date": s["invoice_date"], "bill_no": s["bill_no"],
+                    "net_amount": s["taxable_amount"], "tax_amount": s["tax_amount"]}
+            if s["credit_note_id"]:
+                sale["credit_note"] = {"credit_note_id": s["credit_note_id"], "credit_date": s["credit_date"], "amount": s["credit_amount"], "reason": s["credit_reason"]}
+            call(client, credentials["client"], "POST", "/p2/sales", sale)
+        uploads = pack / "uploads"
+        registers = [("FY 2025-26 sales register", "csv", uploads / "sales_register.csv")] + \
+                    [(f"GSTR-1 {f.stem[-6:-4]}/2026", "gstr1_json", f) for f in sorted((uploads / "gstr1").glob("*.json"))]
+        upload_ids = []
+        for period, fmt, path in registers:
+            up = call(client, credentials["client"], "POST", "/p2/registers", {"period": period, "source_format": fmt, "source_base64": base64.b64encode(path.read_bytes()).decode()}).json()
+            call(client, credentials["auditor"], "POST", f"/p2/registers/{up['upload_id']}/reconcile")
+            upload_ids.append(up["upload_id"])
+        call(client, credentials["client"], "POST", "/p6/bank-statements", {"period": "FY 2025-26", "source_base64": base64.b64encode((uploads / "bank_statement.csv").read_bytes()).decode()})
+        result = call(client, credentials["auditor"], "POST", "/p3/audit-runs", {"period_start": "2025-04-01", "period_end": "2026-03-31", "sampling_seed": SEED}).json()
+    state.update({"classification": f"sample company ({slug})", "company": slug, "run_id": result["run_id"], "register_uploads": upload_ids,
+                  "invoices": len(sales_rows)})
+    (root / "demo-state.json").write_text(json.dumps(state, indent=2), encoding="utf-8")
+    return state
+
+
 def main():
     parser = argparse.ArgumentParser(description="Reset only a dedicated .demo instance; stop its servers first")
-    parser.add_argument("action", choices=["reset", "empty", "credentials", "rehearse"])
+    parser.add_argument("action", choices=["reset", "empty", "credentials", "rehearse", "company"])
+    parser.add_argument("--company", choices=["honest", "hiding"], default="honest")
     parser.add_argument("--name", default="runtime")
     parser.add_argument("--identity", choices=["client", "auditor", "human", "agent"], default="client")
     args = parser.parse_args()
@@ -214,6 +259,8 @@ def main():
         print(json.dumps(reset(args.name), indent=2))
     elif args.action == "empty":
         print(json.dumps(empty(args.name), indent=2))
+    elif args.action == "company":
+        print(json.dumps(company(args.company, args.name), indent=2))
     elif args.action == "credentials":
         root = data_path(args.name)
         configure(root)

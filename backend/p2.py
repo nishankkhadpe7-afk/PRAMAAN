@@ -488,7 +488,7 @@ def reconcile_register(upload_id: str, date_order: Literal["detect", "DMY", "MDY
         rows = db.execute("SELECT row_no,raw_json FROM p2_register_rows WHERE upload_id=? ORDER BY row_no", (upload_id,)).fetchall()
         invoices = db.execute("SELECT i.*,c.name customer_name,c.gstin FROM p2_invoices i JOIN p2_sales_orders o USING(order_id) JOIN p2_customers c USING(customer_id) ORDER BY i.bill_no").fetchall()
         by_bill = {row["bill_no"]: row for row in invoices}
-        credits = {r["credit_note_id"]: r for r in db.execute("SELECT credit_note_id,credit_date,amount_cents FROM p2_credit_notes")}
+        credits = {r["credit_note_id"]: r for r in db.execute("SELECT n.credit_note_id,n.credit_date,n.amount_cents,c.gstin FROM p2_credit_notes n JOIN p2_invoices i USING(invoice_id) JOIN p2_sales_orders o USING(order_id) JOIN p2_customers c USING(customer_id)")}
         if company_state is not None and not re.fullmatch(r"[0-9]{2}", company_state):
             raise HTTPException(422, "company_state must be a two-digit GST state code")
         found_bills = set()
@@ -548,7 +548,21 @@ def reconcile_register(upload_id: str, date_order: Literal["detect", "DMY", "MDY
                     "reconcile again stating the order. Review required, not a confirmed discrepancy."
                     if order_used is None and any(c["field"] == "Date" and t00._SLASH_DATE.fullmatch(str(c["register_value"] or "").strip()) for c in parse_reviews)
                     else "Missing or invalid comparison inputs; review required, not a confirmed discrepancy.")})
+        # A GSTR-1 return covers one month and lists invoices one by one for registered buyers. B2C bills go
+        # to B2CL (inter-state, above Rs 1 lakh) or are filed as totals (B2CS); the books do not record a B2C
+        # buyer's state, so B2C bills and their credit notes are counted, not matched one by one.
+        raw_rows = [json.loads(r["raw_json"]) for r in rows]
+        periods = {r.get("Return Period") for r in raw_rows if r.get("Return") == "GSTR-1"}
+        return_month = next(iter(periods)) if len(periods) == 1 and None not in periods and raw_rows and all(r.get("Return") == "GSTR-1" for r in raw_rows) else None
+        outside_return = b2cs_not_compared = 0
         for invoice in invoices:
+            if invoice["bill_no"] not in found_bills and return_month:
+                if invoice["invoice_date"][:7] != return_month:
+                    outside_return += 1
+                    continue
+                if not invoice["gstin"]:
+                    b2cs_not_compared += 1
+                    continue
             if invoice["bill_no"] not in found_bills:
                 findings.append({"finding_id": f"T00-v2-{upload_id}-{invoice['invoice_id']}-SOR_ONLY", "test_id": "T00", "category": "SYSTEM_ONLY", "bill_no": invoice["bill_no"], "field_differences": [], "reason": "System invoice is absent from the uploaded register."})
         # Once a register lists credit notes, a credit note in the books for the same period that it leaves out is a gap.
@@ -556,7 +570,7 @@ def reconcile_register(upload_id: str, date_order: Literal["detect", "DMY", "MDY
         if credits_listed and found_dates:
             first, last = min(found_dates), max(found_dates)
             for note_id, note in sorted(credits.items()):
-                if note_id not in credits_listed and first <= note["credit_date"] <= last:
+                if note_id not in credits_listed and first <= note["credit_date"] <= last and (not return_month or (note["credit_date"][:7] == return_month and note["gstin"])):
                     findings.append({"finding_id": f"T00-v2-{upload_id}-{note_id}-CN_ONLY", "test_id": "T00", "category": "SYSTEM_ONLY", "bill_no": note_id, "field_differences": [], "reason": "Credit note in the books is absent from the register, which lists other credit notes for this period."})
         for finding in findings:
             finding.update({"ruleset_version": t00.RULE["version"], "ruleset_hash": rule_hash})
@@ -565,7 +579,8 @@ def reconcile_register(upload_id: str, date_order: Literal["detect", "DMY", "MDY
         db.execute("INSERT OR IGNORE INTO p2_reconciliation_rules VALUES(?,?,?)", (reconciliation_id, p1.canonical(t00.RULE).decode(), rule_hash))
         p1.log_event(db, "auditor-demo", "register_reconciled", reconciliation_id, {"upload_id": upload_id, "finding_count": len(findings), "ruleset_version": t00.RULE["version"], "ruleset_hash": rule_hash, "date_order": date_report})
         db.commit()
-        return {"reconciliation_id": reconciliation_id, "upload_id": upload_id, "source_sha256": upload["sha256"], "gstin_not_applicable_rows": not_applicable, "date_order": date_report, "ruleset": t00.RULE, "ruleset_version": t00.RULE["version"], "ruleset_hash": rule_hash, "findings": findings}
+        return {"reconciliation_id": reconciliation_id, "upload_id": upload_id, "source_sha256": upload["sha256"], "gstin_not_applicable_rows": not_applicable, "date_order": date_report,
+                **({"gstr1_scope": {"return_month": return_month, "books_invoices_outside_month": outside_return, "b2c_bills_not_matched_individually": b2cs_not_compared}} if return_month else {}), "ruleset": t00.RULE, "ruleset_version": t00.RULE["version"], "ruleset_hash": rule_hash, "findings": findings}
     finally:
         db.close()
 

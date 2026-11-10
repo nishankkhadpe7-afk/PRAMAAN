@@ -1,0 +1,164 @@
+[
+ {
+  "what": "Year-end sales to a related shell customer",
+  "how": "9 large invoices to Vardhan Distributors in the last 8 days of March",
+  "refs": [
+   "NLP/25-26/1307",
+   "NLP/25-26/1308",
+   "NLP/25-26/1309",
+   "NLP/25-26/1310",
+   "NLP/25-26/1311",
+   "NLP/25-26/1312",
+   "NLP/25-26/1313",
+   "NLP/25-26/1314",
+   "NLP/25-26/1315"
+  ],
+  "checks": [
+   "T08",
+   "T06",
+   "T02"
+  ]
+ },
+ {
+  "what": "Shell sales left out of the GST return",
+  "how": "The 9 shell invoices are in the books but not in March GSTR-1",
+  "refs": [
+   "NLP/25-26/1307",
+   "NLP/25-26/1308",
+   "NLP/25-26/1309",
+   "NLP/25-26/1310",
+   "NLP/25-26/1311",
+   "NLP/25-26/1312",
+   "NLP/25-26/1313",
+   "NLP/25-26/1314",
+   "NLP/25-26/1315"
+  ],
+  "checks": [
+   "GSTR-1 import + T00 (SYSTEM_ONLY)"
+  ]
+ },
+ {
+  "what": "Year-end sales reversed after the year closed",
+  "how": "7 of the 9 shell invoices fully reversed by credit notes in April 2026",
+  "refs": [
+   "NLP-CN901",
+   "NLP-CN902",
+   "NLP-CN903",
+   "NLP-CN904",
+   "NLP-CN905",
+   "NLP-CN906",
+   "NLP-CN907"
+  ],
+  "checks": [
+   "T09"
+  ]
+ },
+ {
+  "what": "Sales to a connected party hidden from the auditor's register",
+  "how": "3 invoices to Om Sai Trading Company are in the books but missing from the register; its GSTIN check digit is also wrong",
+  "refs": [
+   "NLP/25-26/1316",
+   "NLP/25-26/1317",
+   "NLP/25-26/1318"
+  ],
+  "checks": [
+   "T00 (SYSTEM_ONLY)",
+   "GSTR-1 import (GSTIN warning)"
+  ]
+ },
+ {
+  "what": "Amount changed in the register",
+  "how": "One November invoice shows Rs 25,000 less in the register than in the books",
+  "refs": [
+   "NLP/25-26/0736"
+  ],
+  "checks": [
+   "T00 (FIELD_DIFF)"
+  ]
+ },
+ {
+  "what": "Sales under-reported in GSTR-1",
+  "how": "Two February invoices filed at 60% of their taxable value",
+  "refs": [
+   "NLP/25-26/1091",
+   "NLP/25-26/1099"
+  ],
+  "checks": [
+   "T15",
+   "GSTR-1 import (FIELD_DIFF)"
+  ]
+ },
+ {
+  "what": "One order split into two bills under the approval limit",
+  "how": "Two invoices to Bodhi Lifestyle two days apart, each about Rs 7.9 lakh, together over the Rs 15 lakh approval limit",
+  "refs": [
+   "NLP/25-26/1319",
+   "NLP/25-26/1320"
+  ],
+  "checks": [
+   "T10"
+  ]
+ },
+ {
+  "what": "Transport records that cannot be true",
+  "how": "A truck covering Surat to a far city in 7 hours; the same truck on two trips at once; a load above the truck's capacity; goods delivered in a different state than the buyer's",
+  "refs": [
+   "NLP/25-26/0676",
+   "NLP/25-26/0677",
+   "NLP/25-26/0588",
+   "NLP/25-26/0890"
+  ],
+  "checks": [
+   "T11"
+  ]
+ },
+ {
+  "what": "Contract customer billed below the agreed price",
+  "how": "3 invoices 12% under the price list; plus a discount scheme with no approval",
+  "refs": [
+   "NLP/25-26/1005",
+   "NLP/25-26/1006",
+   "NLP/25-26/1008",
+   "NLP-PROMO-02"
+  ],
+  "checks": [
+   "T14"
+  ]
+ },
+ {
+  "what": "E-invoice problems",
+  "how": "One invoice changed after its QR code was signed; one registered 25 days after its date; 4 B2B invoices with no IRN",
+  "refs": [
+   "NLP/25-26/0618",
+   "NLP/25-26/0619",
+   "NLP/25-26/0620",
+   "NLP/25-26/0621",
+   "NLP/25-26/0622",
+   "NLP/25-26/0623"
+  ],
+  "checks": [
+   "T13"
+  ]
+ },
+ {
+  "what": "Revenue entered by hand with no invoice",
+  "how": "A Rs 6,50,000 'year-end sales adjustment' journal on 31 March",
+  "refs": [
+   "NLP-JV-ADJ-01"
+  ],
+  "checks": [
+   "T05"
+  ]
+ },
+ {
+  "what": "Hidden relationship and a circular trading loop",
+  "how": "Vardhan Distributors shares a director with Neelgiri; money and goods loop Neelgiri -> Vardhan -> Om Sai -> Neelgiri",
+  "refs": [
+   "Vardhan Distributors",
+   "Om Sai Trading Company"
+  ],
+  "checks": [
+   "T02"
+  ]
+ }
+]

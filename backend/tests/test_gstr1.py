@@ -46,7 +46,7 @@ class Gstr1ReaderTests(unittest.TestCase):
         rows = {r["Bill No"]: r for r in self.read["rows"]}
         self.assertEqual(set(rows), {"S-1", "S-2", "S-5", "S-6", "E-1", "CN-1", "DN-1"})
         self.assertEqual(rows["S-1"], {"Bill No": "S-1", "Date": "2025-04-05", "Customer": "", "Gross Amt": "1180.00", "GST No": BUYER,
-                                       "Return": "GSTR-1", "Taxable": "1000.00", "CGST": "90.00", "SGST": "90.00"})
+                                       "Return": "GSTR-1", "Return Period": "2025-04", "Taxable": "1000.00", "CGST": "90.00", "SGST": "90.00"})
         self.assertEqual((rows["CN-1"]["Gross Amt"], rows["CN-1"]["CGST"]), ("-590.00", "-45.00"))  # credit note is negative
         self.assertEqual(rows["DN-1"]["Gross Amt"], "118.00")  # debit note adds to sales
         self.assertEqual((rows["S-6"]["GST No"], rows["E-1"]["GST No"]), ("", ""))  # unregistered buyers carry no GSTIN

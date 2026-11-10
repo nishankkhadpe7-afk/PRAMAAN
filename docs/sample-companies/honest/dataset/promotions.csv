@@ -1,0 +1,2 @@
+promotion_id,customer_id,item_code,valid_from,valid_to,discount_percent,approval_ref,source_type
+KHD-PROMO-01,KHD-C001,ITEM-9505,2025-10-01,2025-11-15,5,KHD-BOARD-2025-17,approved_diwali_scheme

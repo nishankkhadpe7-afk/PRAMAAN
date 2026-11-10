@@ -139,6 +139,8 @@ def parse_gstr1(source: bytes) -> dict[str, Any]:
             numbers[key] = section
         sign = -1 if credit else 1
         row = {"Bill No": number, "Date": iso, "Customer": "", "Gross Amt": _money(sign * abs(value)), "GST No": buyer, "Return": "GSTR-1"}
+        if period:
+            row["Return Period"] = period[0].isoformat()[:7]
         for _, label in TAX_KEYS:
             if totals[label]:
                 row[label] = _money(sign * abs(totals[label]))
