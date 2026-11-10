@@ -936,28 +936,37 @@ def baseline_plan(inv: Investigation) -> None:
 
 
 async def complete_with_fallback(inv: Investigation, cfg: dict[str, Any], messages, tools, poster) -> dict[str, Any]:
-    """One model turn; on a rate limit, move to the next configured fallback model (same as the assistant)."""
+    """One model turn: each model of the main provider, then the backup provider (e.g. Groq).
+    If all of them fail, run_investigation falls back to the deterministic planner."""
     from . import agent_llm
-    models = list(dict.fromkeys([cfg["model"], *cfg.get("fallback_models", [])]))
-    candidates = agent_llm._available(models) or models[:1]
-    last = None
-    for model in candidates:
-        try:
-            message = await agent_llm.complete({**cfg, "model": model}, messages, tools, poster, 700)
-            agent_llm._EXHAUSTED.pop(model, None)
-            if model not in inv.models_used:
-                inv.models_used.append(model)
-            return message
-        except agent_llm.RateLimited as exc:
-            agent_llm._EXHAUSTED[model] = time.monotonic() + exc.retry_after
-            last = exc
-        except RuntimeError as exc:
-            # Provider overload (HTTP 5xx, e.g. "high demand") or a dropped connection: temporary, so try the next model.
-            if not (isinstance(exc, agent_llm.ProviderUnavailable) or re.search(r"HTTP 5\d\d", str(exc))):
-                raise
-            agent_llm._EXHAUSTED[model] = time.monotonic() + 30
-            last = agent_llm.RateLimited(30, str(exc))
-    soonest = min(max(agent_llm._EXHAUSTED.get(m, 0) - time.monotonic(), 0) for m in models)
+    chain = agent_llm.provider_chain(cfg)
+    last: Exception | None = None
+    all_models: list[str] = []
+    for provider in chain:
+        models = list(dict.fromkeys([provider["model"], *provider.get("fallback_models", [])]))
+        all_models += models
+        if not agent_llm._available(models) and any(agent_llm._available([q['model'], *q.get('fallback_models', [])]) for q in chain):
+            continue  # all this provider's models are resting and another provider is available
+        for model in agent_llm._available(models) or models[:1]:
+            try:
+                message = await agent_llm.complete({**provider, "model": model}, messages, tools, poster, 700)
+                agent_llm._EXHAUSTED.pop(model, None)
+                label = f"{agent_llm.provider_name(provider)}:{model}"
+                if label not in inv.models_used:
+                    inv.models_used.append(label)
+                return message
+            except agent_llm.RateLimited as exc:
+                agent_llm._EXHAUSTED[model] = time.monotonic() + exc.retry_after
+                last = exc
+            except RuntimeError as exc:
+                # Overload (HTTP 5xx), a dropped connection or an account with no credits: try the backup provider.
+                if not agent_llm.is_provider_down(exc):
+                    raise
+                agent_llm._EXHAUSTED[model] = time.monotonic() + 30
+                last = exc
+                if isinstance(exc, agent_llm.QuotaExhausted):
+                    break  # the account has no credits: go straight to the backup provider
+    soonest = min((max(agent_llm._EXHAUSTED.get(m, 0) - time.monotonic(), 0) for m in all_models), default=1.0)
     raise agent_llm.RateLimited(max(soonest, 1.0), str(last) if last else "rate limited")
 
 
@@ -1015,26 +1024,33 @@ async def run_investigation(run_id: str, finding_id: str | None, planner: str = 
     from . import agent_llm
     if planner == "llm":
         cfg = cfg or agent_llm.config()
-        if not cfg.get("api_key"):
+        if not agent_llm.provider_chain(cfg):
             raise HTTPException(409, "No LLM API key is configured, so the AI planner is unavailable. Set GEMINI_API_KEY, OPENAI_API_KEY or GROQ_API_KEY in .env, or run the deterministic baseline planner.")
     db = p3.db_open()
+    requested_finding = finding_id
     try:
         ctx = _run_context(db, run_id)
         inv = Investigation(db, ctx, finding_id, "INV-AG-" + uuid.uuid4().hex[:12], invoice_id)
         finding_id = inv.finding["finding_id"]
         started = time.monotonic()
+        ai_fallback = None
         if planner == "baseline" or not inv.invoice_id:
             baseline_plan(inv)
             used_planner, model = "deterministic-baseline", None
         else:
             try:
                 await llm_plan(inv, cfg, poster or agent_llm._default_poster)
-            except agent_llm.QuotaExhausted as exc:
-                raise HTTPException(402, "assistant provider account has no credits") from exc
-            except agent_llm.RateLimited as exc:
-                raise HTTPException(429, f"All configured AI models are rate-limited; retry in about {int(exc.retry_after) + 1}s, or run without AI.") from exc
-            used_planner, model = "llm", ", ".join(inv.models_used) or cfg["model"]
+                used_planner, model = "llm", ", ".join(inv.models_used) or cfg["model"]
+            except (agent_llm.QuotaExhausted, agent_llm.RateLimited, agent_llm.ProviderUnavailable) as exc:
+                # Every AI provider failed: start again with the deterministic planner rather than stop.
+                # The partial AI steps are discarded; the report says what happened.
+                ai_fallback = {"reason": type(exc).__name__, "detail": str(exc)[:200], "models_tried": list(inv.models_used)}
+                inv = Investigation(db, ctx, requested_finding, inv.id, invoice_id)
+                baseline_plan(inv)
+                used_planner, model = "deterministic-baseline", None
         report = inv.report(used_planner, model)
+        if ai_fallback:
+            report["ai_fallback"] = {**ai_fallback, "note": "No AI provider was available, so the no-AI planner ran instead. Same steps and guardrails."}
         report["elapsed_seconds"] = round(time.monotonic() - started, 3)
         report["created_at"] = _now()
         report["created_by"] = _subject()

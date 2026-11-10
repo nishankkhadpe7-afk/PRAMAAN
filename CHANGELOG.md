@@ -5,6 +5,7 @@ Notable changes to PRAMAAN, newest first. Dates are when the change landed on `m
 ## Unreleased
 
 ### Added
+- **AI fallback chain**: Gemini models → Groq (when `GROQ_API_KEY` is set) → the no-AI planner. An investigation no longer stops when every AI provider is rate-limited or down; it reruns with the no-AI planner and records `ai_fallback`. Reports name the provider and model that ran (e.g. `groq:openai/gpt-oss-120b`).
 - **How we know + Proof chain on every finding** (`backend/proof.py`, `GET /ui/runs/{run}/proof`, `web/src/proof.tsx`): the rule, the calculation with real numbers, the source files with SHA-256, what is still needed; and each invoice followed through books, register, GSTR-1, agreed price, dispatch/e-way bill, transport, e-invoice, credit notes and bank, each link marked agrees / differs / missing / not applicable. Computed from the frozen run, no AI; the bank link is labelled as not part of the run.
 - **Two sample companies** (`docs/sample-companies`): Kesar Home Decor (records agree) and Neelgiri Lifestyle (12 planted problems with an answer key), a full FY 2025-26 each, built from UCI Online Retail II trading patterns (CC BY 4.0) remapped to India (GSTINs, HSN, GST split, e-way bills, signed demo e-invoices, monthly GSTR-1 JSON). Loaded with `START_PRAMAAN.bat company honest|hiding`; `START_PRAMAAN.bat clean` gives an empty workspace and `demo` restores the original demo. Each asks before replacing the workspace.
 ### Changed

@@ -61,10 +61,42 @@ def config() -> dict[str, str]:
     return {
         "api_key": key,
         "base_url": base_url,
-        "model": os.environ.get("LLM_MODEL", "llama-3.3-70b-versatile"),
+        "model": os.environ.get("LLM_MODEL", "openai/gpt-oss-120b"),
         # Optional comma-separated models tried in order when the main model's quota is used up.
         "fallback_models": [m.strip() for m in os.environ.get("LLM_FALLBACK_MODELS", "").split(",") if m.strip()],
     }
+
+
+def backup_config(primary: dict[str, Any] | None = None) -> dict[str, Any] | None:
+    """Optional second provider, tried when every model of the main one is rate-limited, out of credits
+    or down. Defaults to Groq when GROQ_API_KEY is set (LLM_BACKUP_BASE_URL / LLM_BACKUP_MODEL /
+    LLM_BACKUP_API_KEY override it). Never the same host as the main provider."""
+    primary = primary or config()
+    base_url = (os.environ.get("LLM_BACKUP_BASE_URL") or "https://api.groq.com/openai/v1").rstrip("/")
+    host = (httpx.URL(base_url).host or "").lower()
+    key = os.environ.get("LLM_BACKUP_API_KEY") or (os.environ.get("GROQ_API_KEY") if host.endswith("groq.com") else "")
+    if not key or host == (httpx.URL(primary["base_url"]).host or "").lower():
+        return None
+    return {"api_key": key, "base_url": base_url, "model": os.environ.get("LLM_BACKUP_MODEL", "openai/gpt-oss-120b"),
+            "fallback_models": [m.strip() for m in os.environ.get("LLM_BACKUP_FALLBACK_MODELS", "").split(",") if m.strip()]}
+
+
+def provider_chain(primary: dict[str, Any] | None = None) -> list[dict[str, Any]]:
+    """Main provider, then the backup provider if one is configured."""
+    primary = primary or config()
+    chain = [primary] if primary.get("api_key") else []
+    backup = backup_config(primary)
+    return chain + ([backup] if backup else [])
+
+
+def provider_name(cfg: dict[str, Any]) -> str:
+    host = (httpx.URL(cfg["base_url"]).host or "").lower()
+    return "gemini" if host.endswith("googleapis.com") else "groq" if host.endswith("groq.com") else "openai" if host.endswith("openai.com") else host
+
+
+def is_provider_down(exc: BaseException) -> bool:
+    """Failures that another provider can work around (rate limits are handled per model)."""
+    return isinstance(exc, (QuotaExhausted, ProviderUnavailable)) or bool(re.search(r"HTTP 5\d\d", str(exc)))
 
 
 TOOL_HINTS = {
@@ -245,33 +277,48 @@ async def _session(handler, credential: str | None = None):
 
 
 async def run_agent(prompt: str, max_steps: int = 8, **kwargs: Any) -> dict[str, Any]:
-    """Run the agent, moving to the next configured model when one model's quota is used up."""
+    """Run the agent: each model of the main provider in turn, then the backup provider (e.g. Groq)."""
     import time
-    cfg = config()
-    models = list(dict.fromkeys([cfg["model"], *cfg.get("fallback_models", [])]))
-    candidates = _available(models) or models[:1]
-    last: RateLimited | None = None
-    for model in candidates:
-        try:
-            result = await _run_agent_once(prompt, max_steps, model=model, **kwargs)
-            _EXHAUSTED.pop(model, None)
-            return result
-        except RateLimited as exc:
-            # Remember long waits (e.g. a daily cap) so later questions skip this model until it resets.
-            _EXHAUSTED[model] = time.monotonic() + exc.retry_after
-            exc.model = model
-            last = exc
-    # Every configured model is limited: report when the first one becomes usable again.
-    soonest = min(max(_EXHAUSTED.get(m, 0) - time.monotonic(), 0) for m in models)
-    raise RateLimited(max(soonest, 1.0), str(last) if last else "rate limited", last.model if last else None)
+    chain = provider_chain()
+    if not chain:
+        return await _run_agent_once(prompt, max_steps, **kwargs)  # raises the "no key" error
+    last: Exception | None = None
+    all_models: list[str] = []
+    for provider in chain:
+        models = list(dict.fromkeys([provider["model"], *provider.get("fallback_models", [])]))
+        all_models += models
+        if not _available(models) and any(_available([q['model'], *q.get('fallback_models', [])]) for q in chain):
+            continue  # all this provider's models are resting and another provider is available
+        for model in _available(models) or models[:1]:
+            try:
+                result = await _run_agent_once(prompt, max_steps, model=model, provider=provider, **kwargs)
+                _EXHAUSTED.pop(model, None)
+                return {**result, "provider": provider_name(provider)}
+            except RateLimited as exc:
+                # Remember long waits (e.g. a daily cap) so later questions skip this model until it resets.
+                _EXHAUSTED[model] = time.monotonic() + exc.retry_after
+                exc.model = model
+                last = exc
+            except RuntimeError as exc:
+                if not is_provider_down(exc):
+                    raise
+                _EXHAUSTED[model] = time.monotonic() + 30
+                last = exc
+                if isinstance(exc, QuotaExhausted):
+                    break  # the account has no credits: no other model of this provider will work
+    if isinstance(last, QuotaExhausted) and len(chain) == 1:
+        raise last
+    soonest = min(max(_EXHAUSTED.get(m, 0) - time.monotonic(), 0) for m in all_models)
+    raise RateLimited(max(soonest, 1.0), str(last) if last else "rate limited", getattr(last, "model", None))
 
 
 async def _run_agent_once(prompt: str, max_steps: int = 8, model: str | None = None,
                     poster: Callable[[dict[str, str], dict[str, Any]], Awaitable[dict[str, Any]]] = _default_poster,
                     credential: str | None = None, allowed_tools: set[str] | None = None,
                     max_tool_result_chars: int = 12000, max_tool_calls: int | None = None,
-                    max_tokens: int | None = None, system_prompt: str = SYSTEM_PROMPT) -> dict[str, Any]:
-    cfg = config()
+                    max_tokens: int | None = None, system_prompt: str = SYSTEM_PROMPT,
+                    provider: dict[str, Any] | None = None) -> dict[str, Any]:
+    cfg = provider or config()
     if model:
         cfg = {**cfg, "model": model}
     if not cfg["api_key"]:
