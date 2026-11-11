@@ -397,7 +397,7 @@ Safeguards in code:
 - **The agent can't wander.** It is scoped to the invoice under investigation.
 - **Every step is recorded.** Each tool call is written to the hash-chained audit log, and each report is stored with its hash.
 - **Only a human confirms.** There is no confirm tool for agents; the confirm and reject routes are human-only and blocked on the MCP channel.
-- **Provider hiccups don't break a run.** Rate limits, HTTP 5xx and dropped connections are retried, then the next fallback model (`LLM_FALLBACK_MODELS`) is tried.
+- **Provider hiccups don't break a run.** Rate limits, HTTP 5xx and dropped connections are retried, then the next fallback model (`LLM_FALLBACK_MODELS`), then a backup provider (Groq when `GROQ_API_KEY` is set alongside Gemini). If every provider fails, an investigation restarts with the no-AI planner instead of stopping, and its report says so (`ai_fallback`). The same privacy filter applies whichever provider answers. The agent evaluation numbers were measured with Gemini; the report always names the provider and model that actually ran.
 
 **Try it locally**
 1. Generate a synthetic bank statement for your demo instance: `python -m Pramaan.backend.fixtures_agent --data .demo/runtime --out .demo/runtime/agent_fixtures`.
@@ -490,7 +490,7 @@ $env:PRAMAAN_DATA = Join-Path $PWD.Path '.demo/runtime'
 | PRAMAAN_E2E_CHANNEL         | chrome                | Playwright browser channel; set to empty to use Playwright's bundled Chromium.                                  |
 | PRAMAAN_E2E_VIDEO           | on                    | Set to `off` where Playwright's ffmpeg is not installed.                                                         |
 
-**Tests.** CI (`.github/workflows/ci.yml`) runs all of these on every push and pull request; a separate `Secret scan` workflow checks the full history for leaked credentials. Current suite: 260 backend tests (9 of them need Tesseract and skip without it), 39 UI unit tests (and validated on two real Kaggle datasets: see docs/IMPORT_AUDIT.md), 8 browser journeys.
+**Tests.** CI (`.github/workflows/ci.yml`) runs all of these on every push and pull request; a separate `Secret scan` workflow checks the full history for leaked credentials. Current suite: 263 backend tests (9 of them need Tesseract and skip without it), 39 UI unit tests (and validated on two real Kaggle datasets: see docs/IMPORT_AUDIT.md), 8 browser journeys.
 
 ```powershell
 $env:PYTHONPATH = Join-Path $PWD.Path 'launcher'

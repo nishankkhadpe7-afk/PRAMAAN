@@ -252,11 +252,81 @@ class AgentTests(unittest.TestCase):
                 security.identity.reset(marker)
         report = asyncio.run(go())
         agent_llm._EXHAUSTED.clear()
-        self.assertEqual(report["model"], "backup-model")
+        self.assertEqual(report["model"], "local:backup-model")
         self.assertEqual(seen[0], "primary-model")
         self.assertNotIn("primary-model", seen[1:])  # the limited model is skipped for the rest of the run
         self.assertEqual(seen.count("busy-model"), 1)  # an overloaded (HTTP 503) model is also skipped
         self.assertEqual(seen.count("dropped-model"), 1)  # so is one whose connection dropped
+
+    def _investigate(self, invoice_id, poster, cfg):
+        async def go():
+            marker = security.identity.set({"subject": "agent-auditor", "role": "auditor", "human": False, "channel": "api"})
+            try:
+                return await p6_agent.run_investigation(self.run_id, None, "llm", poster=poster, invoice_id=invoice_id, cfg=cfg)
+            finally:
+                security.identity.reset(marker)
+        return asyncio.run(go())
+
+    def test_backup_provider_takes_over_when_main_provider_has_no_credits(self):
+        from unittest.mock import patch
+        from Pramaan.backend import agent_llm
+        invoice_id = self.by_kind["exact"][3]
+        turns = [{"content": None, "tool_calls": [self.call("match_bank_transactions", {"invoice_id": invoice_id})]},
+                 {"content": "Traced to one matching credit.", "tool_calls": []}]
+        seen = []
+        async def poster(cfg, body):
+            seen.append((cfg["base_url"], cfg["model"]))
+            if "primary" in cfg["base_url"]:
+                raise agent_llm.QuotaExhausted("no credits")
+            return {"choices": [{"message": {"role": "assistant", **turns.pop(0)}}]}
+        agent_llm._EXHAUSTED.clear()
+        env = {"GROQ_API_KEY": "", "LLM_BACKUP_API_KEY": "backup-key", "LLM_BACKUP_BASE_URL": "http://backup", "LLM_BACKUP_MODEL": "groq-like-model"}
+        with patch.dict("os.environ", env):
+            report = self._investigate(invoice_id, poster, {"api_key": "x", "model": "main-model", "fallback_models": [], "base_url": "http://primary"})
+        agent_llm._EXHAUSTED.clear()
+        self.assertEqual(report["planner"], "llm")
+        self.assertEqual(report["model"], "backup:groq-like-model")
+        self.assertEqual(seen[0], ("http://primary", "main-model"))
+        self.assertTrue(all(url == "http://backup" for url, _ in seen[1:]))
+        self.assertNotIn("ai_fallback", report)
+
+    def test_no_ai_planner_runs_when_every_provider_fails(self):
+        from unittest.mock import patch
+        from Pramaan.backend import agent_llm
+        invoice_id = self.by_kind["exact"][3]
+        async def poster(cfg, body):
+            if "primary" in cfg["base_url"]:
+                raise agent_llm.RateLimited(60, "quota")
+            raise agent_llm.ProviderUnavailable("backup down")
+        agent_llm._EXHAUSTED.clear()
+        env = {"GROQ_API_KEY": "", "LLM_BACKUP_API_KEY": "backup-key", "LLM_BACKUP_BASE_URL": "http://backup", "LLM_BACKUP_MODEL": "groq-like-model"}
+        with patch.dict("os.environ", env):
+            report = self._investigate(invoice_id, poster, {"api_key": "x", "model": "main-model", "fallback_models": [], "base_url": "http://primary"})
+        agent_llm._EXHAUSTED.clear()
+        self.assertEqual(report["planner"], "deterministic-baseline")
+        self.assertIsNone(report["model"])
+        self.assertEqual(report["ai_fallback"]["reason"], "RateLimited")
+        self.assertIn("no-AI planner", report["ai_fallback"]["note"])
+        self.assertTrue(report["tool_calls"] > 0)  # the deterministic planner still investigated
+        self.assertEqual(report["status"], "explained")  # the exact-match case is still traced to its bank credit
+
+    def test_assistant_moves_to_backup_provider(self):
+        from unittest.mock import patch
+        from Pramaan.backend import agent_llm
+        calls = []
+        async def once(prompt, max_steps, model=None, provider=None, **kwargs):
+            calls.append((provider["base_url"], model))
+            if "primary" in provider["base_url"]:
+                raise agent_llm.ProviderUnavailable("HTTP 503 high demand")
+            return {"answer": "ok", "complete": True, "model": model, "tool_calls": []}
+        agent_llm._EXHAUSTED.clear()
+        env = {"GROQ_API_KEY": "", "LLM_BACKUP_API_KEY": "k", "LLM_BACKUP_BASE_URL": "http://backup", "LLM_BACKUP_MODEL": "b-model"}
+        with patch.dict("os.environ", env), patch.object(agent_llm, "config", return_value={"api_key": "x", "base_url": "http://primary", "model": "m1", "fallback_models": ["m2"]}), \
+                patch.object(agent_llm, "_run_agent_once", side_effect=once):
+            result = asyncio.run(agent_llm.run_agent("question"))
+        agent_llm._EXHAUSTED.clear()
+        self.assertEqual(result["provider"], "backup")
+        self.assertEqual(calls, [("http://primary", "m1"), ("http://primary", "m2"), ("http://backup", "b-model")])  # each main model, then the backup
 
     def test_poster_retries_dropped_connections_then_reports_provider_unavailable(self):
         import httpx
