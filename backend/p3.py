@@ -5,13 +5,13 @@ import json
 import re
 import secrets
 import sqlite3
-from datetime import date, datetime, timedelta
+from datetime import date, datetime, timedelta, timezone
 from decimal import Decimal
 from pathlib import Path
 from typing import Any
 
 from fastapi import APIRouter, HTTPException
-from pydantic import BaseModel, Field, field_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 from . import app as p1
 from . import p3_dataset
@@ -60,6 +60,10 @@ def db_open() -> sqlite3.Connection:
       CREATE TABLE IF NOT EXISTS p3_field_verifications(verification_id TEXT PRIMARY KEY, evidence_id TEXT NOT NULL REFERENCES p3_evidence(evidence_id), field TEXT NOT NULL, value_json TEXT NOT NULL, note TEXT NOT NULL, verified_by TEXT NOT NULL, verified_at TEXT NOT NULL);
       CREATE TRIGGER IF NOT EXISTS p3_field_verifications_no_update BEFORE UPDATE ON p3_field_verifications BEGIN SELECT RAISE(ABORT,'field verifications are append-only'); END;
       CREATE TRIGGER IF NOT EXISTS p3_field_verifications_no_delete BEFORE DELETE ON p3_field_verifications BEGIN SELECT RAISE(ABORT,'field verifications are append-only'); END;
+      -- UI-11: why a follow-up request (sheet 'custom' or 'agent_followup') was raised, and by whom.
+      CREATE TABLE IF NOT EXISTS p3_request_reasons(request_id TEXT PRIMARY KEY REFERENCES p3_evidence_requests(request_id), reason TEXT NOT NULL, requested_by TEXT NOT NULL, requested_at TEXT NOT NULL);
+      CREATE TRIGGER IF NOT EXISTS p3_request_reasons_no_update BEFORE UPDATE ON p3_request_reasons BEGIN SELECT RAISE(ABORT,'request reasons are append-only'); END;
+      CREATE TRIGGER IF NOT EXISTS p3_request_reasons_no_delete BEFORE DELETE ON p3_request_reasons BEGIN SELECT RAISE(ABORT,'request reasons are append-only'); END;
     """)
     return db
 
@@ -769,6 +773,30 @@ def draw_rank(seed: str, ref: str) -> str:
     return p1.digest((seed + "\0" + ref).encode("utf-8"))
 
 
+# Documents an auditor (or, after human confirmation, the agent) may ask the client for.
+REQUESTABLE_DOCUMENTS = ("invoice", "e_way_bill", "lorry_receipt", "proof_of_delivery", "credit_note",
+                         "return_support", "payment_receipt", "bank_advice")
+
+
+def received_documents(db: sqlite3.Connection, object_type: str, object_id: str, wanted: list[str]) -> list[str]:
+    """UI-03: document types the client has already supplied for this record.
+
+    One upload answers every audit that asks for the same document, so a new request starts with
+    what is already held instead of asking the client again.
+    """
+    held = {r["document_type"] for r in db.execute("SELECT DISTINCT document_type FROM p3_evidence WHERE object_type=? AND object_id=?", (object_type, object_id))}
+    return sorted(held & set(wanted))
+
+
+def request_status(required: list[str], uploaded: list[str]) -> str:
+    return "fulfilled" if set(required) <= set(uploaded) else "partially_fulfilled" if uploaded else "pending"
+
+
+def request_reasons(db: sqlite3.Connection) -> dict[str, dict[str, Any]]:
+    return {r["request_id"]: {"reason": r["reason"], "requested_by": r["requested_by"], "requested_at": r["requested_at"]}
+            for r in db.execute("SELECT * FROM p3_request_reasons")}
+
+
 def save_run(db: sqlite3.Connection, snapshot: dict[str, Any], period_start: str, period_end: str, seed: str, ruleset: dict[str, Any], rerun_of: str | None = None) -> dict[str, Any]:
     snapshot_json = p1.canonical(snapshot).decode()
     snapshot_hash = p1.digest(snapshot_json.encode())
@@ -783,11 +811,19 @@ def save_run(db: sqlite3.Connection, snapshot: dict[str, Any], period_start: str
         db.execute("INSERT INTO p3_samples VALUES(?,?,?,?,?,?,?,?)", (run_id, sample["sheet"], index, sample["object_ref"], sample["stratum"], sample["selection_reason"], sample["random_draw"], sample["inclusion_probability"]))
     for draw in draws:
         db.execute("INSERT INTO p3_draws VALUES(?,?,?,?,?,?)", (run_id, draw["sheet"], draw["object_ref"], draw["draw"], draw["rank"], draw["selected"]))
+    prefilled_requests = prefilled_documents = 0
     for sample in samples:
         docs = ruleset["evidence_requests"][sample["sheet"]]
         request_id = "ER-" + p1.digest(p1.canonical([run_id, sample["sheet"], sample["object_ref"]]))[:16]
-        db.execute("INSERT OR IGNORE INTO p3_evidence_requests VALUES(?,?,?,?,?,?,?,?)", (request_id, run_id, sample["sheet"], sample["object_ref"], sample["object_type"], p1.canonical(docs).decode(), "[]", "pending"))
+        # UI-03: a rerun (or a second audit of the same sale) links the documents already received.
+        held = received_documents(db, sample["object_type"], sample["object_ref"], docs)
+        inserted = db.execute("INSERT OR IGNORE INTO p3_evidence_requests VALUES(?,?,?,?,?,?,?,?)", (request_id, run_id, sample["sheet"], sample["object_ref"], sample["object_type"], p1.canonical(docs).decode(), p1.canonical(held).decode(), request_status(docs, held))).rowcount
+        if inserted and held:
+            prefilled_requests += 1
+            prefilled_documents += len(held)
     p1.log_event(db, "auditor-demo", "p3_audit_run_created", run_id, {"snapshot_hash": snapshot_hash, "sampling_seed": seed, "ruleset_version": ruleset["version"], "sampler_version": ruleset["sampler_version"]})
+    if prefilled_documents:
+        p1.log_event(db, "auditor-demo", "evidence_requests_prefilled", run_id, {"requests": prefilled_requests, "documents": prefilled_documents, "basis": "documents already received for the same record and document type"})
     return result
 
 
@@ -876,14 +912,72 @@ def list_evidence_requests(run_id: str) -> dict[str, Any]:
             except HTTPException:
                 register_ctx = None
         versions = evidence_versions(db)
+        reasons = request_reasons(db)
         requests = []
         for row in db.execute("SELECT * FROM p3_evidence_requests WHERE run_id=? ORDER BY sheet,sample_ref", (run_id,)):
-            item = dict(row)
+            item = {**dict(row), **reasons.get(row["request_id"], {})}
             item["required_docs"] = json.loads(item["required_docs"])
             item["uploaded_docs"] = json.loads(item["uploaded_docs"])
             item["evidence"] = [{**dict(r), **versions.get(r["evidence_id"], {"version": 1}), **({"in_snapshot": r["evidence_id"] in in_snapshot} if in_snapshot is not None else {}), **_document_read_view(reads.get(r["evidence_id"]), invoices.get(item["sample_ref"]) if in_snapshot is not None else None, in_snapshot is not None, verifications.get(r["evidence_id"]), _register_rows(register_ctx, invoices.get(item["sample_ref"])))} for r in db.execute("SELECT evidence_id,document_type,sha256,content_type,controller,acquisition_channel,independently_verified FROM p3_evidence WHERE object_id=? AND object_type=? ORDER BY evidence_id", (item["sample_ref"], item["object_type"]))]
             requests.append(item)
         return {"run_id": run_id, "requests": requests}
+    finally:
+        db.close()
+
+
+class CustomRequestsIn(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    invoice_ids: list[str] = Field(min_length=1, max_length=200)
+    documents: list[str] = Field(min_length=1, max_length=len(REQUESTABLE_DOCUMENTS))
+    reason: str = Field(min_length=3, max_length=500)
+
+
+@router.post("/audit-runs/{run_id}/evidence-requests")
+def create_evidence_requests(run_id: str, payload: CustomRequestsIn) -> dict[str, Any]:
+    """UI-11: a human reviewer asks the client for documents on one or many invoices of a run.
+
+    Sending a request to the client is a decision, so it needs the human-review sign-in (agents
+    and ordinary auditor sessions propose through /p6/runs/{run}/actions instead). The run's
+    snapshot, samples and findings are not changed.
+    """
+    from .security import identity
+    caller = identity.get()
+    if not caller or caller["role"] != "auditor" or not caller.get("human") or caller.get("channel") == "mcp":
+        raise HTTPException(403, "human review capability required")
+    docs, reason = sorted(set(payload.documents)), payload.reason.strip()
+    if not set(docs) <= set(REQUESTABLE_DOCUMENTS):
+        raise HTTPException(422, "documents must be from: " + ", ".join(REQUESTABLE_DOCUMENTS))
+    if len(reason) < 3:
+        raise HTTPException(422, "a reason is required")
+    invoice_ids = list(dict.fromkeys(payload.invoice_ids))
+    db = db_open()
+    try:
+        run = db.execute("SELECT snapshot_json FROM p3_audit_runs WHERE run_id=?", (run_id,)).fetchone()
+        if not run:
+            raise HTTPException(404, "P3 audit run not found")
+        known = {i["invoice_id"] for i in json.loads(run["snapshot_json"]).get("invoices", [])}
+        unknown = [i for i in invoice_ids if i not in known]
+        if unknown:
+            raise HTTPException(422, "not in this run's frozen snapshot: " + ", ".join(unknown[:5]) + (f" and {len(unknown) - 5} more" if len(unknown) > 5 else ""))
+        now = datetime.now(timezone.utc).isoformat()
+        db.execute("BEGIN IMMEDIATE")
+        created, already = [], []
+        for invoice_id in invoice_ids:
+            request_id = "ER-CU-" + p1.digest(p1.canonical([run_id, invoice_id, docs]))[:16]
+            held = received_documents(db, "invoice", invoice_id, docs)
+            status = request_status(docs, held)
+            if not db.execute("INSERT OR IGNORE INTO p3_evidence_requests VALUES(?,?,?,?,?,?,?,?)", (request_id, run_id, "custom", invoice_id, "invoice", p1.canonical(docs).decode(), p1.canonical(held).decode(), status)).rowcount:
+                already.append(request_id)
+                continue
+            db.execute("INSERT INTO p3_request_reasons VALUES(?,?,?,?)", (request_id, reason, caller["subject"], now))
+            created.append({"request_id": request_id, "invoice_id": invoice_id, "required_docs": docs, "uploaded_docs": held, "status": status})
+        if created:
+            p1.log_event(db, caller["subject"], "evidence_requests_created", run_id, {"request_ids": [c["request_id"] for c in created], "documents": docs, "reason": reason, "human_requested": True})
+        db.commit()
+        return {"run_id": run_id, "documents": docs, "created": created, "already_requested": already}
+    except Exception:
+        db.rollback()
+        raise
     finally:
         db.close()
 

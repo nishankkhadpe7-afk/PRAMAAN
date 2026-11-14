@@ -35,9 +35,9 @@ Not issues: the "failed requests" in the baseline are React StrictMode's dev-onl
 | ID | Status |
 |---|---|
 | UI-01, UI-02, UI-04, UI-05 | Fixed |
-| UI-03 | Copy fixed; root cause is a backend gap (logged) |
+| UI-03 | Fixed (backend: new runs link documents already received) |
 | UI-06 – UI-10, UI-12, UI-13 | Fixed |
-| UI-11 | Backend gap: no evidence-request API (logged, no UI faked) |
+| UI-11 | Fixed (evidence-request API and *Request documents…* on selected findings) |
 | UI-14 – UI-17 | Fixed |
 | UI-18 (new, P0) | Fixed: drawer stole focus back to the opener after the first keystroke |
 

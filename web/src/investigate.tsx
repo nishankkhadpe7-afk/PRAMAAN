@@ -22,12 +22,12 @@ function Records({records}:{records:Row[]}){
   return <div className="conflict-records">{records.map((rec,i)=><dl key={i} className="conflict-record"><dt>{toTitleLabel(rec.source||'record')}</dt>{Object.entries(rec).filter(([k])=>k!=='source').map(([k,v])=><div key={k}><span>{toTitleLabel(k)}</span><b>{String(v??'—')}</b></div>)}</dl>)}</div>
 }
 
-function ConfirmDrawer({action,onClose,onDone}:{action:Row;onClose:()=>void;onDone:()=>void}){
+export function ConfirmDrawer({action,onClose,onDone}:{action:Row;onClose:()=>void;onDone:()=>void}){
   const {api}=useSession();const [reason,setReason]=useState(''),[busy,setBusy]=useState(false),[error,setError]=useState('')
   const decide=async(kind:'confirm'|'reject')=>{setBusy(true);setError('');try{await api!.json(`/p6/actions/${id(action.action_id)}/${kind}`,'POST',{payload_hash:action.payload_hash,reason});onDone()}catch(e){setError(e instanceof Error?e.message:'The decision could not be recorded.')}finally{setBusy(false)}}
   const p=action.payload
   return <Drawer title="Confirm the proposed evidence request" onClose={onClose}>
-    <p>The agent proposed this request. It is sent only if you confirm.</p>
+    <p>This request is a proposal. It is sent only if you confirm.</p>
     <dl className="facts"><div><dt>Sent to</dt><dd>The client's evidence inbox (company workspace)</dd></div><div><dt>Invoice</dt><dd>{p.invoice_id}</dd></div><div><dt>Documents requested</dt><dd>{p.documents.map(toTitleLabel).join(', ')}</dd></div><div><dt>Reason shown to the client</dt><dd>{p.reason}</dd></div><div><dt>Proposed by</dt><dd>{action.proposed_by} · {formatWhen(action.proposed_at)}</dd></div><div><dt>Payload fingerprint</dt><dd><code className="muted-id">{action.payload_hash}</code></dd></div></dl>
     <Field label="Your note (required to reject)"><textarea maxLength={500} value={reason} onChange={e=>setReason(e.target.value)}/></Field>
     {error&&<div className="notice error" role="alert">{error}</div>}

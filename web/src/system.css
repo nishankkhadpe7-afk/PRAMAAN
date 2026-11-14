@@ -72,6 +72,8 @@ tr.selected-row td{background:rgba(232,194,122,.07)}
 
 /* Bulk review drawer. */
 .bulk-form{display:grid;gap:var(--space-4)}
+.doc-picker{border:0;padding:0;margin:0;display:grid;grid-template-columns:repeat(auto-fill,minmax(170px,1fr));gap:var(--space-1) var(--space-3)}
+.doc-picker legend{padding:0;margin-bottom:var(--space-2);font-weight:600;font-size:var(--text-sm)}
 .bulk-form p{margin:0;line-height:1.55}
 .bulk-preview{margin:0;padding-left:var(--space-5);display:grid;gap:4px;font-size:var(--text-sm);color:var(--muted);max-height:220px;overflow:auto}
 

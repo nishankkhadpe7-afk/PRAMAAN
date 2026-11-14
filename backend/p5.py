@@ -295,6 +295,78 @@ def propose_review_decision(run_id: str, finding_id: str, payload: ReviewIn):
     return persist_review(run_id, finding_id, payload, proposal=True)
 
 
+class BulkItemIn(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    finding_id: str = Field(min_length=1, max_length=200)
+    expected_revision: int = Field(default=0, ge=0)
+
+
+class BulkReviewIn(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    outcome: Literal["EXCEPTION_CONFIRMED", "EXPLAINED", "DATA_ERROR"]
+    reason: str = Field(min_length=1, max_length=4096)
+    items: list[BulkItemIn] = Field(min_length=1, max_length=500)
+    proposed_adjustment: str = Field(default="Undetermined; human accounting assessment required.", max_length=4096)
+
+
+@router.post("/runs/{run_id}/reviews/bulk")
+def record_bulk_review_decisions(run_id: str, payload: BulkReviewIn):
+    caller = identity.get()
+    if not caller or caller["role"] != "auditor" or not caller.get("human") or caller.get("channel") == "mcp":
+        raise HTTPException(403, "human review capability required")
+    return persist_bulk(run_id, payload, proposal=False)
+
+
+@router.post("/runs/{run_id}/proposals/bulk")
+def propose_bulk_review_decisions(run_id: str, payload: BulkReviewIn):
+    return persist_bulk(run_id, payload, proposal=True)
+
+
+def persist_bulk(run_id, payload, proposal):
+    """One outcome and reason for many findings: the run is verified once and every row is appended
+    in one transaction. Each finding still gets its own decision row and its own log entry, exactly as
+    the per-finding endpoints write them; a finding that fails its check is reported and skipped.
+    Monetary impact is per finding, so it is not accepted here."""
+    if not payload.reason.strip():
+        raise HTTPException(422, "review reason required")
+    ids = [item.finding_id for item in payload.items]
+    if len(set(ids)) != len(ids):
+        raise HTTPException(422, "a finding is listed more than once")
+    db = p3.db_open()
+    try:
+        _, _, _, findings = reviewable(db, run_id)
+        subject = identity.get()["subject"]
+        db.execute("BEGIN IMMEDIATE")
+        latest = latest_reviews(db, run_id)
+        results = []
+        for item in payload.items:
+            if item.finding_id not in findings:
+                results.append({"finding_id": item.finding_id, "ok": False, "status": 404, "detail": "finding not in run"})
+                continue
+            previous = latest.get(item.finding_id, {})
+            if not proposal and previous.get("revision", 0) != item.expected_revision:
+                results.append({"finding_id": item.finding_id, "ok": False, "status": 409, "detail": "review was concurrently changed"})
+                continue
+            single = ReviewIn(outcome=payload.outcome, reason=payload.reason, expected_revision=item.expected_revision, proposed_adjustment=payload.proposed_adjustment)
+            decision = {**single.model_dump(), "run_id": run_id, "finding_id": item.finding_id, "decided_by": subject,
+                        "decided_at": datetime.now(timezone.utc).isoformat(), "revision": previous.get("revision", 0) + 1,
+                        "human_conclusion": not proposal}
+            if proposal:
+                db.execute("INSERT INTO p5_proposals(run_id,finding_id,proposal_json) VALUES(?,?,?)", (run_id, item.finding_id, p1.canonical(decision).decode()))
+            else:
+                db.execute("INSERT INTO p5_reviews VALUES(?,?,?,?)", (run_id, item.finding_id, decision["revision"], p1.canonical(decision).decode()))
+            p1.log_event(db, subject, "review_proposed" if proposal else "human_review_recorded", item.finding_id, decision)
+            results.append({"finding_id": item.finding_id, "ok": True, "status": 200, "revision": decision["revision"]})
+        db.commit()
+        saved = sum(1 for r in results if r["ok"])
+        return {"run_id": run_id, "proposal": proposal, "saved": saved, "failed": len(results) - saved, "results": results}
+    except Exception:
+        db.rollback()
+        raise
+    finally:
+        db.close()
+
+
 def persist_review(run_id, finding_id, payload, proposal):
     db = p3.db_open()
     try:

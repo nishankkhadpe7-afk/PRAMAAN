@@ -59,9 +59,11 @@ All five P0 issues and all P1/P2 issues are fixed or logged as backend gaps, as 
 
 ## 5. Backend gaps (logged, not faked)
 
-1. **UI-03:** rerun evidence requests do not prefill already-uploaded documents.
-2. **UI-11:** no endpoint to create evidence requests; bulk evidence request is blocked on this.
-3. **Bulk review:** no batch endpoint, so the UI loops per finding.
+All three were closed after this audit (see `CHANGELOG.md`, tests in `backend/tests/test_workflow_gaps.py`):
+
+1. **UI-03 (closed):** new and repeated runs start each evidence request with the documents already received.
+2. **UI-11 (closed):** `POST /p3/audit-runs/{run}/evidence-requests` (human reviewer only); *Request documents…* on selected findings.
+3. **Bulk review (closed):** `POST /p5/runs/{run}/reviews/bulk` and `/proposals/bulk`; the drawer sends 100 findings per call.
 
 ## 6. Design system
 

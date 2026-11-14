@@ -48,7 +48,7 @@ Constraint honoured: PRAMAAN stays a single-company, single-auditor local applic
 | F7 | Drawer lacked focus management | Focus trap, Escape, focus returns to opener | Vitest | Resolved |
 | F8 | One 407 KB bundle | Lazy workspace routes | Build output | Resolved |
 | F9 | Canvas errors flooded test output | `getContext` stub in test setup | Clean Vitest output | Resolved |
-| U1 | Findings noisy, no triage | Findings sorted most serious first, open before reviewed | Manual | Partially resolved: no bulk review actions |
+| U1 | Findings noisy, no triage | Findings sorted most serious first, open before reviewed | Manual | Resolved: bulk review (`/p5/runs/{run}/reviews/bulk`) and bulk document requests from selected findings |
 | U2 | Errors below the fold; editable predictable seed | Inline field errors; seed behind "Advanced"; unreadable-date notice | Vitest + screenshot | Resolved |
 | U3 | Mobile sign-in below marketing cards | Form first on ≤1024 px; principles hidden on mobile | Screenshot 390 px | Resolved |
 | U4 | Jargon and unlabelled benchmark claims | Plain-language sign-in copy; benchmark labelled synthetic | Screenshot | Resolved |
@@ -103,4 +103,4 @@ Multi-tenant hosting would need: Postgres with row-level security (the SQLite au
 
 ## UI/UX audit (branch `ui-ux-audit`)
 
-UI-01 – UI-18 tracked in `docs/ui-audit/02-issues.md`; report in `docs/UI_UX_AUDIT.md`. axe serious nodes 106 → 0, console errors 1 → 0, 360 px overflow 2 screens → 0. Backend gaps left open: UI-03 (rerun evidence linking), UI-11 (evidence-request API), no bulk review endpoint.
+UI-01 – UI-18 tracked in `docs/ui-audit/02-issues.md`; report in `docs/UI_UX_AUDIT.md`. axe serious nodes 106 → 0, console errors 1 → 0, 360 px overflow 2 screens → 0. The three backend gaps are closed: UI-03 (new runs link documents already received), UI-11 (`POST /p3/audit-runs/{run}/evidence-requests`, human reviewer only) and bulk review endpoints; covered by `backend/tests/test_workflow_gaps.py`.

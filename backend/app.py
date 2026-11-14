@@ -533,6 +533,10 @@ from .p5 import router as p5_router
 app.include_router(p5_router)
 from .p6_agent import router as p6_router
 app.include_router(p6_router)
+from .assurance import router as assurance_router
+app.include_router(assurance_router)
+from .transparency import router as transparency_router
+app.include_router(transparency_router)
 from .web_views import router as web_router
 app.include_router(web_router)
 from .vault_crypto import VaultKeyError as _VaultKeyError

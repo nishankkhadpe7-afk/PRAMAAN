@@ -35,8 +35,7 @@ router = APIRouter(prefix="/p6")
 PROMPT_VERSION = "investigate-v2"
 MAX_STEPS = 10
 DEFAULT_WINDOW_DAYS = 45
-AGENT_DOCUMENTS = ["invoice", "e_way_bill", "lorry_receipt", "proof_of_delivery", "credit_note",
-                   "return_support", "payment_receipt", "bank_advice"]
+AGENT_DOCUMENTS = list(p3.REQUESTABLE_DOCUMENTS)
 STATUSES = ("explained", "unexplained", "conflict", "needs_confirmation", "budget_exhausted")
 BANK_COLUMNS = ("date", "amount", "direction", "narration", "reference", "balance")
 
@@ -588,8 +587,11 @@ def _decide(action_id: str, payload: DecisionIn, confirm: bool) -> dict[str, Any
             request_id = "ER-AG-" + row["payload_hash"][:16]
             if db.execute("SELECT 1 FROM p3_evidence_requests WHERE request_id=?", (request_id,)).fetchone():
                 raise HTTPException(409, "evidence request already exists")
+            # UI-03/UI-11: start from documents already held, and keep the reason for the client to read.
+            held = p3.received_documents(db, "invoice", body["invoice_id"], body["documents"])
             db.execute("INSERT INTO p3_evidence_requests VALUES(?,?,?,?,?,?,?,?)",
-                       (request_id, body["run_id"], "agent_followup", body["invoice_id"], "invoice", p1.canonical(body["documents"]).decode(), "[]", "pending"))
+                       (request_id, body["run_id"], "agent_followup", body["invoice_id"], "invoice", p1.canonical(body["documents"]).decode(), p1.canonical(held).decode(), p3.request_status(body["documents"], held)))
+            db.execute("INSERT INTO p3_request_reasons VALUES(?,?,?,?)", (request_id, body["reason"] or "Follow-up requested during investigation.", caller["subject"], _now()))
             result = {"request_id": request_id}
         db.execute("UPDATE p6_actions SET status=?, decided_by=?, decided_at=?, decision_reason=?, result_json=? WHERE action_id=?",
                    ("executed" if confirm else "rejected", caller["subject"], _now(), payload.reason.strip()[:500], p1.canonical(result).decode() if result else None, action_id))

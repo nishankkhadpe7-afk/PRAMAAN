@@ -434,7 +434,7 @@ Review outcomes are EXCEPTION_CONFIRMED, EXPLAINED, or DATA_ERROR; a final decis
 | -------------- | ----------------------------------------------------------------------------------------------------- |
 | Client         | Business records; registers and disclosures; evidence inbox.                                          |
 | Auditor        | Run summary; samples/evidence requests; findings/provenance; workpapers; integrity/post-test changes. |
-| Human reviewer | Auditor views plus final-decision control when that credential carries human-review capability, including bulk review of selected findings (keyboard: `j`/`k` move, `x` select). |
+| Human reviewer | Auditor views plus final-decision control when that credential carries human-review capability, including bulk review of selected findings (keyboard: `j`/`k` move, `x` select) and sending document requests to the client from selected findings. |
 
 **Help for first-time users.** The interface explains itself without hiding the audit detail:
 
@@ -490,7 +490,7 @@ $env:PRAMAAN_DATA = Join-Path $PWD.Path '.demo/runtime'
 | PRAMAAN_E2E_CHANNEL         | chrome                | Playwright browser channel; set to empty to use Playwright's bundled Chromium.                                  |
 | PRAMAAN_E2E_VIDEO           | on                    | Set to `off` where Playwright's ffmpeg is not installed.                                                         |
 
-**Tests.** CI (`.github/workflows/ci.yml`) runs all of these on every push and pull request; a separate `Secret scan` workflow checks the full history for leaked credentials. Current suite: 263 backend tests (9 of them need Tesseract and skip without it), 39 UI unit tests (and validated on two real Kaggle datasets: see docs/IMPORT_AUDIT.md), 8 browser journeys.
+**Tests.** CI (`.github/workflows/ci.yml`) runs all of these on every push and pull request; a separate `Secret scan` workflow checks the full history for leaked credentials. Current suite: 276 backend tests (9 of them need Tesseract and skip without it), 39 UI unit tests (and validated on two real Kaggle datasets: see docs/IMPORT_AUDIT.md), 8 browser journeys.
 
 ```powershell
 $env:PYTHONPATH = Join-Path $PWD.Path 'launcher'
@@ -546,8 +546,8 @@ See [docs/EVALUATION.md](docs/EVALUATION.md) for class-by-class results and cave
 | --------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | Implemented within documented prototype scope       | P1–P5: source preservation, lifecycles/reversals, reconciliation, supported deterministic rules, snapshots/sampling/evidence requests, credentialed API/MCP, DLP, human-gated review, frozen local packages.                                        |
 | Technically demonstrated; final evidence incomplete | P6 UI integration and automated clean-reset rehearsals passed. The independent-person blind rehearsal is reported but lacks participant/scenario/artifact evidence, so overall P6 remains blocked.                                                  |
-| Partial                                             | T03 needs contract/policy review; T12 lacks a complete independent-assertion workflow; T13 is demo-key verification; custom evidence requests, external notifications, general lifecycle editing, partner sign-off, and async jobs are unavailable. |
-| Not demonstrated                                    | Live Tally/SAP/ERP connections and OCR of scanned PDFs (file imports only), official GST/IRP integration, external anchoring, production deployment, PostgreSQL grants, tenant/OS isolation, OAuth, production rate limits, hosted MCP interoperability, statistical projection, certification.                                 |
+| Partial                                             | T03 needs contract/policy review; T12 lacks a complete independent-assertion workflow; T13 is demo-key verification; evidence requests have no due dates; external notifications, general lifecycle editing, partner sign-off, and async jobs are unavailable. |
+| Not demonstrated                                    | Live Tally/SAP/ERP connections and OCR of scanned PDFs (file imports only), official GST/IRP integration, submission of log checkpoints to an outside timestamping service (signed checkpoints and offline-checkable proofs exist, see [docs/ASSURANCE.md](docs/ASSURANCE.md)), production deployment, PostgreSQL grants, tenant/OS isolation, OAuth, production rate limits, hosted MCP interoperability, a screen for monetary-unit sampling (the API and Stringer-bound evaluation exist), certification.                                 |
 
 Read [docs/PROGRESS.md](docs/PROGRESS.md), [docs/PHASES.md](docs/PHASES.md), [docs/MASTER.md](docs/MASTER.md), [backend/P5_VERIFICATION_REPORT.md](backend/P5_VERIFICATION_REPORT.md), and [backend/P6_VERIFICATION_REPORT.md](backend/P6_VERIFICATION_REPORT.md) for gate evidence and limits.
 

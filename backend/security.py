@@ -54,7 +54,15 @@ AUDITOR |= {"list_bank_statements", "match_bank_transactions", "match_party", "i
             "get_investigation", "propose_agent_action", "list_agent_actions", "confirm_agent_action", "reject_agent_action"}
 TOOL_NAMES |= {"upload_bank_statement", "match_bank_transactions", "match_party", "investigate_finding", "propose_evidence_request", "list_agent_actions"}
 AUDITOR |= {"verify_document_field"}
-HUMAN_ONLY = {"record_review_decision", "confirm_agent_action", "reject_agent_action", "verify_document_field"}
+# Verifiable event log: both sides may fetch checkpoints and proofs (they reveal hashes, not payloads).
+CLIENT |= {"log_checkpoint", "log_inclusion_proof", "log_consistency_proof"}
+AUDITOR |= {"log_checkpoint", "log_inclusion_proof", "log_consistency_proof"}
+# Statistical assurance: sampling plans and the anomaly screen for auditors; audited amounts need a human.
+AUDITOR |= {"create_mus_plan", "list_mus_plans", "record_mus_results", "anomaly_screen"}
+# Bulk review (one call for many findings) and auditor-raised evidence requests (UI-11).
+AUDITOR |= {"record_bulk_review_decisions", "propose_bulk_review_decisions", "create_evidence_requests"}
+HUMAN_ONLY = {"record_review_decision", "confirm_agent_action", "reject_agent_action", "verify_document_field",
+              "record_bulk_review_decisions", "create_evidence_requests", "record_mus_results"}
 TOOL_NAMES |= {"create_export_package", "export_p5_workpaper", "export_memo", "propose_review_decision", "get_review_queue", "get_p5_lifecycle"}
 BUSINESS = {"sales", "parties", "evidence", "links", "p2_customers", "p2_sales_orders",
             "p2_dispatches", "p2_invoices", "p2_journals", "p2_journal_lines", "p2_receipts",
@@ -66,6 +74,7 @@ AUDIT = {"runs", "p2_reconciliations", "p3_audit_runs", "p3_samples", "p3_draws"
 AUDIT |= {"p5_packages", "p5_proposals", "p2_reconciliation_rules"}
 AUDIT |= {"p3_audit_labels", "p3_run_verifications"}
 AUDIT |= {"p6_investigations", "p6_actions"}
+AUDIT |= {"p3_request_reasons", "assurance_mus_plans", "assurance_mus_results"}
 # access_log is read by auditors through /ui/access-log; only the logger connection writes it.
 
 
@@ -121,6 +130,8 @@ def bootstrap():
         init_p5(db)
         from .p6_agent import init_p6
         init_p6(db)
+        from .assurance import init_assurance
+        init_assurance(db)
         db.close()
     finally:
         identity.reset(reset)
@@ -227,7 +238,7 @@ def constrain(db, caller):
         if action == sqlite3.SQLITE_READ:
             if role == "client_employee" and table == "p3_audit_labels" and column in {"run_id", "audit_name"}:
                 return sqlite3.SQLITE_OK
-            if role == "client_employee" and table not in BUSINESS | {"p3_evidence_requests", "p3_evidence", "events"} and not (table == "p3_audit_runs" and column == "run_id"):
+            if role == "client_employee" and table not in BUSINESS | {"p3_evidence_requests", "p3_evidence", "p3_request_reasons", "events"} and not (table == "p3_audit_runs" and column == "run_id"):
                 return deny()
             if role == "logger":
                 return deny()

@@ -240,8 +240,9 @@ def web_inbox():
         # What was read from uploaded invoice PDFs, shown back to the client (no audit comparison here).
         reads = {r["evidence_id"]: json.loads(r["read_json"]) for r in db.execute("SELECT evidence_id,read_json FROM p3_document_reads")}
         versions = p3.evidence_versions(db)  # corrected files and the ones they replaced
+        reasons = p3.request_reasons(db)  # why a follow-up request was raised
         for row in db.execute("SELECT * FROM p3_evidence_requests ORDER BY rowid DESC"):
-            item = dict(row)
+            item = {**dict(row), **reasons.get(row["request_id"], {})}
             item["audit_name"] = names.get(item["run_id"], "Revenue audit")
             for field in ("required_docs", "uploaded_docs"):
                 item[field] = json.loads(item[field])
@@ -266,7 +267,7 @@ def web_inbox():
         return {"requests": requests, "work_items": work,
                 "outstanding_documents": sum(len(w["outstanding_docs"]) for w in work),
                 "outstanding_items": sum(1 for w in work if w["outstanding_docs"]),
-                "limits": "Requests are created by the existing sampler; due dates and custom/ad-hoc requests are unavailable."}
+                "limits": "Requests come from the sampler or from a reviewer's follow-up (with a reason); due dates are unavailable."}
     finally:
         db.close()
 
